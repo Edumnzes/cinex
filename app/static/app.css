@@ -54,13 +54,21 @@ input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; }
 
 /* ---------- workspace (Premiere panel layout) */
 .workspace { display: grid; gap: 4px; padding: 4px; height: calc(100% - 46px);
-  grid-template-columns: 300px minmax(0, 1fr) 290px; grid-template-rows: minmax(0, 1fr) 236px;
+  grid-template-columns: var(--c-insp, 300px) minmax(0, 1fr) var(--c-chat, 290px); grid-template-rows: minmax(0, 1fr) var(--r-tl, 236px);
   grid-template-areas: "insp mon chat" "tl tl tl"; }
 /* Mobile layout: the 9:16 monitor stands full height on the left; the tools share the rest. */
 body.lay-mobile .workspace {
-  grid-template-columns: calc((100vh - 170px) * 9 / 16 + 24px) 300px minmax(0, 1fr);
+  grid-template-columns: var(--c-mon, calc((100vh - 170px) * 9 / 16 + 24px)) var(--c-insp, 300px) minmax(0, 1fr);
   grid-template-areas: "mon insp chat" "mon tl tl"; }
-.panel { background: var(--panel); border-radius: 8px; min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.panel { position: relative; background: var(--panel); border-radius: 8px; min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+/* resize handles on panel edges (drag; double-click = default size) */
+.rz { position: absolute; z-index: 6; background: transparent; transition: background .12s; }
+.rz:hover, .rz.drag { background: var(--accent); }
+.rz.x { top: 0; bottom: 0; width: 5px; cursor: col-resize; } .rz.x.r { right: 0; } .rz.x.l { left: 0; }
+.rz.y { left: 0; right: 0; height: 5px; top: 0; cursor: row-resize; }
+body:not(.lay-mobile) .rz.only-mobile, body.lay-mobile .rz.only-desktop { display: none; }
+body.resizing, body.resizing * { user-select: none !important; }
+body.resizing video { pointer-events: none; }
 .inspector { grid-area: insp; } .monitor { grid-area: mon; } .comments { grid-area: chat; } .timelinepanel { grid-area: tl; }
 .phead { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-bottom: 1px solid var(--line); flex: none; }
 .ptitle { font-weight: 500; font-size: 13px; }
@@ -91,9 +99,9 @@ body.lay-mobile .workspace {
 .selinfo .row2 input { flex: 1; background: var(--bg); }
 
 /* ---------- program monitor */
-.stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 12px; background: #141414; }
-.phone { position: relative; height: 100%; max-width: 100%; aspect-ratio: 9 / 16; background: #000; overflow: hidden; container-type: inline-size; }
-.phone.wide { height: auto; width: 100%; max-height: 100%; aspect-ratio: 16 / 9; }
+.stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 12px; background: #141414; container-type: size; }
+.phone { position: relative; width: min(100cqw, 100cqh * 9 / 16); aspect-ratio: 9 / 16; background: #000; overflow: hidden; }
+.phone.wide { width: min(100cqw, 100cqh * 16 / 9); aspect-ratio: 16 / 9; }
 #bgfill { position: absolute; inset: 0; width: 100%; height: 100%; filter: blur(14px) brightness(.85); transform: scale(1.15); }
 .phone.fit video { position: relative; object-fit: contain; }
 .phone video { width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; }

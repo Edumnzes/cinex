@@ -28,6 +28,8 @@
   muda: a prévia vertical fica em pé à esquerda, em toda a altura, e as ferramentas ocupam o resto. Prévia e exportação
   em cada um (`<nome>_cinex.mp4` / `<nome>_cinex_16x9.mp4`). Vídeo gravado em pé no 16:9 aparece inteiro, com
   fundo desfocado nas laterais (`cut.py --fit blur`). `qa.py --platform desktop` confere o 16:9.
+- Painéis redimensionáveis: arraste a borda do inspetor, da conversa (Desktop), da prévia (Mobile) ou o topo da
+  linha do tempo; cada layout guarda os próprios tamanhos e o duplo clique na borda volta ao padrão.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

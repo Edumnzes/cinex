@@ -127,11 +127,44 @@ function renderFormat() {
   const f = (st && st.format) || "vertical";
   $("#phone").classList.toggle("wide", f === "horizontal");
   document.body.classList.toggle("lay-mobile", f === "vertical");       // app layout follows the preview shape
+  applyLayout();
   if (st) requestAnimationFrame(renderTimeline);                          // the timeline panel changed width
   const v = $("#video"), fit = f === "horizontal" && v.videoHeight > v.videoWidth;   // vertical footage in 16:9
   $("#phone").classList.toggle("fit", fit); $("#bgfill").hidden = !fit;
   for (const b of $("#fmtseg").children) b.classList.toggle("on", b.dataset.f === f);
   lastKey = ""; drawCaption();
+}
+
+// ------------------------------------------------------------ resizable panels (sizes saved per layout)
+const layoutKey = () => "cinex.layout." + (document.body.classList.contains("lay-mobile") ? "mobile" : "desktop");
+function applyLayout() {
+  const ws = $(".workspace"); for (const v of ["--c-insp", "--c-chat", "--c-mon", "--r-tl"]) ws.style.removeProperty(v);
+  let saved = {}; try { saved = JSON.parse(store.get(layoutKey()) || "{}"); } catch {}
+  for (const [k, v] of Object.entries(saved)) ws.style.setProperty(k, v + "px");
+}
+function bindResizers() {
+  for (const h of document.querySelectorAll(".rz")) {
+    const vert = h.classList.contains("y"), panel = h.parentElement;
+    h.onpointerdown = (e) => {
+      e.preventDefault(); h.setPointerCapture(e.pointerId); h.classList.add("drag"); document.body.classList.add("resizing");
+      const r = panel.getBoundingClientRect(), start = vert ? r.height : r.width, p0 = vert ? e.clientY : e.clientX;
+      const sign = +h.dataset.sign, min = +h.dataset.min, max = +h.dataset.max;
+      h.onpointermove = (ev) => {
+        const v = Math.round(Math.min(max, Math.max(min, start + sign * ((vert ? ev.clientY : ev.clientX) - p0))));
+        $(".workspace").style.setProperty(h.dataset.var, v + "px"); lastKey = ""; drawCaption();
+      };
+      h.onpointerup = () => {
+        h.onpointermove = h.onpointerup = null; h.classList.remove("drag"); document.body.classList.remove("resizing");
+        let saved = {}; try { saved = JSON.parse(store.get(layoutKey()) || "{}"); } catch {}
+        saved[h.dataset.var] = parseInt($(".workspace").style.getPropertyValue(h.dataset.var)); store.set(layoutKey(), JSON.stringify(saved));
+        if (st) renderTimeline();
+      };
+    };
+    h.ondblclick = () => {
+      let saved = {}; try { saved = JSON.parse(store.get(layoutKey()) || "{}"); } catch {}
+      delete saved[h.dataset.var]; store.set(layoutKey(), JSON.stringify(saved)); applyLayout(); lastKey = ""; drawCaption();
+    };
+  }
 }
 
 function rawToCut(t) {
@@ -371,7 +404,7 @@ function renderAll() {
 }
 
 async function init() {
-  bindCaptionUI();
+  bindCaptionUI(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
   for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };
