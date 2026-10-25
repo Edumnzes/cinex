@@ -40,7 +40,7 @@ still), Grundmann et al. "Auto-Directed Video Stabilization with Robust L1 Optim
 static, constant-velocity and smooth-acceleration segments, never a jittery chase), Premiere Auto Reframe
 ("Slower motion" preset for talking heads: nearly static, few keyframes), virtual-operator write-ups (dead
 zone ~5 %, damped spring with speed/acceleration caps, face margin, eyes on the upper third), 1€ filter (low
-cut-off when slow = no jitter). The user's feedback: zoom/tracking "ficando estranho" → be conservative.
+cut-off when slow = no jitter). In practice animated zoom/tracking reads as unnatural ("estranho") on talking heads → be conservative.
 
 Camera (engine, automatic)
 - Per range the engine picks **LOCK** (one fixed framing for the whole shot = tripod) when the face stays within
@@ -74,7 +74,7 @@ A zoom is a tool with one job each time; if it has no job, leave the camera alon
 | Close-up (face > 40 % of the height) | no zoom-in | no room; proportion first |
 | < 2.5 s after the previous zoom step | no | pumping; keep the previous level |
 | Emphasis word (number, promise, punchline) with a cut ≤ 0.5 s before it and none of the above | optional editorial punch (+8–12 %) in `ZOOM`, max ~1 per 8 s | emphasis — the only zoom *you* add by hand |
-The engine applies the table automatically for jump cuts (`cuts=KEEP_STARTS, jumpcuts="auto"`) and explains
+The engine applies the table automatically for jump cuts (`cuts=CUTS` from cuts.json, `jumpcuts="auto"`) and explains
 every decision with `python project.py cuts`. Read it; override with a list only if you disagree.
 
 When is TRACKING needed?

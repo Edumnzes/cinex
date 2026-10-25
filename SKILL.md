@@ -6,7 +6,7 @@ description: Cinex (formerly reels-editor) — edit raw phone videos into dynami
 # Cinex
 
 Turns a raw vertical (or horizontal) talking-head / trade-show / product video into a
-finished 1080x1920 Reel. The user is typically a business owner (e.g. solar sector,
+finished 1080x1920 Reel. The user is typically a small-business owner (often
 Portuguese-speaking) who wants professional, dynamic edits without learning an editor.
 Talk to them in their language, in plain words.
 
@@ -33,7 +33,7 @@ the same questions twice. Full procedure (questions, what to read, templates): `
    `python scripts/brand.py show <handle>` → folder `~/instagram-legendas/<handle>/`, shared with
    the `legendas-instagram` skill (`perfil.md`, `video.md`, `marca.json`, `videos.md`).
 2. **Saved already** → read `perfil.md`, `video.md`, `marca.json`; tell the user in 2–3 lines what
-   you are using and ask only whether something changed. Continue to step 0/1.
+   you are using and ask only whether something changed. Continue with B.
 3. **Not saved** → (a) short briefing with `AskUserQuestion` (≤ 2 rounds, ≤ 8 questions; pre-fill from
    `perfil.md` if it exists); (b) Instagram analysis in the browser: profile, Reels grid, "Ver insights"
    of ~8–12 Reels, account insights, watch 3–5 Reels; (c) write `video.md` + `marca.json`
@@ -96,6 +96,8 @@ Tell the user in the delivery which bank items were used and their licence notes
 python <skill>/scripts/setup_env.py          # creates ~/reelsenv, prints PYTHON and FFMPEG paths
 ```
 Run every script below with that venv python (`~/reelsenv/Scripts/python` on Windows).
+`scripts/…` and `assets/…` below are relative to the skill folder (`~/.claude/skills/cinex`); when you are
+inside the project folder, call them with that full path.
 Work in a project folder with a short path, e.g. `~/reels/<video-name>/` (Windows venv/ffmpeg
 calls break on very long paths). Known pitfalls, already handled by the scripts:
 SSL errors behind antivirus/proxy → `truststore`; OpenCV 5 has no Haar cascades → YuNet
@@ -165,7 +167,7 @@ words.json by hand — wrong caption text is worse than no caption.
 ## 3. Audio — Adobe Podcast Enhance Speech
 
 Only the audio goes to Adobe (smaller, and the picture never leaves the machine):
-1. `ffmpeg -i cut_1080.mp4 -vn -ac 1 -ar 48000 voice.wav`
+1. `<FFMPEG> -i cut_1080.mp4 -vn -ac 1 -ar 48000 voice.wav` (the ffmpeg path printed by setup_env.py)
 2. Adobe connector: `adobe_mandatory_init` → `asset_initialize_file_upload` (path, size, `audio/wav`)
    → `curl -L -X PUT <transfer href> -H "Content-Type: audio/wav" --data-binary @voice.wav`
    → `asset_finalize_file_upload` (pass the transfer document back verbatim) → `media_enhance_speech(assetId)`.
@@ -208,14 +210,14 @@ sources in the final summary.
 ## 5. Build the project file
 
 Copy `assets/example_project.py` to the project folder as `project.py` and rewrite:
-- `ZOOM` keyframes — be conservative (the user found animated zooms/tracking "estranho"): slow `eio` drifts
+- `ZOOM` keyframes — be conservative (animated zooms/tracking look unnatural on talking heads): slow `eio` drifts
   ≤ ~5 % per shot, punch-ins ONLY as instant steps on cuts (t0 == t1 at a keep.json join, +8–12 %, ≥ 3 s apart),
   never animated punches; close-ups stay at 1.0–1.04. Engine caps at `z_max` 1.25 (style-guide §3).
 - `SCENES`: every shot change in the cut (the joins in keep.json where the picture jumps).
 - `RANGES`: who the camera follows per stretch — `left`/`right` in two-shots (the speaker),
   `big` for single close-ups, `None` for B-roll. Boundaries MUST sit on cuts (keep.json joins). The engine
   decides LOCK (tripod) vs TRACK (damped spring) per range; force with a 4th item `"lock"`/`"track"`.
-- `cuts=KEEP_STARTS, jumpcuts="auto"`: pass every keep.json join; the engine decides per cut whether a zoom
+- `cuts=CUTS, jumpcuts="auto"`: pass every join from cuts.json; the engine decides per cut whether a zoom
   step is needed (only visible jumps on the same framing, not when the framing already changes, B-roll,
   re-frame, graphic on screen, close-up, or < 2.5 s since the last step). `python project.py cuts` prints the
   decision + reason for each cut — read it. Not every cut needs a zoom; not every shot needs tracking
@@ -256,7 +258,7 @@ this concept, a comparison for that one); plain Python with the lib's primitives
 
 ```
 python project.py preview 1 5.7 19.3 ... --debug   # key moments: entry, middle, exit of each motion
-python project.py check                            # face-collision + safe-area report
+python project.py check                            # face-collision + safe-area + SFX density report
 python project.py cuts                             # per cut: zoom step or not, and why
 python project.py motion                           # camera QA: lock/track (+why), pan/zoom speed, wobble -> must say SMOOTH
 python project.py strip 5.2 6.2                    # consecutive frames around a punch-in / pan

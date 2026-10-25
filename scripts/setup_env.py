@@ -13,8 +13,8 @@ venv = Path(sys.argv[1] if len(sys.argv) > 1 else Path.home() / "reelsenv")
 py = venv / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 if not py.exists():
     subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
-pkgs = ["faster-whisper", "imageio-ffmpeg", "opencv-python", "pillow", "numpy", "truststore"]
-subprocess.run([str(py), "-m", "pip", "install", "-q", "--disable-pip-version-check", *pkgs], check=True)
+req = Path(__file__).resolve().parent.parent / "requirements.txt"      # single source of the version ranges
+subprocess.run([str(py), "-m", "pip", "install", "-q", "--disable-pip-version-check", "-r", str(req)], check=True)
 ff = subprocess.run([str(py), "-c", "import imageio_ffmpeg;print(imageio_ffmpeg.get_ffmpeg_exe())"],
                     capture_output=True, text=True, check=True).stdout.strip()
 print("PYTHON", py)

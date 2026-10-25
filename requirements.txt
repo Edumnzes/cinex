@@ -1,7 +1,9 @@
 # Instalado automaticamente por scripts/setup_env.py em ~/reelsenv
-faster-whisper
-imageio-ffmpeg
-opencv-python
-pillow
-numpy
-truststore
+# Faixas testadas (última verificação: Python 3.14, faster-whisper 1.2.1, opencv 5.0, numpy 2.5, pillow 12.3).
+# O limite superior evita que uma versão maior nova (ou comprometida) entre sem revisão.
+faster-whisper>=1.2,<2
+imageio-ffmpeg>=0.6,<0.7
+opencv-python>=5.0,<6
+pillow>=11,<13
+numpy>=2.0,<3
+truststore>=0.10,<1

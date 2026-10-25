@@ -104,6 +104,13 @@ def save_wav(x, path):
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(SR); w.writeframes((np.clip(x, -1, 1) * 32767).astype(np.int16).tobytes())
 
 
+def free(path):
+    """`path`, or `name-2.ext`, `name-3.ext`... — never overwrite a file already in the bank."""
+    base, n = path, 2
+    while path.exists(): path = base.with_name(f"{base.stem}-{n}{base.suffix}"); n += 1
+    return path
+
+
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument("--origem", default="Pixabay")
     ap.add_argument("--licenca", default="Pixabay Content License (uso comercial, sem atribuição)"); ap.add_argument("--dry", action="store_true")
@@ -119,7 +126,7 @@ def main():
             out.append((p.name, "duplicado", 0, "mesmo arquivo já está no banco", ""))
             if not a.dry:
                 (inbox / "_processados" / "_duplicados").mkdir(parents=True, exist_ok=True)
-                shutil.move(str(p), str(inbox / "_processados" / "_duplicados" / p.name))
+                shutil.move(str(p), str(free(inbox / "_processados" / "_duplicados" / p.name)))
             continue
         seen.add(h)
         x, _ = trim(decode(p))
@@ -127,14 +134,14 @@ def main():
         m = measure(x); cat, conf, why = classify(p.stem, m)
         dest_dir = root / (cat or "_revisar"); slug = re.sub(r"[^a-z0-9]+", "-", p.stem.lower()).strip("-")[:32]
         n = len(list(dest_dir.glob("*.wav"))) + 1 if dest_dir.exists() else 1
-        dest = dest_dir / (f"{cat}_{n:02d}_{slug}.wav" if cat else f"{slug}.wav")
+        dest = free(dest_dir / (f"{cat}_{n:02d}_{slug}.wav" if cat else f"{slug}.wav"))
         uso = sfx_use(cat, m["dur"]) if cat else ""
         out.append((p.name, cat or "revisar", conf, why + (f" · {uso}" if uso and uso != "ideal" else ""), f"{m['dur']:.2f}s"))
         if a.dry: continue
         save_wav(x, dest)
         idx.append(dict(arquivo=str(dest.relative_to(root)).replace("\\", "/"), categoria=cat, origem=a.origem, licenca=a.licenca,
                         duracao=m["dur"], uso=uso, confianca=conf, criterio=why, medidas=m, original=p.name, md5=h))
-        (inbox / "_processados").mkdir(exist_ok=True); shutil.move(str(p), str(inbox / "_processados" / p.name))
+        (inbox / "_processados").mkdir(exist_ok=True); shutil.move(str(p), str(free(inbox / "_processados" / p.name)))
     if not a.dry: idx_p.write_text(json.dumps(idx, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"{'arquivo':38} {'categoria':9} {'conf.':5} {'dur.':6} critério")
     for name, cat, conf, why, dur in out: print(f"{name[:38]:38} {cat:9} {conf:<5} {dur:6} {why}")

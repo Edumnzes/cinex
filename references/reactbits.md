@@ -57,7 +57,7 @@ Paste a background layer first inside a motion (`ov.alpha_composite(aurora(t))`)
 | React Bits | Pattern in this skill |
 |---|---|
 | Counter | `count_up` in a navy card |
-| Stepper / Animated List | staggered pills (see IMG_6999 `mg_mission`: DIVULGAR → CONECTAR → INFORMAR) |
+| Stepper / Animated List | staggered pills (e.g. DIVULGAR → CONECTAR → INFORMAR) |
 | Profile Card | guest name card (icon + name + @handle) |
 | Magic Bento / Spotlight Card / Chroma Grid | icon tiles row (módulos · inversores · estruturas) |
 | Card Swap / Stack / Bounce Cards | product cards replacing each other on each spec |

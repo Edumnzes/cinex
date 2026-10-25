@@ -5,6 +5,14 @@
   (o link antigo redireciona), desenvolvimento na pasta `PROGRAMACAO/CINEX`, instalada em `~/.claude/skills/cinex`
   por uma junção (link de pasta) que aponta para ela.
 - As pastas de dados não mudam: `~/reels-banco`, `~/instagram-legendas`, `~/reels`.
+- **Licença MIT**: o uso deixa de depender de autorização do autor. Termos de uso reescritos como aviso de
+  privacidade e responsabilidades (sem restringir a licença).
+- Revisão da documentação: índice do README completo, passos de uso na ordem real (perfil → formato → análise),
+  seção de privacidade e segurança, caminhos dos scripts a partir da pasta do projeto, regra de SFX seletivos
+  também no FLUXO, `cuts=CUTS` (de cuts.json) em todos os guias, 13 formatos no diagrama.
+- `sfx_ingest.py`: nunca sobrescreve um som do banco (antes, apagar um arquivo do meio da numeração fazia o
+  próximo som importado substituir outro, e um original repetido em `_processados` interrompia a importação).
+- `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.
 
 ## 2.0.0 — 2026-10-25
 - **Perfil da marca como primeiro passo**: briefing curto + análise somente leitura dos Reels e Insights

@@ -1,10 +1,11 @@
 # Termos de Uso e Privacidade
 
-Última atualização: 29/09/2026
+Última atualização: 25/10/2026
 
-Estes termos valem para qualquer pessoa autorizada a usar a skill **Cinex** (antigo Reels Editor)
-(o "Software"). O uso do Software também está sujeito à [LICENSE.md](LICENSE.md).
-Ao usar o Software, você concorda com estes termos.
+Estes termos valem para qualquer pessoa que use a skill **Cinex** (antigo Reels Editor) (o "Software").
+O uso é livre e não precisa de autorização: a licença é a MIT ([LICENSE.md](LICENSE.md)).
+Estes termos não restringem a licença; eles explicam como o Software trata dados e quais
+responsabilidades ficam com quem edita e publica os vídeos.
 
 ## 1. O que o Software é
 Um conjunto de instruções e scripts que orienta o Claude Code (Anthropic) a editar vídeos
@@ -42,7 +43,7 @@ O Software faz verificações, mas não garante exatidão. Revise antes de publi
   o arquivo de voz fica armazenado na sua conta Creative Cloud até que você o apague.
 - Se o vídeo contiver dados pessoais de terceiros (rosto, voz, nome), você é o controlador
   desses dados nos termos da Lei nº 13.709/2018 (LGPD) e deve ter base legal para tratá-los.
-- O Software não coleta telemetria nem envia dados ao titular.
+- O Software não coleta telemetria nem envia dados aos autores.
 
 ### Acesso ao Instagram
 - O login é feito **por você**, no seu navegador. O Software instrui o Claude a **nunca digitar senhas,
@@ -69,7 +70,7 @@ O Software faz verificações, mas não garante exatidão. Revise antes de publi
 - Conteúdo publicado deve respeitar as regras das plataformas (Instagram, TikTok, YouTube).
 
 ## 6. Limitação de responsabilidade
-O Software é fornecido "no estado em que se encontra". O titular não se responsabiliza por
+O Software é fornecido "no estado em que se encontra". Os autores não se responsabilizam por
 conteúdo publicado, perdas de arquivos, custos de serviços de terceiros (Anthropic, Adobe,
 bancos de assets) ou danos decorrentes do uso. Mantenha cópia dos seus vídeos originais.
 

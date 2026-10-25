@@ -7,8 +7,8 @@ corta pausas e respirações, coloca legendas dinâmicas palavra por palavra, fa
 acompanhando o rosto, adiciona motion graphics explicativos, corrige a cor e limpa a voz
 com o Adobe Podcast Enhance Speech.
 
-> **Uso privado.** Este repositório é proprietário — veja [LICENSE.md](LICENSE.md) e
-> [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
+> **Código aberto (licença MIT).** Qualquer pessoa pode usar, modificar e distribuir, sem pedir autorização —
+> veja [LICENSE.md](LICENSE.md). Como os dados são tratados: [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
 
 ---
 
@@ -19,11 +19,16 @@ com o Adobe Podcast Enhance Speech.
 4. [Como usar](#como-usar)
 5. [Estrutura do repositório](#estrutura-do-repositório)
 6. [Comandos do projeto](#comandos-do-projeto)
-7. [Efeitos sonoros](#efeitos-sonoros)
-8. [Áudio com Adobe Podcast](#áudio-com-adobe-podcast)
-9. [Limitações](#limitações)
-10. [Solução de problemas](#solução-de-problemas)
-11. [Documentação detalhada](#documentação-detalhada)
+7. [Formatos](#formatos)
+8. [Perfil da marca](#perfil-da-marca)
+9. [Banco (referências, fontes, motions, efeitos)](#banco-referências-fontes-motions-efeitos)
+10. [Efeitos sonoros](#efeitos-sonoros)
+11. [Áudio com Adobe Podcast](#áudio-com-adobe-podcast)
+12. [Privacidade e segurança](#privacidade-e-segurança)
+13. [Limitações](#limitações)
+14. [Solução de problemas](#solução-de-problemas)
+15. [Documentação detalhada](#documentação-detalhada)
+16. [Licença](#licença)
 
 ---
 
@@ -93,12 +98,13 @@ Ou simplesmente peça em linguagem natural: *"edita esse vídeo para Reels, cort
 coloca legenda"*. A skill também é acionada por pedidos parciais (só legendas, só o corte, só o áudio).
 
 O Claude vai:
-0. **na primeira vez com uma marca**: fazer um briefing curto e analisar os Reels e Insights
+1. **na primeira vez com uma marca**: fazer um briefing curto e analisar os Reels e Insights
    do Instagram (você faz o login; a skill só lê) — isso fica salvo e não é repetido;
-1. analisar o vídeo e mostrar o mapa (tempo | plano | fala | tratamento sugerido);
-2. perguntar o que só você sabe (nome do evento, @, estilo);
-3. cortar, montar o projeto, conferir prévias e renderizar;
-4. entregar o arquivo final em `Downloads` com um resumo.
+2. recomendar 3 formatos para o vídeo e deixar você escolher (ou ver os 13);
+3. analisar o vídeo e mostrar o mapa (tempo | plano | fala | tratamento sugerido) com o plano editorial;
+4. perguntar o que só você sabe (nome do evento, @, dados na tela);
+5. cortar, montar o projeto, conferir prévias, renderizar e passar no controle de qualidade;
+6. entregar o arquivo final em `Downloads` com um resumo e a nota de cada dimensão.
 
 Cada vídeo ganha uma pasta de trabalho em `~/reels/<nome-do-video>/`. Ela é mantida para que
 ajustes (texto, cor, tempo) sejam rápidos — basta pedir.
@@ -109,7 +115,7 @@ ajustes (texto, cor, tempo) sejam rápidos — basta pedir.
 cinex/
 ├── SKILL.md                  # instruções que o Claude segue (ponto de entrada da skill)
 ├── README.md                 # este arquivo
-├── LICENSE.md                # licença proprietária
+├── LICENSE.md                # licença MIT
 ├── TERMOS_DE_USO.md          # termos de uso e privacidade
 ├── THIRD_PARTY_NOTICES.md    # licenças de terceiros (fontes, modelo, bibliotecas)
 ├── CHANGELOG.md
@@ -158,21 +164,21 @@ cinex/
 ## Comandos do projeto
 
 Dentro da pasta do vídeo (`~/reels/<nome>/`), com o Python do ambiente (`~/reelsenv/Scripts/python`
-no Windows, `~/reelsenv/bin/python` no macOS/Linux):
+no Windows, `~/reelsenv/bin/python` no macOS/Linux). `<skill>` é `~/.claude/skills/cinex`:
 
 | Comando | Para quê |
 |---|---|
 | `python project.py preview 1 5.7 19.3 --debug` | Quadros-chave renderizados (com zonas de segurança) |
-| `python project.py check` | Texto sobre o rosto / fora da área segura |
+| `python project.py check` | Texto sobre o rosto, fora da área segura ou SFX demais |
 | `python project.py cuts` | Em cada corte: zoom ou não, e por quê |
 | `python project.py motion` | Velocidade de pan/zoom e tremidas — deve dar **SMOOTH** |
 | `python project.py strip 5.2 6.2` | Quadros consecutivos para julgar suavidade |
 | `python project.py looks 12` | O mesmo quadro em todos os ajustes de cor |
 | `python project.py color` | Correção de cor por plano + `color.jpg` (antes / corrigido / + look) |
 | `python project.py full render.mp4` | Render final (+ `final_sheet.jpg` para conferência) |
-| `python scripts/qa.py final.mp4 --project project.py` | Controle de qualidade — qualquer FALHA bloqueia a entrega |
-| `python scripts/decisions.py check` / `report` | Registro completo? Tabela de notas para a entrega |
-| `python scripts/export_ig.py final.mp4 --name X --cover 4.3` | Arquivos para o Instagram em Downloads |
+| `python <skill>/scripts/qa.py final.mp4 --project project.py` | Controle de qualidade — qualquer FALHA bloqueia a entrega |
+| `python <skill>/scripts/decisions.py check` / `report` | Registro completo? Tabela de notas para a entrega |
+| `python <skill>/scripts/export_ig.py final.mp4 --name X --cover 4.3` | Arquivos para o Instagram em Downloads |
 
 ## Formatos
 
@@ -265,8 +271,8 @@ python ~/.claude/skills/cinex/scripts/sfx_ingest.py --origem Pixabay
 Cada som é classificado pelo nome e pela análise do áudio, tem o silêncio cortado e o volume igualado, e vai
 para a pasta da categoria. O que não der para classificar fica em `sfx/_revisar/`.
 
-O nome precisa começar pela categoria. Fontes gratuitas com uso comercial permitido: **Mixkit**
-e **Pixabay**. Se a pasta não existir, o vídeo sai sem SFX e o render avisa quais categorias faltam.
+Se você salvar direto nas pastas das categorias (sem o `sfx_ingest.py`), o nome do arquivo precisa começar
+pela categoria (`pop_03.wav`). Fontes gratuitas com uso comercial permitido: **Mixkit** e **Pixabay**. Se a pasta não existir, o vídeo sai sem SFX e o render avisa quais categorias faltam.
 
 ## Áudio com Adobe Podcast
 
@@ -276,6 +282,21 @@ reverb) e é mixado localmente. Sem o conector, a skill normaliza o áudio origi
 
 > No app desktop (aba Code), o resultado do Adobe chega por um painel que pode demorar a aparecer.
 > Alternativa manual: enviar `voice.wav` em podcast.adobe.com/enhance e devolver o arquivo tratado.
+
+## Privacidade e segurança
+
+- **Tudo roda no seu computador.** Vídeo, transcrição, rostos e render ficam locais. Só a trilha de voz sai,
+  e só se você usar o conector Adobe.
+- **Nada de dados de clientes no Git.** O `.gitignore` bloqueia vídeos, áudios e imagens. O perfil das marcas
+  (`~/instagram-legendas`), o banco (`~/reels-banco`) e os projetos (`~/reels`) ficam fora do repositório.
+- **Instagram só leitura.** O login é seu; a skill nunca digita senha nem código e não curte, comenta ou
+  altera nada.
+- **Sem downloads por conta própria.** A skill não baixa sons, motions ou vídeos sem o seu OK.
+- **Sem telemetria.** Os scripts não fazem nenhuma chamada de rede; os comandos externos (ffmpeg) são
+  chamados sem shell, com os argumentos em lista.
+- As dependências Python têm versões delimitadas em [requirements.txt](requirements.txt).
+
+Detalhes em [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
 
 ## Limitações
 
@@ -300,3 +321,9 @@ reverb) e é mixado localmente. Sem o conector, a skill normaliza o áudio origi
 - [SKILL.md](SKILL.md) — as instruções que o Claude segue
 - [references/style-guide.md](references/style-guide.md) — regras de ritmo, zoom, proporção e legendas
 - [references/visual-references.md](references/visual-references.md) — estilos, cor, SFX e bancos de assets
+- [CHANGELOG.md](CHANGELOG.md) — o que mudou em cada versão
+
+## Licença
+
+[MIT](LICENSE.md) — uso livre, inclusive comercial, sem pedir autorização; mantenha o aviso de copyright.
+Fontes e o modelo de rosto incluídos seguem as próprias licenças ([THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)).

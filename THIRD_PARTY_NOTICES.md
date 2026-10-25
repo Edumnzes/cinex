@@ -1,7 +1,8 @@
 # Avisos de terceiros
 
 O Software inclui ou depende dos componentes abaixo, cada um sob a sua própria licença.
-A licença proprietária do repositório ([LICENSE.md](LICENSE.md)) **não** se aplica a eles.
+A licença MIT do repositório ([LICENSE.md](LICENSE.md)) cobre só o código e a documentação do Cinex;
+estes componentes seguem as licenças abaixo.
 
 ## Incluídos no repositório (`assets/`)
 

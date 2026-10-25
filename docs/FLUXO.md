@@ -10,7 +10,7 @@ vídeo (`~/reels/<nome>/`), salvo indicação.
 vídeo bruto (.MOV/.MP4)
   │
   ├─ A. Perfil da marca ─ brand.py · briefing · Instagram (leitura) → perfil.md · video.md · marca.json
-  ├─ B. Formato ──────── 3 recomendados ou lista completa (12)     → template + compose.py se preciso
+  ├─ B. Formato ──────── 3 recomendados ou lista completa (13)     → template + compose.py se preciso
   ├─ C. Banco ────────── referências do formato · fontes · motions · sons (~/reels-banco)
   ├─ 1. Análise ──────── transcribe.py · energy.py · faces.py  →  mapa + perguntas
   ├─ 1b. Plano ───────── objetivo · mensagem · estrutura · sequência  →  decisoes.json
@@ -130,7 +130,7 @@ A partir daqui **todos os tempos são da linha do tempo cortada**.
 
 Só a voz vai para a nuvem; a imagem nunca sai do computador.
 
-1. `ffmpeg` extrai `voice.wav` (mono, 48 kHz) do corte.
+1. O ffmpeg do ambiente extrai `voice.wav` (mono, 48 kHz) do corte.
 2. Conector Adobe: `adobe_mandatory_init` → `asset_initialize_file_upload` →
    envio com `curl PUT` → `asset_finalize_file_upload` → `media_enhance_speech(assetId)`.
 3. A tarefa é assíncrona; o resultado chega por um painel (widget), lido com
@@ -171,7 +171,7 @@ Cópia adaptada de `assets/example_project.py`, usando `scripts/reels_lib.py` e 
 | `STYLE`, `LOOK`, `accent` | Estilo de legenda, ajuste de cor e cor de destaque |
 | `BG` | Escurecer/desfocar o fundo sob cards grandes |
 | `mg_*(ov, t)` | Uma função por ideia, entrando na palavra que ilustra; `slot()` posiciona fora do rosto |
-| `SFX`, `FLASHES` | Um som por evento visual; flash cuts |
+| `SFX`, `FLASHES` | Sons só nos eventos-chave (gancho, card principal, prova, CTA; ~2 a cada 10 s no máximo); flash cuts |
 | `broll=[...]` | Cortes para imagens de apoio (tela cheia ou card) |
 
 Regras de design (em `references/style-guide.md`): escala tipográfica fixa (`ts("xs"…"3xl")`),
@@ -191,7 +191,7 @@ texto por vídeo.
 | Comando | Critério |
 |---|---|
 | `preview t1 t2 … --debug` | Quadros de entrada/meio/saída de cada motion; zonas inseguras em vermelho |
-| `check` | Nenhum card sobre o rosto de quem fala; nada fora da área segura |
+| `check` | Nenhum card sobre o rosto de quem fala; nada fora da área segura; SFX dentro do limite |
 | `cuts` | Justificativa de zoom/sem zoom em cada corte |
 | `motion` | Pan p95 < 60 px/s, zoom < 5 %/s, sem "vai-e-volta" → veredito **SMOOTH** |
 | `strip t0 t1` | Quadros consecutivos em volta de um corte para achar solavancos |
