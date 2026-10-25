@@ -14,6 +14,15 @@
   próximo som importado substituir outro, e um original repetido em `_processados` interrompia a importação).
 - Exemplos com marca fictícia ("Sol Exemplo", `suamarca`) no lugar de marcas reais; o PDF do manual de edição
   deixa de ser distribuído (as regras continuam em `references/manual-edicao.md`).
+- **App Cinex (primeira fase)**: editor visual local (`app/server.py`, http://127.0.0.1:8765) com linha do
+  tempo (trechos mantidos/cortados sobre a onda do áudio), prévia 9:16 que já pula os cortes e mostra as legendas,
+  painel de legendas (estilos prontos, fonte embutida, do banco ou do computador, peso, cor, destaque, tamanho,
+  contorno, posição, 1 ou 2 linhas, 1/3/5 palavras, caixa alta), aprovação do corte e exportação para Downloads.
+  O Claude Code continua sendo o cérebro: propõe o corte e responde pela conversa do app
+  (`scripts/app_project.py`: new, show, seg, say, wait, export). O servidor só aceita conexões deste computador
+  e recusa pedidos de outros sites.
+- Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
+- `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.
 
 ## 2.0.0 — 2026-10-25

@@ -109,6 +109,26 @@ O Claude vai:
 Cada vídeo ganha uma pasta de trabalho em `~/reels/<nome-do-video>/`. Ela é mantida para que
 ajustes (texto, cor, tempo) sejam rápidos — basta pedir.
 
+### App Cinex (editor visual, em desenvolvimento)
+
+Para ver e ajustar a edição você mesmo, peça ao Claude para abrir o vídeo no app, ou rode:
+
+```bash
+~/reelsenv/Scripts/python ~/.claude/skills/cinex/app/server.py --open
+```
+
+Abre em http://127.0.0.1:8765 (só no seu computador). Na tela:
+- **Linha do tempo:** cada trecho aparece sobre a onda do áudio. Laranja = mantido, listrado = cortado.
+  Clique para ver o trecho e dê duplo clique (ou Delete) para manter ou cortar.
+- **Prévia 9:16:** já pula os cortes e mostra as legendas como vão sair.
+- **Legendas:** estilos prontos, fonte (inclusive do seu computador), cor, destaque, tamanho, contorno,
+  posição, uma ou duas linhas, quantas palavras por vez.
+- **Conversa com o Cinex:** peça ajustes por escrito. Quem responde é o Claude Code, que precisa estar
+  com a conversa aberta.
+- **Aprovar e travar corte** e **Exportar:** o vídeo final vai para `Downloads/<nome>_cinex.mp4`.
+
+Nesta primeira fase o app faz corte e legendas. Zoom, motion, cor e efeitos sonoros continuam pelo fluxo normal.
+
 ## Estrutura do repositório
 
 ```
@@ -122,8 +142,12 @@ cinex/
 ├── requirements.txt
 ├── docs/
 │   └── FLUXO.md              # o fluxo completo, do vídeo bruto à entrega
+├── app/
+│   ├── server.py             # app Cinex: servidor local (127.0.0.1:8765)
+│   └── static/               # interface: index.html, app.css, app.js
 ├── scripts/
 │   ├── setup_env.py          # cria ~/reelsenv e instala dependências
+│   ├── app_project.py        # projetos do app: estado compartilhado com o Claude Code
 │   ├── transcribe.py         # transcrição com faster-whisper (tempo por palavra)
 │   ├── energy.py             # mapa de energia do áudio (pausas)
 │   ├── faces.py              # detecção de rostos (YuNet) + folha de miniaturas

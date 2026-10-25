@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cinex</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo"></span><div><small>PROJETO</small><select id="project"></select></div></div>
+  <form id="newform" class="newform">
+    <input id="srcpath" placeholder="Caminho do vídeo, ex.: C:\Users\voce\Downloads\IMG_1234.MOV" autocomplete="off">
+    <button type="submit" class="ghost">Novo projeto</button>
+  </form>
+  <div class="spacer"></div>
+  <span id="savestate" class="muted"></span>
+  <button id="exportbtn" class="primary" disabled>Exportar</button>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<main class="grid">
+  <aside class="left">
+    <nav class="tabs">
+      <button data-tab="legendas" class="on">Legendas</button>
+      <button data-tab="corte">Corte</button>
+      <button disabled title="Em breve">Efeitos</button>
+      <button disabled title="Em breve">Tipos</button>
+    </nav>
+
+    <section id="tab-legendas" class="panel">
+      <div class="presets" id="presets"></div>
+      <div class="field"><label>Legendas</label><label class="switch"><input type="checkbox" id="c-enabled"><span></span></label></div>
+      <div class="field"><label>Fonte</label><select id="c-font"></select></div>
+      <div class="field"><label></label><label class="ghost filebtn">Escolher fonte do computador<input type="file" id="c-upload" accept=".ttf,.otf" hidden></label></div>
+      <div class="field" id="weightrow"><label>Peso</label><select id="c-weight"></select></div>
+      <div class="field"><label>Cor</label><input type="color" id="c-color"><label class="mini">Destaque</label><input type="color" id="c-accent"></div>
+      <div class="field"><label>Tamanho</label><input type="range" id="c-size" min="36" max="110"><output id="o-size"></output></div>
+      <div class="field"><label>Contorno</label><input type="range" id="c-stroke" min="0" max="12"><output id="o-stroke"></output></div>
+      <div class="field"><label>Posição</label><input type="range" id="c-y" min="900" max="1440" step="10"><output id="o-y"></output></div>
+      <div class="field"><label>Linhas</label><div class="seg" data-key="lines"><button data-v="1">Uma</button><button data-v="2">Duas</button></div></div>
+      <div class="field"><label>Palavras</label><div class="seg" data-key="words"><button data-v="1">Uma</button><button data-v="3">Até 3</button><button data-v="5">Até 5</button></div></div>
+      <div class="field"><label>Caixa alta</label><label class="switch"><input type="checkbox" id="c-upper"><span></span></label></div>
+      <div class="field"><label>Destacar</label><input id="c-keywords" placeholder="palavras separadas por vírgula"></div>
+    </section>
+
+    <section id="tab-corte" class="panel" hidden>
+      <p class="muted">Clique num bloco da linha do tempo para ver o trecho. Duplo clique alterna entre manter e cortar.</p>
+      <div id="selinfo" class="selinfo muted">Nenhum trecho selecionado.</div>
+      <div class="field"><label>Corte</label><button id="lockbtn" class="ghost"></button></div>
+    </section>
+
+    <section class="chat">
+      <h3>Converse com o Cinex</h3>
+      <div id="msgs" class="msgs"></div>
+      <form id="chatform"><input id="chatin" placeholder="Peça um ajuste ao Cinex…" autocomplete="off"><button class="primary">Enviar</button></form>
+      <small class="muted">As respostas chegam pelo Claude Code: deixe a conversa do Cinex aberta lá.</small>
+    </section>
+  </aside>
+
+  <section class="center">
+    <div class="tlhead">
+      <h3>Edição</h3>
+      <span id="durinfo" class="muted"></span>
+      <div class="spacer"></div>
+      <label class="muted">Zoom <input type="range" id="tlzoom" min="20" max="200" value="60"></label>
+    </div>
+    <div class="timeline" id="timeline">
+      <div class="tlinner" id="tlinner">
+        <div class="ruler" id="ruler"></div>
+        <div class="track"><span class="ticon">▣</span><div class="blocks" id="blocks"></div></div>
+        <div class="track"><span class="ticon">∿</span><canvas id="wave" height="56"></canvas></div>
+        <div class="playhead" id="playhead"></div>
+      </div>
+    </div>
+    <div class="legend muted"><span class="sw keep"></span>mantido <span class="sw cut"></span>cortado</div>
+  </section>
+
+  <section class="right">
+    <div class="phone" id="phone">
+      <video id="video" playsinline preload="auto"></video>
+      <div class="cap" id="cap"></div>
+      <div class="ph-empty" id="phempty">Abra ou crie um projeto</div>
+    </div>
+    <div class="controls">
+      <button id="playbtn" class="ghost">▶</button>
+      <span id="tc" class="muted">0:00 / 0:00</span>
+      <div class="spacer"></div>
+      <label class="muted"><input type="checkbox" id="skipcut" checked> Prévia do corte</label>
+    </div>
+    <div class="progress" id="exportbox" hidden><div class="bar"><span id="exportbar"></span></div><small id="exportmsg"></small></div>
+  </section>
+</main>
+<script src="/static/app.js"></script>
+</body>
+</html>

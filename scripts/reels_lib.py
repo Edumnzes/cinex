@@ -479,16 +479,29 @@ class Reel:
                 sp = T(tk["d"], cs["ksize"], self.accent, cs["kw"], cs["stroke"], family=cs["kfam"], glow=glow)
                 vw = text_w(tk["d"], cs["ksize"], cs["kw"], cs["kfam"])
             else:
-                sp = T(tk["d"], cs["size"], WHITE, cs["w"], cs["stroke"], family=cs["fam"])
+                sp = T(tk["d"], cs["size"], cs.get("color", WHITE), cs["w"], cs["stroke"], family=cs["fam"])
                 vw = text_w(tk["d"], cs["size"], cs["w"], cs["fam"])
             key = tk["key"]
             mid = glyph_mid(tk["d"], cs["ksize"] if key else cs["size"], cs["kw"] if key else cs["w"],
                             cs["kfam"] if key else cs["fam"], cs["stroke"])
             items.append((tk, sp, vw + 2 * cs["stroke"], mid))
         gap = int(cs["size"] * .4)                     # visible word gap from the font size, not sprite padding
-        base = baseline_for(self.cap_y, cs["size"], cs["w"], cs["fam"])   # one baseline for the whole line
+        avail = W - 2 * SAFE_SIDE
+        rows = [items]
+        if cs.get("lines", 1) == 2 and len(items) > 1 and sum(it[2] for it in items) + gap * (len(items) - 1) > avail:
+            # two lines only when one doesn't fit: split where the two widths are most even
+            cum = [sum(it[2] for it in items[:i]) for i in range(1, len(items))]
+            i = min(range(len(cum)), key=lambda j: abs(cum[j] - (cum[-1] + items[-1][2]) / 2)) + 1
+            rows = [items[:i], items[i:]]
+        lh = cs["size"] * 1.15
+        for ri, row in enumerate(rows):                # one baseline per row, rows centred on cap_y
+            self._caption_row(ov, t, g, row, gap, avail, baseline_for(self.cap_y, cs["size"], cs["w"], cs["fam"])
+                              + (ri - (len(rows) - 1) / 2) * lh)
+
+    def _caption_row(self, ov, t, g, items, gap, avail, base):
+        cs = self.cs
         tot = sum(it[2] for it in items) + gap * (len(items) - 1)
-        k = min(1.0, (W - 2 * SAFE_SIDE) / tot)
+        k = min(1.0, avail / tot)
         x = W / 2 - tot * k / 2
         for tk, sp, vw, mid in items:
             st = g["s"] if self.cap_anim == "group" else tk["s"] - .04
@@ -990,22 +1003,7 @@ class Reel:
                     tiles.append(im)
             self._sheet(tiles, "color.jpg", cols=3)
         elif cmd == "full":
-            out = args[0]
-            enc = subprocess.Popen([FFM, "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
-                                    "-i", "-", "-i", self.src, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-preset", "medium", "-crf", "17",
-                                    "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", "-shortest", out], stdin=subprocess.PIPE)
-            for i, fr in enumerate(self.frames()):
-                enc.stdin.write(self.compose(fr, i / FPS).tobytes())
-                if i % 150 == 0: print(f"{i / FPS:.1f}s", flush=True)
-            enc.stdin.close(); enc.wait(); print("done", out)
-            if self.sfx and self.sfx_track("sfx.wav"):   # keep sfx.wav: mix_audio.py --sfx reuses it after Adobe
-                tmp = out + ".tmp.mp4"; Path(out).replace(tmp)
-                subprocess.run([FFM, "-loglevel", "error", "-y", "-i", tmp, "-i", "sfx.wav", "-filter_complex",
-                                "[0:a][1:a]amix=inputs=2:normalize=0:duration=first[a]", "-map", "0:v", "-map", "[a]",
-                                "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out], check=True)
-                Path(tmp).unlink(); print("mixed sfx into", out)
-            subprocess.run([FFM, "-loglevel", "error", "-y", "-i", out, "-vf", "fps=1/2,scale=180:320,tile=9x4", "-frames:v", "1", "final_sheet.jpg"])
-            print("wrote final_sheet.jpg")
+            self.render(args[0])
         elif cmd == "cuts":                            # why each cut gets (or doesn't get) a zoom step
             for c, need, why in self.cut_report: print(f"  {c:6.2f}s  {'ZOOM   ' if need else 'no zoom'}  {why}")
             print(f"{sum(1 for r in self.cut_report if r[1])} of {len(self.cut_report)} same-shot cuts get a zoom step")
@@ -1019,3 +1017,23 @@ class Reel:
                 ImageDraw.Draw(im).text((12, 12), name, font=font(28, "Bold"), fill=WHITE, stroke_width=3, stroke_fill=BLACK)
                 tiles.append(im)
             self._sheet(tiles, "looks.jpg", cols=len(tiles))
+
+    def render(self, out, progress=None):
+        """Final render (audio copied from src, SFX mixed in, sfx.wav kept, final_sheet.jpg).
+        progress(fraction) is called once per second of video (used by the Cinex app)."""
+        enc = subprocess.Popen([FFM, "-loglevel", "error", "-y", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(FPS),
+                                "-i", "-", "-i", self.src, "-map", "0:v", "-map", "1:a", "-c:v", "libx264", "-preset", "medium", "-crf", "17",
+                                "-pix_fmt", "yuv420p", "-c:a", "copy", "-movflags", "+faststart", "-shortest", out], stdin=subprocess.PIPE)
+        for i, fr in enumerate(self.frames()):
+            enc.stdin.write(self.compose(fr, i / FPS).tobytes())
+            if i % 150 == 0: print(f"{i / FPS:.1f}s", flush=True)
+            if progress and i % FPS == 0: progress(min(1.0, i / FPS / self.dur))
+        enc.stdin.close(); enc.wait(); print("done", out)
+        if self.sfx and self.sfx_track("sfx.wav"):   # keep sfx.wav: mix_audio.py --sfx reuses it after Adobe
+            tmp = out + ".tmp.mp4"; Path(out).replace(tmp)
+            subprocess.run([FFM, "-loglevel", "error", "-y", "-i", tmp, "-i", "sfx.wav", "-filter_complex",
+                            "[0:a][1:a]amix=inputs=2:normalize=0:duration=first[a]", "-map", "0:v", "-map", "[a]",
+                            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out], check=True)
+            Path(tmp).unlink(); print("mixed sfx into", out)
+        subprocess.run([FFM, "-loglevel", "error", "-y", "-i", out, "-vf", "fps=1/2,scale=180:320,tile=9x4", "-frames:v", "1", "final_sheet.jpg"])
+        print("wrote final_sheet.jpg")

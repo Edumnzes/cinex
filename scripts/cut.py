@@ -17,7 +17,7 @@ K = json.load(open(a.keep))
 fl, cat = [], ""
 for i, (s, e) in enumerate(K):
     d = e - s
-    fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,scale={w}:{h},setsar=1[v{i}]")
+    fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h},setsar=1[v{i}]")
     fl.append(f"[0:a]atrim={s}:{e},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03[a{i}]")
     cat += f"[v{i}][a{i}]"
 fl.append(f"{cat}concat=n={len(K)}:v=1:a=1[v][a]")

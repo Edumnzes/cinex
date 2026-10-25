@@ -90,6 +90,25 @@ reuse someone's audio/words) → script with one idea per sentence → storyboar
   You cannot hear, so ask the user to listen once to the ones classified "só pelo áudio".
 Tell the user in the delivery which bank items were used and their licence notes.
 
+## D. Cinex app — visual editor (v3, in progress)
+
+When the user wants to see and adjust the edit themselves ("abre no app", "editor", "timeline", "quero mexer
+nas legendas"), use the local app instead of delivering a finished file. The app is the interface; **you stay the
+brain**: you propose the cut, answer the app's chat and change the project. Current scope: cut + captions
+(no zoom, motion, colour, SFX or phrase reordering in the app yet — for those, use the normal flow below).
+1. Start the server once, in the background: `python app/server.py` → http://127.0.0.1:8765 (local only).
+2. Create the project: `python scripts/app_project.py new <video> --name <name> --prompt "<marca.json termos>"`
+   (proxy, transcription, waveform and an automatic pause cut). The user can also create it from the app.
+3. Editorial pass with the same rules as steps 1b–2 (manual §2–3): `app_project.py show <name>` lists every
+   segment with its text; cut false starts, repetitions and filler with `seg <name> <id|s-e> cut "motivo"`, keep
+   functional pauses, then summarise the plan in the app's chat with `say <name> "..."` and give the link.
+4. Listen to the chat: run `app_project.py wait <name>` in the background; when it returns, do what was asked
+   (`seg`, caption changes by editing `captions` in `~/reels/<name>/cinex.json` through `app_project.update`),
+   answer with `say`, and start `wait` again. The user's edits in the app land in the same file — re-read with
+   `show` before changing anything, never overwrite their choices without saying so.
+5. Export is the app's button (or `app_project.py export <name>`): cut → captions with the engine → −14 LUFS →
+   `Downloads/<name>_cinex.mp4`. Then run `qa.py` on `~/reels/<name>/final.mp4` and report it in the chat.
+
 ## 0. Environment (once per machine, ~2 min)
 
 ```
