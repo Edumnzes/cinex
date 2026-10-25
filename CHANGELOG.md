@@ -21,6 +21,9 @@
   O Claude Code continua sendo o cérebro: propõe o corte e responde pela conversa do app
   (`scripts/app_project.py`: new, show, seg, say, wait, export). O servidor só aceita conexões deste computador
   e recusa pedidos de outros sites.
+- Interface no estilo Premiere + Notion: painéis (inspetor, monitor de programa, conversa, sequência), trilhas C1/V1/A1
+  com cabeçalho, timecode HH:MM:SS:QQ, transporte (quadro a quadro, trecho anterior/próximo, setas do teclado),
+  linha do tempo que acompanha a reprodução, conversa em estilo de comentários e paleta neutra.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

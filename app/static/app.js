@@ -20,6 +20,9 @@ async function api(path, opt = {}) {
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
 }
+const FPS = 30, HEAD = 72;      // HEAD = track-header width (--head in app.css)
+const p2 = (n) => String(Math.floor(n)).padStart(2, "0");
+const tcode = (t) => { t = Math.max(0, t || 0); return `${p2(t / 3600)}:${p2((t / 60) % 60)}:${p2(t % 60)}:${p2(Math.round((t % 1) * FPS) % FPS)}`; };
 const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
@@ -65,7 +68,7 @@ async function save(patch) {
   finally { pending--; }
 }
 let capTimer = null;
-function saveCaptions() { renderCaptionsUI(); buildGroups(); drawCaption(); clearTimeout(capTimer); capTimer = setTimeout(() => save({ captions: st.captions, keywords: st.keywords }), 500); }
+function saveCaptions() { renderCaptionsUI(); buildGroups(); drawCaption(); renderTimeline(); clearTimeout(capTimer); capTimer = setTimeout(() => save({ captions: st.captions, keywords: st.keywords }), 500); }
 
 // ------------------------------------------------------------ jobs (prep / export) + polling
 function showJobs(prep, exp) {
@@ -122,6 +125,10 @@ function buildGroups() {
 function rawToCut(t) {
   for (const g of kept) if (t >= g.s && t < g.e) return g.off + (t - g.s);
   return null;
+}
+function cutToRaw(ct) {
+  for (const g of kept) if (ct >= g.off && ct < g.off + (g.e - g.s)) return g.s + (ct - g.off);
+  return kept.length ? kept.at(-1).e : 0;
 }
 function cutTotal() { return kept.reduce((a, g) => a + g.e - g.s, 0); }
 
@@ -213,12 +220,20 @@ function bindCaptionUI() {
 // ------------------------------------------------------------ timeline
 function renderTimeline() {
   const dur = st.duration, w = Math.ceil(dur * pps);
-  $("#tlinner").style.width = w + 48 + "px";
+  $("#tlinner").style.width = w + HEAD + 24 + "px";
   $("#tlinner").classList.toggle("locked", st.cut_locked);
-  const step = [1, 2, 5, 10, 15, 30, 60].find((s) => s * pps >= 60) || 120;
+  const step = [1, 2, 5, 10, 15, 30, 60].find((s) => s * pps >= 90) || 120;
   const ticks = [];
-  for (let t = 0; t <= dur; t += step) { const s = document.createElement("span"); s.style.left = t * pps + "px"; s.textContent = fmt(t); ticks.push(s); }
+  for (let t = 0; t <= dur; t += step) { const s = document.createElement("span"); s.style.left = t * pps + "px"; s.textContent = tcode(t); ticks.push(s); }
   $("#ruler").replaceChildren(...ticks);
+  $("#caplane").replaceChildren(...(st.captions.enabled ? groups : []).map((g) => {
+    const b = document.createElement("div"); b.className = "blk capb";
+    const s = cutToRaw(g.s), clip = kept.find((k) => s >= k.s && s < k.e);
+    const e = Math.min(cutToRaw(Math.max(g.s, g.e - 0.01)), clip ? clip.e : Infinity);
+    b.style.left = s * pps + "px"; b.style.width = Math.max(2, (e - s) * pps - 1) + "px";
+    b.textContent = b.title = g.w.map((w) => w.d).join(" ");
+    return b;
+  }));
   $("#blocks").replaceChildren(...st.segments.map((g) => {
     const b = document.createElement("div");
     b.className = `blk ${g.keep ? "keep" : "cut"}${sel === g.id ? " sel" : ""}`;
@@ -242,7 +257,7 @@ function drawWave() {
     const t0 = (x / w) * dur, t1 = ((x + 1) / w) * dur;
     let v = 0; for (let i = Math.floor(t0 / wave.step); i <= Math.min(pk.length - 1, Math.floor(t1 / wave.step)); i++) v = Math.max(v, pk[i]);
     while (si < segs.length - 1 && segs[si].e <= t0) si++;
-    g.fillStyle = segs[si] && segs[si].keep ? "#ff6a1a" : "#3a3f48";
+    g.fillStyle = segs[si] && segs[si].keep ? "#4fa785" : "#3f3f3f";
     const h = Math.max(1, v * (cv.height - 6)); g.fillRect(x, mid - h / 2, 1, h);
   }
 }
@@ -264,15 +279,15 @@ function afterCutChange() { buildGroups(); renderTimeline(); renderDur(); save({
 function renderInfo() {
   const box = $("#selinfo"), g = st.segments.find((x) => x.id === sel);
   $("#lockbtn").textContent = st.cut_locked ? "Corte aprovado ✓ — reabrir" : "Aprovar e travar corte";
-  if (!g) { box.className = "selinfo muted"; box.textContent = "Nenhum trecho selecionado."; return; }
+  if (!g) { box.className = "selinfo muted"; box.textContent = "Clique num clipe da linha do tempo."; return; }
   box.className = "selinfo";
-  const head = document.createElement("div");
-  head.textContent = `#${g.id} · ${g.s.toFixed(2)}–${g.e.toFixed(2)} s (${(g.e - g.s).toFixed(1)} s) · ${g.keep ? "mantido" : "cortado"}`;
+  const head = document.createElement("div"); head.className = "muted small";
+  head.textContent = `Clipe ${g.id} · ${tcode(g.s)} → ${tcode(g.e)} · ${(g.e - g.s).toFixed(1)} s · ${g.keep ? "mantido" : "cortado"}`;
   const text = document.createElement("p"); text.textContent = g.text || "(sem fala)";
-  const row = document.createElement("div"); row.className = "row";
-  const reason = document.createElement("input"); reason.placeholder = "motivo"; reason.value = g.reason || ""; reason.disabled = st.cut_locked;
+  const row = document.createElement("div"); row.className = "row2";
+  const reason = document.createElement("input"); reason.placeholder = "Motivo do corte"; reason.value = g.reason || ""; reason.disabled = st.cut_locked;
   reason.onchange = () => { g.reason = reason.value; save({ segments: st.segments }); };
-  const btn = document.createElement("button"); btn.className = g.keep ? "ghost" : "primary"; btn.disabled = st.cut_locked;
+  const btn = document.createElement("button"); btn.className = g.keep ? "secondary" : "primary"; btn.disabled = st.cut_locked;
   btn.textContent = g.keep ? "Cortar" : "Manter"; btn.onclick = () => toggle(g.id);
   row.append(reason, btn); box.replaceChildren(head, text, row);
 }
@@ -285,11 +300,13 @@ function renderDur() {
 // ------------------------------------------------------------ chat
 function renderChat() {
   const box = $("#msgs"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
-  box.replaceChildren(...(st.chat || []).map((m) => {
-    const d = document.createElement("div"); d.className = "msg " + (m.who === "user" ? "user" : "");
-    const b = document.createElement("b"); b.textContent = m.who === "user" ? "VOCÊ" : "CINEX";
-    d.append(b, document.createTextNode(m.text)); return d;
-  }));
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  const msgs = (st.chat || []).map((m) => {
+    const user = m.who === "user", d = el("div", "msg" + (user ? " user" : ""));
+    const who = el("div", "who", user ? "Você" : "Cinex"); who.append(el("small", "", (m.t || "").slice(11, 16)));
+    d.append(el("div", "av", user ? "V" : "C"), who, el("div", "txt", m.text)); return d;
+  });
+  box.replaceChildren(...(msgs.length ? msgs : [el("div", "empty", "Nenhuma mensagem ainda. Peça um ajuste: “corta a parte em que eu gaguejo”, “legenda maior”…")]));
   if (atEnd) box.scrollTop = box.scrollHeight;
 }
 
@@ -308,9 +325,13 @@ function update() {
   }
   if (st) {
     const t = v.currentTime;
-    $("#playhead").style.left = 40 + t * pps + "px";
-    const ct = rawToCut(t);
-    $("#tc").textContent = $("#skipcut").checked ? `${fmt(ct ?? 0)} / ${fmt(cutTotal())}` : `${fmt(t)} / ${fmt(st.duration)}`;
+    $("#playhead").style.left = HEAD + t * pps + "px";
+    const tl = $("#timeline"), x = t * pps;                      // page the view with the playhead (Premiere)
+    if (!v.paused && (x < tl.scrollLeft || x > tl.scrollLeft + tl.clientWidth - HEAD - 40)) tl.scrollLeft = Math.max(0, x - 40);
+    const ct = rawToCut(t), cut = $("#skipcut").checked;
+    $("#tc").textContent = tcode(cut ? ct ?? 0 : t);
+    $("#tctotal").textContent = tcode(cut ? cutTotal() : st.duration);
+    $("#tlcode").textContent = tcode(t);
     drawCaption();
   }
 }
@@ -322,19 +343,28 @@ function seekFromEvent(e, el) {
 
 // ------------------------------------------------------------ wiring
 function tab(n) {
-  for (const b of document.querySelectorAll(".tabs button[data-tab]")) b.classList.toggle("on", b.dataset.tab === n);
+  for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.classList.toggle("on", b.dataset.tab === n);
   $("#tab-legendas").hidden = n !== "legendas"; $("#tab-corte").hidden = n !== "corte";
 }
 
 function renderAll() {
   if (!st) { $("#phempty").hidden = false; return; }
+  $("#progname").textContent = st.name;
   buildGroups(); renderCaptionsUI(); renderChat(); renderDur(); renderTimeline(); lastKey = ""; drawCaption();
   $("#exportbtn").disabled = !st.segments.length;
 }
 
 async function init() {
   bindCaptionUI();
-  for (const b of document.querySelectorAll(".tabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
+  for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
+  const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };
+  const jump = (dir) => {
+    const t = $("#video").currentTime, list = $("#skipcut").checked ? kept : st.segments;
+    const g = dir > 0 ? list.find((x) => x.s > t + 0.01) : [...list].reverse().find((x) => x.s < t - 0.3);
+    $("#video").currentTime = g ? g.s : dir > 0 ? t : 0;
+  };
+  $("#backbtn").onclick = () => st && step(-1 / FPS); $("#fwdbtn").onclick = () => st && step(1 / FPS);
+  $("#prevbtn").onclick = () => st && jump(-1); $("#nextbtn").onclick = () => st && jump(1);
   $("#project").onchange = (e) => e.target.value && openProject(e.target.value);
   $("#newform").onsubmit = async (e) => {
     e.preventDefault(); const src = $("#srcpath").value.trim(); if (!src) return;
@@ -359,10 +389,12 @@ async function init() {
   $("#video").onplay = () => ($("#playbtn").textContent = "❚❚");
   $("#video").onpause = () => ($("#playbtn").textContent = "▶");
   $("#video").onseeked = $("#video").ontimeupdate = update;      // rAF stops while the tab is hidden
-  $("#phone").onclick = () => $("#playbtn").click();
+  $("#video").onclick = () => $("#playbtn").click();
   document.addEventListener("keydown", (e) => {
     if (e.target.matches("input, select, textarea")) return;
     if (e.code === "Space") { e.preventDefault(); $("#playbtn").click(); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); $("#backbtn").click(); }
+    if (e.key === "ArrowRight") { e.preventDefault(); $("#fwdbtn").click(); }
     if ((e.key === "Delete" || e.key === "Backspace") && sel) toggle(sel);
   });
   window.addEventListener("resize", () => { lastKey = ""; drawCaption(); });

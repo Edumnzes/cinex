@@ -8,88 +8,121 @@
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="logo"></span><div><small>PROJETO</small><select id="project"></select></div></div>
+  <div class="crumbs">
+    <span class="logo" aria-hidden="true"></span>
+    <span class="crumb">Cinex</span><span class="sep">/</span>
+    <select id="project" class="crumb-select" aria-label="Projeto"></select>
+  </div>
   <form id="newform" class="newform">
-    <input id="srcpath" placeholder="Caminho do vídeo, ex.: C:\Users\voce\Downloads\IMG_1234.MOV" autocomplete="off">
-    <button type="submit" class="ghost">Novo projeto</button>
+    <input id="srcpath" placeholder="+ Novo projeto: cole o caminho do vídeo (C:\…\IMG_1234.MOV)" autocomplete="off" aria-label="Caminho do vídeo">
   </form>
   <div class="spacer"></div>
-  <span id="savestate" class="muted"></span>
+  <span id="savestate" class="muted small"></span>
   <button id="exportbtn" class="primary" disabled>Exportar</button>
 </header>
 
 <div id="banner" class="banner" hidden></div>
 
-<main class="grid">
-  <aside class="left">
-    <nav class="tabs">
+<main class="workspace">
+  <!-- inspector -->
+  <section class="panel inspector">
+    <nav class="ptabs">
       <button data-tab="legendas" class="on">Legendas</button>
       <button data-tab="corte">Corte</button>
       <button disabled title="Em breve">Efeitos</button>
-      <button disabled title="Em breve">Tipos</button>
+      <button disabled title="Em breve">Cor</button>
     </nav>
+    <div class="pbody">
+      <div id="tab-legendas">
+        <div class="group-title">Estilo</div>
+        <div class="presets" id="presets"></div>
 
-    <section id="tab-legendas" class="panel">
-      <div class="presets" id="presets"></div>
-      <div class="field"><label>Legendas</label><label class="switch"><input type="checkbox" id="c-enabled"><span></span></label></div>
-      <div class="field"><label>Fonte</label><select id="c-font"></select></div>
-      <div class="field"><label></label><label class="ghost filebtn">Escolher fonte do computador<input type="file" id="c-upload" accept=".ttf,.otf" hidden></label></div>
-      <div class="field" id="weightrow"><label>Peso</label><select id="c-weight"></select></div>
-      <div class="field"><label>Cor</label><input type="color" id="c-color"><label class="mini">Destaque</label><input type="color" id="c-accent"></div>
-      <div class="field"><label>Tamanho</label><input type="range" id="c-size" min="36" max="110"><output id="o-size"></output></div>
-      <div class="field"><label>Contorno</label><input type="range" id="c-stroke" min="0" max="12"><output id="o-stroke"></output></div>
-      <div class="field"><label>Posição</label><input type="range" id="c-y" min="900" max="1440" step="10"><output id="o-y"></output></div>
-      <div class="field"><label>Linhas</label><div class="seg" data-key="lines"><button data-v="1">Uma</button><button data-v="2">Duas</button></div></div>
-      <div class="field"><label>Palavras</label><div class="seg" data-key="words"><button data-v="1">Uma</button><button data-v="3">Até 3</button><button data-v="5">Até 5</button></div></div>
-      <div class="field"><label>Caixa alta</label><label class="switch"><input type="checkbox" id="c-upper"><span></span></label></div>
-      <div class="field"><label>Destacar</label><input id="c-keywords" placeholder="palavras separadas por vírgula"></div>
-    </section>
+        <div class="group-title">Texto</div>
+        <div class="prop"><label>Legendas</label><label class="switch"><input type="checkbox" id="c-enabled"><span></span></label></div>
+        <div class="prop"><label>Fonte</label><select id="c-font"></select></div>
+        <div class="prop"><label></label><label class="link filebtn">Escolher fonte do computador…<input type="file" id="c-upload" accept=".ttf,.otf" hidden></label></div>
+        <div class="prop" id="weightrow"><label>Peso</label><select id="c-weight"></select></div>
+        <div class="prop"><label>Caixa alta</label><label class="switch"><input type="checkbox" id="c-upper"><span></span></label></div>
 
-    <section id="tab-corte" class="panel" hidden>
-      <p class="muted">Clique num bloco da linha do tempo para ver o trecho. Duplo clique alterna entre manter e cortar.</p>
-      <div id="selinfo" class="selinfo muted">Nenhum trecho selecionado.</div>
-      <div class="field"><label>Corte</label><button id="lockbtn" class="ghost"></button></div>
-    </section>
+        <div class="group-title">Aparência</div>
+        <div class="prop"><label>Cor</label><input type="color" id="c-color"><span class="muted small">Destaque</span><input type="color" id="c-accent"></div>
+        <div class="prop"><label>Tamanho</label><input type="range" id="c-size" min="36" max="110"><output id="o-size"></output></div>
+        <div class="prop"><label>Contorno</label><input type="range" id="c-stroke" min="0" max="12"><output id="o-stroke"></output></div>
+        <div class="prop"><label>Posição</label><input type="range" id="c-y" min="900" max="1440" step="10"><output id="o-y"></output></div>
 
-    <section class="chat">
-      <h3>Converse com o Cinex</h3>
-      <div id="msgs" class="msgs"></div>
-      <form id="chatform"><input id="chatin" placeholder="Peça um ajuste ao Cinex…" autocomplete="off"><button class="primary">Enviar</button></form>
-      <small class="muted">As respostas chegam pelo Claude Code: deixe a conversa do Cinex aberta lá.</small>
-    </section>
-  </aside>
+        <div class="group-title">Ritmo</div>
+        <div class="prop"><label>Linhas</label><div class="seg" data-key="lines"><button data-v="1">Uma</button><button data-v="2">Duas</button></div></div>
+        <div class="prop"><label>Palavras</label><div class="seg" data-key="words"><button data-v="1">1</button><button data-v="3">Até 3</button><button data-v="5">Até 5</button></div></div>
+        <div class="prop"><label>Destacar</label><input id="c-keywords" placeholder="palavras, separadas, por vírgula"></div>
+      </div>
 
-  <section class="center">
-    <div class="tlhead">
-      <h3>Edição</h3>
-      <span id="durinfo" class="muted"></span>
+      <div id="tab-corte" hidden>
+        <div class="group-title">Trecho selecionado</div>
+        <div id="selinfo" class="selinfo muted">Clique num clipe da linha do tempo.</div>
+        <div class="group-title">Corte</div>
+        <p class="muted small">Duplo clique num clipe (ou Delete) alterna entre manter e cortar.</p>
+        <button id="lockbtn" class="secondary wide"></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- program monitor -->
+  <section class="panel monitor">
+    <div class="phead"><span class="ptitle">Programa</span><span id="progname" class="muted small"></span>
       <div class="spacer"></div>
-      <label class="muted">Zoom <input type="range" id="tlzoom" min="20" max="200" value="60"></label>
+      <label class="check small"><input type="checkbox" id="skipcut" checked> Prévia do corte</label>
+    </div>
+    <div class="stage">
+      <div class="phone" id="phone">
+        <video id="video" playsinline preload="auto"></video>
+        <div class="cap" id="cap"></div>
+        <div class="ph-empty" id="phempty">Abra ou crie um projeto</div>
+      </div>
+    </div>
+    <div class="transport">
+      <span id="tc" class="timecode">00:00:00:00</span>
+      <div class="spacer"></div>
+      <button class="icon" id="prevbtn" title="Trecho anterior">⏮</button>
+      <button class="icon" id="backbtn" title="Voltar 1 quadro (←)">◂</button>
+      <button class="icon play" id="playbtn" title="Reproduzir (espaço)">▶</button>
+      <button class="icon" id="fwdbtn" title="Avançar 1 quadro (→)">▸</button>
+      <button class="icon" id="nextbtn" title="Próximo trecho">⏭</button>
+      <div class="spacer"></div>
+      <span id="tctotal" class="timecode muted">00:00:00:00</span>
+    </div>
+    <div class="progress" id="exportbox" hidden><div class="bar"><span id="exportbar"></span></div><small id="exportmsg" class="muted"></small></div>
+  </section>
+
+  <!-- comments (chat) -->
+  <section class="panel comments">
+    <div class="phead"><span class="ptitle">Conversa</span><span class="muted small">com o Cinex</span></div>
+    <div id="msgs" class="msgs"></div>
+    <form id="chatform" class="composer">
+      <input id="chatin" placeholder="Peça um ajuste…" autocomplete="off" aria-label="Mensagem">
+      <button class="primary small-btn" aria-label="Enviar">↑</button>
+    </form>
+    <small class="muted hint">As respostas vêm do Claude Code: deixe a conversa do Cinex aberta lá.</small>
+  </section>
+
+  <!-- timeline -->
+  <section class="panel timelinepanel">
+    <div class="phead">
+      <span class="ptitle">Sequência</span>
+      <span id="tlcode" class="timecode big">00:00:00:00</span>
+      <span id="durinfo" class="muted small"></span>
+      <div class="spacer"></div>
+      <span class="legend small muted"><i class="sw keep"></i>mantido <i class="sw cut"></i>cortado</span>
+      <label class="small muted zoom">− <input type="range" id="tlzoom" min="20" max="240" value="60" aria-label="Zoom da linha do tempo"> +</label>
     </div>
     <div class="timeline" id="timeline">
       <div class="tlinner" id="tlinner">
-        <div class="ruler" id="ruler"></div>
-        <div class="track"><span class="ticon">▣</span><div class="blocks" id="blocks"></div></div>
-        <div class="track"><span class="ticon">∿</span><canvas id="wave" height="56"></canvas></div>
+        <div class="row rulerrow"><div class="thead"></div><div class="ruler" id="ruler"></div></div>
+        <div class="row"><div class="thead"><b>C1</b><span>Legendas</span></div><div class="lane" id="caplane"></div></div>
+        <div class="row tall"><div class="thead"><b>V1</b><span>Vídeo</span></div><div class="lane" id="blocks"></div></div>
+        <div class="row tall"><div class="thead"><b>A1</b><span>Áudio</span></div><div class="lane"><canvas id="wave" height="56"></canvas></div></div>
         <div class="playhead" id="playhead"></div>
       </div>
     </div>
-    <div class="legend muted"><span class="sw keep"></span>mantido <span class="sw cut"></span>cortado</div>
-  </section>
-
-  <section class="right">
-    <div class="phone" id="phone">
-      <video id="video" playsinline preload="auto"></video>
-      <div class="cap" id="cap"></div>
-      <div class="ph-empty" id="phempty">Abra ou crie um projeto</div>
-    </div>
-    <div class="controls">
-      <button id="playbtn" class="ghost">▶</button>
-      <span id="tc" class="muted">0:00 / 0:00</span>
-      <div class="spacer"></div>
-      <label class="muted"><input type="checkbox" id="skipcut" checked> Prévia do corte</label>
-    </div>
-    <div class="progress" id="exportbox" hidden><div class="bar"><span id="exportbar"></span></div><small id="exportmsg"></small></div>
   </section>
 </main>
 <script src="/static/app.js"></script>
