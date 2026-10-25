@@ -21,6 +21,7 @@ FFM = imageio_ffmpeg.get_ffmpeg_exe()
 SPECS = {  # Instagram only for now (decided with the user)
     "reels":   dict(size=(1080, 1920), fps=(29.9, 30.1), dur=(3, 180), lufs=(-15.5, -12.5), peak=-1.0),
     "stories": dict(size=(1080, 1920), fps=(23.9, 60.1), dur=(1, 60), lufs=(-15.5, -12.5), peak=-1.0),
+    "desktop": dict(size=(1920, 1080), fps=(29.9, 30.1), dur=(3, 3600), lufs=(-15.5, -12.5), peak=-1.0),   # 16:9 (YouTube, site)
 }
 
 
@@ -61,7 +62,8 @@ def run(argv=None):
         res.append(dict(item=name, status="OK" if ok else ("AVISO" if warn else "FALHA"), valor=val, esperado=want))
 
     add("resolução", (w, h) == spec["size"], f"{w}x{h}", "%dx%d" % spec["size"])
-    add("proporção 9:16", h and abs(w / h - 9 / 16) < .01, f"{w}:{h}", "9:16")
+    ar = "%d:%d" % ((9, 16) if spec["size"][0] < spec["size"][1] else (16, 9))
+    add("proporção " + ar, h and abs(w / h - spec["size"][0] / spec["size"][1]) < .01, f"{w}:{h}", ar)
     add("fps", spec["fps"][0] <= fps <= spec["fps"][1], fps, "%s-%s" % spec["fps"])
     add("duração", spec["dur"][0] <= dur <= spec["dur"][1], f"{dur:.2f}s", "%s-%ss" % spec["dur"])
     add("áudio presente", has_audio, has_audio, True)

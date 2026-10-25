@@ -21,7 +21,7 @@ STATIC = APP / "static"
 PORT = 8765
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)       # no console window flashing on Windows
 MAX_BODY = 25 * 1024 * 1024                     # font uploads
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix"}
+EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 
@@ -90,6 +90,7 @@ class H(BaseHTTPRequestHandler):
         self.send_response(206 if rng and (rng.group(1) or rng.group(2)) else 200)
         self.send_header("Content-Type", ctype); self.send_header("Accept-Ranges", "bytes")
         self.send_header("Content-Length", str(b - a + 1)); self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Cache-Control", "no-cache")      # always revalidate: app updates show up on reload
         if rng and (rng.group(1) or rng.group(2)): self.send_header("Content-Range", f"bytes {a}-{b}/{size}")
         self.end_headers()
         with open(path, "rb") as f:
@@ -160,6 +161,7 @@ class H(BaseHTTPRequestHandler):
             if not (P.folder(name) / "cinex.json").exists(): return self._err(404, "projeto não existe")
             if sub == "state":
                 body = {k: v for k, v in self._json().items() if k in EDITABLE}
+                if body.get("format", "vertical") not in ("vertical", "horizontal"): return self._err(400, "formato inválido")
                 if "segments" in body:
                     for g in body["segments"]:
                         if not (isinstance(g.get("s"), (int, float)) and isinstance(g.get("e"), (int, float)) and isinstance(g.get("keep"), bool)):

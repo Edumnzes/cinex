@@ -122,6 +122,16 @@ function buildGroups() {
   });
 }
 
+function frameSize() { return st && st.format === "horizontal" ? [1920, 1080] : [1080, 1920]; }
+function renderFormat() {
+  const f = (st && st.format) || "vertical";
+  $("#phone").classList.toggle("wide", f === "horizontal");
+  const v = $("#video"), fit = f === "horizontal" && v.videoHeight > v.videoWidth;   // vertical footage in 16:9
+  $("#phone").classList.toggle("fit", fit); $("#bgfill").hidden = !fit;
+  for (const b of $("#fmtseg").children) b.classList.toggle("on", b.dataset.f === f);
+  lastKey = ""; drawCaption();
+}
+
 function rawToCut(t) {
   for (const g of kept) if (t >= g.s && t < g.e) return g.off + (t - g.s);
   return null;
@@ -150,7 +160,7 @@ function drawCaption() {
   if (key === lastKey) return; lastKey = key;
   if (!g) { cap.replaceChildren(); return; }
   ensureFont(c.font);
-  const box = $("#phone").clientWidth, px = (v) => (v * box) / 1080;
+  const [FW] = frameSize(), box = $("#phone").clientWidth, px = (v) => (v * box) / FW;
   cap.style.top = (c.y / 1920) * 100 + "%";
   cap.style.fontFamily = `"cx-${c.font}", system-ui`;
   cap.style.fontWeight = W8[c.weight] || 400;
@@ -163,7 +173,7 @@ function drawCaption() {
     if (c.upper && w.s <= ct && ct < w.e + 0.05) s.style.transform = "scale(1.06)";
     return s;
   });
-  const avail = box * (920 / 1080);
+  const avail = box * ((FW - 160) / FW);
   const line = (ws) => { const d = document.createElement("div"); d.className = "line"; d.append(...ws); return d; };
   let rows = [line(spans)]; cap.replaceChildren(...rows);
   if (c.lines === 2 && spans.length > 1 && rows[0].offsetWidth > avail) {
@@ -333,6 +343,10 @@ function update() {
     $("#tctotal").textContent = tcode(cut ? cutTotal() : st.duration);
     $("#tlcode").textContent = tcode(t);
     drawCaption();
+    if (!$("#bgfill").hidden && v.readyState >= 2) {                  // blurred fill behind vertical footage
+      const c = $("#bgfill"), g = c.getContext("2d"), k = Math.max(c.width / v.videoWidth, c.height / v.videoHeight);
+      g.drawImage(v, (c.width - v.videoWidth * k) / 2, (c.height - v.videoHeight * k) / 2, v.videoWidth * k, v.videoHeight * k);
+    }
   }
 }
 
@@ -349,7 +363,7 @@ function tab(n) {
 
 function renderAll() {
   if (!st) { $("#phempty").hidden = false; return; }
-  $("#progname").textContent = st.name;
+  $("#progname").textContent = st.name; renderFormat();
   buildGroups(); renderCaptionsUI(); renderChat(); renderDur(); renderTimeline(); lastKey = ""; drawCaption();
   $("#exportbtn").disabled = !st.segments.length;
 }
@@ -357,6 +371,7 @@ function renderAll() {
 async function init() {
   bindCaptionUI();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
+  for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };
   const jump = (dir) => {
     const t = $("#video").currentTime, list = $("#skipcut").checked ? kept : st.segments;
@@ -388,7 +403,8 @@ async function init() {
   $("#playbtn").onclick = () => { const v = $("#video"); v.paused ? v.play() : v.pause(); };
   $("#video").onplay = () => ($("#playbtn").textContent = "❚❚");
   $("#video").onpause = () => ($("#playbtn").textContent = "▶");
-  $("#video").onseeked = $("#video").ontimeupdate = update;      // rAF stops while the tab is hidden
+  $("#video").onseeked = $("#video").ontimeupdate = update;
+  $("#video").onloadedmetadata = renderFormat;      // rAF stops while the tab is hidden
   $("#video").onclick = () => $("#playbtn").click();
   document.addEventListener("keydown", (e) => {
     if (e.target.matches("input, select, textarea")) return;

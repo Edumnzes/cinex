@@ -107,7 +107,9 @@ brain**: you propose the cut, answer the app's chat and change the project. Curr
    answer with `say`, and start `wait` again. The user's edits in the app land in the same file — re-read with
    `show` before changing anything, never overwrite their choices without saying so.
 5. Export is the app's button (or `app_project.py export <name>`): cut → captions with the engine → −14 LUFS →
-   `Downloads/<name>_cinex.mp4`. Then run `qa.py` on `~/reels/<name>/final.mp4` and report it in the chat.
+   `Downloads/<name>_cinex.mp4` (or `_cinex_16x9.mp4` when `format` is "horizontal" — Desktop 16:9; vertical footage
+   is then fitted over a blurred fill). Then run `qa.py` on `~/reels/<name>/final.mp4` (`--platform desktop` for
+   16:9) and report it in the chat.
 
 ## 0. Environment (once per machine, ~2 min)
 

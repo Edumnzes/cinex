@@ -70,10 +70,12 @@
   <section class="panel monitor">
     <div class="phead"><span class="ptitle">Programa</span><span id="progname" class="muted small"></span>
       <div class="spacer"></div>
+      <div class="seg" id="fmtseg" role="group" aria-label="Formato"><button data-f="vertical" title="Reels, Stories, TikTok, Shorts">Mobile 9:16</button><button data-f="horizontal" title="YouTube, site, apresentações">Desktop 16:9</button></div>
       <label class="check small"><input type="checkbox" id="skipcut" checked> Prévia do corte</label>
     </div>
     <div class="stage">
       <div class="phone" id="phone">
+        <canvas id="bgfill" width="64" height="36" hidden></canvas>
         <video id="video" playsinline preload="auto"></video>
         <div class="cap" id="cap"></div>
         <div class="ph-empty" id="phempty">Abra ou crie um projeto</div>

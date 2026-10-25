@@ -1035,5 +1035,5 @@ class Reel:
                             "[0:a][1:a]amix=inputs=2:normalize=0:duration=first[a]", "-map", "0:v", "-map", "[a]",
                             "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", out], check=True)
             Path(tmp).unlink(); print("mixed sfx into", out)
-        subprocess.run([FFM, "-loglevel", "error", "-y", "-i", out, "-vf", "fps=1/2,scale=180:320,tile=9x4", "-frames:v", "1", "final_sheet.jpg"])
+        subprocess.run([FFM, "-loglevel", "error", "-y", "-i", out, "-vf", f"fps=1/2,scale={180 if W < H else 320}:{320 if W < H else 180},tile={9 if W < H else 6}x{4 if W < H else 6}", "-frames:v", "1", "final_sheet.jpg"])
         print("wrote final_sheet.jpg")

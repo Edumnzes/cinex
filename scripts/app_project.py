@@ -24,6 +24,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = Path.home() / "reels"
 PY = sys.executable
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
+FORMATS = {"vertical": (1080, 1920), "horizontal": (1920, 1080)}    # Mobile 9:16 / Desktop 16:9
 CAPTIONS = {"enabled": True, "font": "sans", "weight": "Black", "color": "#FFFFFF", "accent": "#FFD400", "size": 62,
             "stroke": 6, "lines": 1, "words": 3, "upper": True, "y": 1300}
 
@@ -122,7 +123,7 @@ def new(src, name=None, prompt=None):
     d = folder(name); d.mkdir(parents=True, exist_ok=True)
     if not (d / "cinex.json").exists():
         _write_json(d / "cinex.json", dict(version=1, rev=0, name=name, src=str(src), duration=round(duration(src), 2),
-                                           segments=[], cut_locked=False, captions=dict(CAPTIONS), keywords=[], fix={},
+                                           segments=[], cut_locked=False, captions=dict(CAPTIONS), format="vertical", keywords=[], fix={},
                                            chat=[], created=_now()))
     prepare(name, prompt)
     return name
@@ -214,6 +215,13 @@ def remap_words(words, segs):
     return out
 
 
+def source_is_vertical(d):
+    """From the preview proxy, which already has the phone rotation applied."""
+    e = subprocess.run([_ff(), "-hide_banner", "-i", str(d / "preview.mp4")], capture_output=True, text=True, encoding="utf-8", errors="replace").stderr
+    w, h = map(int, re.search(r"Video:.*?(\d{2,5})x(\d{2,5})", e).groups())
+    return h > w
+
+
 def rgba(h, a=255):
     h = h.lstrip("#"); return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) + (a,)
 
@@ -221,12 +229,14 @@ def rgba(h, a=255):
 def export(name):
     """Runs in its own process (the app starts `app_project.py export <name>`); progress goes to export.json."""
     d = folder(name); st = load(name); c = st["captions"]; os.chdir(d)
+    fmt = st.get("format", "vertical"); FW, FH = FORMATS[fmt]
     try:
         kept = [g for g in st["segments"] if g["keep"]]
         if not kept: raise ValueError("nenhum trecho mantido no corte")
         job(name, "export", step="Cortando", pct=3, done=False, error=None, out=None)
         _write_json(d / "keep.json", [[g["s"], g["e"]] for g in kept])
-        subprocess.run([PY, str(HERE / "cut.py"), st["src"], "keep.json", "cut.mp4", "--size", "1080x1920", "--crf", "16"],
+        fit = "blur" if fmt == "horizontal" and source_is_vertical(d) else "crop"
+        subprocess.run([PY, str(HERE / "cut.py"), st["src"], "keep.json", "cut.mp4", "--size", f"{FW}x{FH}", "--crf", "16", "--fit", fit],
                        check=True, capture_output=True)
         words = json.loads((d / "words_raw.json").read_text(encoding="utf-8"))
         _write_json(d / "words.json", remap_words(words, kept))
@@ -234,6 +244,8 @@ def export(name):
         subprocess.run([PY, str(HERE / "faces.py"), "cut.mp4", "faces.json"], check=True, capture_output=True)
         job(name, "export", step="Desenhando legendas", pct=25)
         sys.path.insert(0, str(HERE)); import reels_lib as R
+        R.W, R.H = FW, FH                               # the engine reads the frame size at render time
+        R.SAFE_TOP, R.SAFE_BOTTOM = (270, FH - 480) if fmt == "vertical" else (60, FH - 60)
         fam = c["font"]
         if fam not in R.FONTS:                          # a font file the user picked in the app (project fonts/)
             fp = d / "fonts" / fam
@@ -246,12 +258,12 @@ def export(name):
         dur = duration(d / "cut.mp4")
         reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, 1.0, 1.0, R.eio)], ranges=[(0, dur + 1, "big")],
                       keywords=st.get("keywords", []), fix=st.get("fix", {}), caption_style="app", accent=rgba(c["accent"]),
-                      look="none", jumpcuts=[], cuts=[], correct=False, cap_y=int(c["y"]))
+                      look="none", jumpcuts=[], cuts=[], correct=False, cap_y=int(c["y"] / 1920 * FH))     # y is stored on the 9:16 scale; same relative height
         if not c["enabled"]: reel.groups = []
         reel.render("render.mp4", lambda f: job(name, "export", step="Renderizando", pct=25 + int(f * 65)))
         job(name, "export", step="Ajustando o volume (-14 LUFS)", pct=92)
         subprocess.run([PY, str(HERE / "mix_audio.py"), "render.mp4", "render.mp4", "final.mp4"], check=True, capture_output=True)
-        out = Path.home() / "Downloads" / f"{name}_cinex.mp4"
+        out = Path.home() / "Downloads" / f"{name}_cinex{'' if fmt == 'vertical' else '_16x9'}.mp4"
         shutil.copy2(d / "final.mp4", out)
         job(name, "export", step="Pronto", pct=100, done=True, out=str(out))
         say(name, f"Vídeo exportado: {out.name} ({dur:.1f} s), na pasta Downloads.")
