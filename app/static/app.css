@@ -56,6 +56,10 @@ input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .workspace { display: grid; gap: 4px; padding: 4px; height: calc(100% - 46px);
   grid-template-columns: 300px minmax(0, 1fr) 290px; grid-template-rows: minmax(0, 1fr) 236px;
   grid-template-areas: "insp mon chat" "tl tl tl"; }
+/* Mobile layout: the 9:16 monitor stands full height on the left; the tools share the rest. */
+body.lay-mobile .workspace {
+  grid-template-columns: calc((100vh - 170px) * 9 / 16 + 24px) 300px minmax(0, 1fr);
+  grid-template-areas: "mon insp chat" "mon tl tl"; }
 .panel { background: var(--panel); border-radius: 8px; min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .inspector { grid-area: insp; } .monitor { grid-area: mon; } .comments { grid-area: chat; } .timelinepanel { grid-area: tl; }
 .phead { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 12px; border-bottom: 1px solid var(--line); flex: none; }
@@ -153,8 +157,10 @@ canvas#wave { display: block; height: 56px; margin-top: 4px; cursor: text; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 @media (max-width: 1100px) {
-  .workspace { grid-template-columns: 1fr; grid-template-rows: auto 70vh 260px auto; height: auto;
+  .workspace, body.lay-mobile .workspace { grid-template-columns: 1fr; grid-template-rows: auto 70vh 260px auto; height: auto;
     grid-template-areas: "insp" "mon" "tl" "chat"; }
   .comments { min-height: 320px; }
   .newform { display: none; }
 }
+.phead .seg button, .phead .check { white-space: nowrap; }
+body.lay-mobile #progname { display: none; }

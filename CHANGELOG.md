@@ -24,7 +24,8 @@
 - Interface no estilo Premiere + Notion: painéis (inspetor, monitor de programa, conversa, sequência), trilhas C1/V1/A1
   com cabeçalho, timecode HH:MM:SS:QQ, transporte (quadro a quadro, trecho anterior/próximo, setas do teclado),
   linha do tempo que acompanha a reprodução, conversa em estilo de comentários e paleta neutra.
-- Formato no app: **Mobile 9:16** (Reels) ou **Desktop 16:9** (mantém o horizontal), com prévia e exportação
+- Formato no app: **Mobile 9:16** (Reels) ou **Desktop 16:9** (mantém o horizontal). No Mobile o layout do programa
+  muda: a prévia vertical fica em pé à esquerda, em toda a altura, e as ferramentas ocupam o resto. Prévia e exportação
   em cada um (`<nome>_cinex.mp4` / `<nome>_cinex_16x9.mp4`). Vídeo gravado em pé no 16:9 aparece inteiro, com
   fundo desfocado nas laterais (`cut.py --fit blur`). `qa.py --platform desktop` confere o 16:9.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.

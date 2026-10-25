@@ -126,6 +126,8 @@ function frameSize() { return st && st.format === "horizontal" ? [1920, 1080] : 
 function renderFormat() {
   const f = (st && st.format) || "vertical";
   $("#phone").classList.toggle("wide", f === "horizontal");
+  document.body.classList.toggle("lay-mobile", f === "vertical");       // app layout follows the preview shape
+  if (st) requestAnimationFrame(renderTimeline);                          // the timeline panel changed width
   const v = $("#video"), fit = f === "horizontal" && v.videoHeight > v.videoWidth;   // vertical footage in 16:9
   $("#phone").classList.toggle("fit", fit); $("#bgfill").hidden = !fit;
   for (const b of $("#fmtseg").children) b.classList.toggle("on", b.dataset.f === f);

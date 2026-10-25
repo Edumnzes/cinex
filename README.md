@@ -125,7 +125,9 @@ Abre em http://127.0.0.1:8765 (só no seu computador). Na tela:
   posição, uma ou duas linhas, quantas palavras por vez.
 - **Conversa com o Cinex:** peça ajustes por escrito. Quem responde é o Claude Code, que precisa estar
   com a conversa aberta.
-- **Mobile 9:16 ou Desktop 16:9:** escolha no monitor. Vídeo gravado em pé no 16:9 fica inteiro, com fundo desfocado.
+- **Mobile ou Desktop:** escolha no monitor. No Mobile a prévia vertical fica em pé à esquerda e as ferramentas
+  ocupam o resto da tela; no Desktop a prévia é horizontal, no centro. Vídeo gravado em pé no 16:9 fica inteiro,
+  com fundo desfocado.
 - **Aprovar e travar corte** e **Exportar:** o vídeo final vai para `Downloads/<nome>_cinex.mp4` (ou `_cinex_16x9.mp4`).
 
 Nesta primeira fase o app faz corte e legendas. Zoom, motion, cor e efeitos sonoros continuam pelo fluxo normal.
