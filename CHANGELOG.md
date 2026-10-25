@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.0.0 — em desenvolvimento (branch `v2`)
+## 2.0.0 — 2026-10-25
 - **Perfil da marca como primeiro passo**: briefing curto + análise somente leitura dos Reels e Insights
   do Instagram (login feito pela pessoa), salvo em `~/instagram-legendas/<arroba>/` e reaproveitado.
 - Pasta compartilhada com a skill `legendas-instagram` (`perfil.md`), mais `video.md`, `marca.json` e `videos.md`.
