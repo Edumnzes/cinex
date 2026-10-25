@@ -14,7 +14,7 @@ Usage (CLI):
     python brand.py log <handle> "<line>"   # append a delivered reel to videos.md
 In project.py:
     from brand import load_brand
-    B = load_brand("ynvestsolar")           # dict with every key of the template filled in
+    B = load_brand("suamarca")              # dict with every key of the template filled in
 """
 import json, sys, datetime
 from pathlib import Path

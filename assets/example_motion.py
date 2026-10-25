@@ -1,4 +1,4 @@
-"""RSD (desligamento rápido) — motion explicativo, só texto na tela, Ynvest Solar.
+"""RSD (desligamento rápido) — motion explicativo, só texto na tela, marca fictícia "Sol Exemplo".
 Conteúdo-base: explicação de @infinitienergybrasil / @joao.growsolar (reescrita, sem áudio nem imagem deles).
 Estilo: referências de motion limpo (fundo claro, 1 cor de marca, cards, tipografia cinética) + diagramas de
 sistema solar com fluxo CC/CA e mudança de estado.
@@ -203,9 +203,9 @@ def draw(ov, t):
     p = prog(t, CTA0 + 1.1, .4)
     if p > 0:
         pulse = 1 + .025 * math.sin(max(0, t - CTA0 - 1.6) * 6)
-        pill(ov, W / 2, 900, "Fale com a Ynvest Solar", ts("md"), GOLD, INK, s=(.6 + .4 * eback(p)) * pulse, a=eo(p))
+        pill(ov, W / 2, 900, "Fale com a Sol Exemplo", ts("md"), GOLD, INK, s=(.6 + .4 * eback(p)) * pulse, a=eo(p))
     p = prog(t, CTA0 + 1.6, .4)
-    if p > 0: label(ov, "@ynvestsolar", W / 2, 1000, ts("sm"), MUTE, "SemiBold", a=eo(p))
+    if p > 0: label(ov, "@solexemplo", W / 2, 1000, ts("sm"), MUTE, "SemiBold", a=eo(p))
 
 
 # SFX only on key events (manual 5): 9 sounds in 62 s. A riser leads into the rapid-shutdown switch.

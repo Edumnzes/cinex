@@ -12,6 +12,8 @@
   também no FLUXO, `cuts=CUTS` (de cuts.json) em todos os guias, 13 formatos no diagrama.
 - `sfx_ingest.py`: nunca sobrescreve um som do banco (antes, apagar um arquivo do meio da numeração fazia o
   próximo som importado substituir outro, e um original repetido em `_processados` interrompia a importação).
+- Exemplos com marca fictícia ("Sol Exemplo", `suamarca`) no lugar de marcas reais; o PDF do manual de edição
+  deixa de ser distribuído (as regras continuam em `references/manual-edicao.md`).
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.
 
 ## 2.0.0 — 2026-10-25

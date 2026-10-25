@@ -51,7 +51,7 @@ com o Adobe Podcast Enhance Speech.
 | Entrega (Instagram) | Reel, capa, prévia do recorte da grade do perfil e partes para Stories se passar de 60 s |
 
 O fluxo completo, passo a passo, está em [docs/FLUXO.md](docs/FLUXO.md). Os critérios de edição seguem o
-[Manual Técnico de Edição](docs/Manual_Tecnico_IA_Editor_Social_Media.pdf), transformado em regras em
+*Manual Técnico de Edição Profissional para Social Media* do autor, transformado em regras em
 [references/manual-edicao.md](references/manual-edicao.md) — ele prevalece sobre as outras referências.
 
 ## Requisitos
@@ -121,8 +121,7 @@ cinex/
 ├── CHANGELOG.md
 ├── requirements.txt
 ├── docs/
-│   ├── FLUXO.md              # o fluxo completo, do vídeo bruto à entrega
-│   └── Manual_Tecnico_IA_Editor_Social_Media.pdf   # manual de edição (fonte)
+│   └── FLUXO.md              # o fluxo completo, do vídeo bruto à entrega
 ├── scripts/
 │   ├── setup_env.py          # cria ~/reelsenv e instala dependências
 │   ├── transcribe.py         # transcrição com faster-whisper (tempo por palavra)

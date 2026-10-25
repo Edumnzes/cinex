@@ -1,6 +1,6 @@
 """Word-level transcription with faster-whisper.
 
-Usage: python transcribe.py <video_or_audio> <out_words.json> [--lang pt] [--model medium] [--prompt "Growatt, RISE 261"]
+Usage: python transcribe.py <video_or_audio> <out_words.json> [--lang pt] [--model medium] [--prompt "SuaMarca, Produto X"]
 Writes [{"w": word, "s": start, "e": end, "p": prob}, ...] and prints a readable line with
 gaps > 0.35 s marked as ⟨1.2s⟩ and low-confidence words marked (?).
 --prompt biases spelling of brand/product names (strongly recommended).

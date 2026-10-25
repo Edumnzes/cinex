@@ -1,7 +1,7 @@
 # Manual de edição — critérios da skill
 
-Fonte: *Manual Técnico de Edição Profissional para Social Media* v1.0 (set/2026), do dono da skill
-(`docs/Manual_Tecnico_IA_Editor_Social_Media.pdf`). Este arquivo transforma o manual em regras
+Fonte: *Manual Técnico de Edição Profissional para Social Media* v1.0 (set/2026), do autor da skill
+(o PDF não é distribuído no repositório). Este arquivo transforma o manual em regras
 operacionais. **Quando outra referência da skill contradisser este arquivo, vale este arquivo.**
 
 ## Conteúdo
