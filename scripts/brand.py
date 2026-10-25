@@ -2,10 +2,10 @@
 
 One folder per Instagram handle:  ~/instagram-legendas/<handle>/
     perfil.md     business, audience, voice, insights        (written by either skill)
-    video.md      Reels analysis + editing direction           (reels-editor)
-    marca.json    machine-readable defaults for project.py     (reels-editor)
+    video.md      Reels analysis + editing direction           (cinex)
+    marca.json    machine-readable defaults for project.py     (cinex)
     historico.md  captions delivered                           (legendas-instagram)
-    videos.md     reels delivered                              (reels-editor)
+    videos.md     reels delivered                              (cinex)
 
 Usage (CLI):
     python brand.py list                    # handles that already have a profile

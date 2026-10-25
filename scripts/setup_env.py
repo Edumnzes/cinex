@@ -1,4 +1,4 @@
-"""Create (or reuse) the Python venv used by the reels-editor skill.
+"""Create (or reuse) the Python venv used by the Cinex skill.
 
 Usage:  python setup_env.py [venv_dir]      (default: ~/reelsenv)
 Prints the venv python path and the bundled ffmpeg path.

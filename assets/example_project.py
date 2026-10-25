@@ -10,7 +10,7 @@ For a video with no footage at all (format `motion_explicativo`) start from exam
 """
 import sys, math, json
 from pathlib import Path
-SKILL = Path.home() / ".claude" / "skills" / "reels-editor"
+SKILL = Path.home() / ".claude" / "skills" / "cinex"
 sys.path.insert(0, str(SKILL / "scripts"))
 from reels_lib import *  # noqa: F401,F403  (Reel, T, RR, paste, pill, icon, easing, colours, bands, ts, slot)
 from fx import blur_text                                  # at most 2 text animations per video; this one uses 1

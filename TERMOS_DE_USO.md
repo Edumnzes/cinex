@@ -2,7 +2,7 @@
 
 Última atualização: 29/09/2026
 
-Estes termos valem para qualquer pessoa autorizada a usar a skill **Reels Editor**
+Estes termos valem para qualquer pessoa autorizada a usar a skill **Cinex** (antigo Reels Editor)
 (o "Software"). O uso do Software também está sujeito à [LICENSE.md](LICENSE.md).
 Ao usar o Software, você concorda com estes termos.
 

@@ -7,7 +7,7 @@ import sys, math
 from functools import lru_cache
 from PIL import Image, ImageDraw
 from pathlib import Path
-sys.path.insert(0, str(Path.home() / ".claude" / "skills" / "reels-editor" / "scripts"))
+sys.path.insert(0, str(Path.home() / ".claude" / "skills" / "cinex" / "scripts"))
 from motion_lib import *  # noqa
 
 # ============================================================ ROTEIRO (texto = narração)

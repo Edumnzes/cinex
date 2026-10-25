@@ -1,4 +1,6 @@
-# Reels Editor — skill para Claude Code
+# Cinex — edição de Reels com o Claude Code
+
+_Antigo **reels-editor**. A partir da v3 a ferramenta se chama Cinex._
 
 Transforma vídeos brutos gravados no celular em **Reels / TikTok / Shorts prontos (1080×1920)**:
 corta pausas e respirações, coloca legendas dinâmicas palavra por palavra, faz zooms suaves
@@ -61,11 +63,11 @@ Não é preciso instalar ffmpeg: a skill usa o binário do pacote `imageio-ffmpe
 ## Instalação
 
 ```bash
-git clone https://github.com/Edumnzes/reels-editor.git ~/.claude/skills/reels-editor
+git clone https://github.com/Edumnzes/cinex.git ~/.claude/skills/cinex
 ```
 
 ```bash
-python ~/.claude/skills/reels-editor/scripts/setup_env.py
+python ~/.claude/skills/cinex/scripts/setup_env.py
 ```
 
 O segundo comando cria o ambiente Python em `~/reelsenv` (caminho curto de propósito — caminhos
@@ -75,7 +77,7 @@ Ele imprime o caminho do Python e do ffmpeg que a skill vai usar.
 Para atualizar depois:
 
 ```bash
-git -C ~/.claude/skills/reels-editor pull
+git -C ~/.claude/skills/cinex pull
 ```
 
 ## Como usar
@@ -84,7 +86,7 @@ No Claude Code, anexe o vídeo e chame a skill:
 
 ```
 @"C:\Users\voce\Downloads\VIDEO.MOV"
-/reels-editor
+/cinex
 ```
 
 Ou simplesmente peça em linguagem natural: *"edita esse vídeo para Reels, corta as pausas e
@@ -104,7 +106,7 @@ ajustes (texto, cor, tempo) sejam rápidos — basta pedir.
 ## Estrutura do repositório
 
 ```
-reels-editor/
+cinex/
 ├── SKILL.md                  # instruções que o Claude segue (ponto de entrada da skill)
 ├── README.md                 # este arquivo
 ├── LICENSE.md                # licença proprietária
@@ -211,7 +213,7 @@ e a visão geral da conta. Daí saem as regras de edição daquela marca.
 | `videos.md` | Histórico de Reels entregues |
 
 ```bash
-python ~/.claude/skills/reels-editor/scripts/brand.py list
+python ~/.claude/skills/cinex/scripts/brand.py list
 ```
 
 Mostra as marcas que já têm perfil. Para ver ou apagar, é só abrir a pasta — são arquivos de texto.
@@ -222,11 +224,11 @@ Seu acervo fica em `~/reels-banco` — fora do Git, porque fontes, motions e son
 redistribuídos. Criar e conferir:
 
 ```bash
-python ~/.claude/skills/reels-editor/scripts/banco.py init
+python ~/.claude/skills/cinex/scripts/banco.py init
 ```
 
 ```bash
-python ~/.claude/skills/reels-editor/scripts/banco.py check
+python ~/.claude/skills/cinex/scripts/banco.py check
 ```
 
 | Pasta | O que colocar | Uso |
@@ -257,7 +259,7 @@ no máximo ~2 a cada 10 s e nunca em corte simples. A skill **não baixa sons so
 `~/reels-banco/sfx/_entrada/` e peça ao Claude para organizar — ou rode:
 
 ```bash
-python ~/.claude/skills/reels-editor/scripts/sfx_ingest.py --origem Pixabay
+python ~/.claude/skills/cinex/scripts/sfx_ingest.py --origem Pixabay
 ```
 
 Cada som é classificado pelo nome e pela análise do áudio, tem o silêncio cortado e o volume igualado, e vai

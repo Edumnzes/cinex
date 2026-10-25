@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.0 — em desenvolvimento (branch `v3`)
+- A ferramenta passa a se chamar **Cinex** (antes reels-editor): skill `cinex`, repositório `Edumnzes/cinex`
+  (o link antigo redireciona), desenvolvimento na pasta `PROGRAMACAO/CINEX`, instalada em `~/.claude/skills/cinex`
+  por uma junção (link de pasta) que aponta para ela.
+- As pastas de dados não mudam: `~/reels-banco`, `~/instagram-legendas`, `~/reels`.
+
 ## 2.0.0 — 2026-10-25
 - **Perfil da marca como primeiro passo**: briefing curto + análise somente leitura dos Reels e Insights
   do Instagram (login feito pela pessoa), salvo em `~/instagram-legendas/<arroba>/` e reaproveitado.

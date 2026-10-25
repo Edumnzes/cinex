@@ -43,9 +43,9 @@ escolhido e segue o padrão (não copia o conteúdo de ninguém — copia a estr
 - Duração típica:
 - CTA:
 """
-README = """# Banco da skill reels-editor
+README = """# Banco da skill Cinex
 
-Pasta lida pela skill `reels-editor` (fora do Git de propósito: arquivos licenciados não podem ser redistribuídos).
+Pasta lida pela skill `cinex` (fora do Git de propósito: arquivos licenciados não podem ser redistribuídos).
 
 | Pasta | O que colocar | Como a skill usa |
 |---|---|---|
@@ -54,7 +54,7 @@ Pasta lida pela skill `reels-editor` (fora do Git de propósito: arquivos licenc
 | `motions/<categoria>/` | vídeo com transparência (`.mov` ProRes 4444 ou `.webm` VP9), `.gif` ou pasta de PNGs | sobrepostos no vídeo (`overlays=[...]`) |
 | `sfx/<categoria>/` | `.wav` / `.mp3` (pop, whoosh, click, ding, riser, impact, flash, tick, error) | `sfx=[(t, "pop", -12)]`; varia entre os arquivos da categoria |
 
-Verifique tudo com:  python ~/.claude/skills/reels-editor/scripts/banco.py check
+Verifique tudo com:  python ~/.claude/skills/cinex/scripts/banco.py check
 
 ## Licenças
 Guarde junto de cada item a origem e a licença (arquivo `licenca.txt` na pasta ou campo `licenca` nos índices).
@@ -72,7 +72,7 @@ Guarde junto de cada item a origem e a licença (arquivo `licenca.txt` na pasta 
 
 ENTRADA_TXT = """Coloque aqui os efeitos sonoros que você baixar (Pixabay, Mixkit, Motion Array...), com qualquer nome.
 Depois peça ao Claude para organizar os sons, ou rode:
-  python ~/.claude/skills/reels-editor/scripts/sfx_ingest.py --origem Pixabay
+  python ~/.claude/skills/cinex/scripts/sfx_ingest.py --origem Pixabay
 Cada som é classificado (click, pop, whoosh, ding, riser, impact, flash, tick, error), tem o silêncio
 cortado, o volume igualado e vai para a pasta da categoria. Os originais ficam em _processados.
 O que não der para classificar vai para sfx/_revisar.
