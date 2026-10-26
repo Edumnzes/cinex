@@ -107,7 +107,7 @@ function buildGroups() {
   kept = playOrder();                         // play order (phrases may be reordered)
   let off = 0; const toks = [], c = st.captions, fix = st.fix || {}, keys = new Set((st.keywords || []).map((k) => k.toUpperCase()));
   for (const g of kept) {
-    for (const w of words) {
+    for (const w of segSilent(g) ? [] : words) {          // no captions where the voice is muted
       const m = (w.s + w.e) / 2; if (m < g.s || m >= g.e) continue;
       const s = off + Math.max(0, w.s - g.s), e = off + Math.min(g.e, w.e) - g.s;
       if (w.w.startsWith("-") && toks.length) { toks.at(-1).d += w.w; toks.at(-1).e = e; continue; }
@@ -115,7 +115,7 @@ function buildGroups() {
       const d = c.upper ? core.toUpperCase() : core;
       toks.push({ d, s, e, brk: /[,.?!]$/.test(w.w), key: keys.has(d.toUpperCase()) });
     }
-    g.off = off; off += g.e - g.s;
+    g.off = off; off += segLen(g);
   }
   const out = []; let cur = [];
   for (const t of toks) {
@@ -236,15 +236,17 @@ function camera(t) {
   v.style.transform = z > 1.001 ? `scale(${z})` : "";
 }
 
+const segSpeed = (g) => g.speed || 1, segLen = (g) => (g.e - g.s) / segSpeed(g);      // slow motion stretches the cut
+const segSilent = (g) => !!g.mudo || segSpeed(g) < 1;
 function rawToCut(t) {
-  for (const g of kept) if (t >= g.s && t < g.e) return g.off + (t - g.s);
+  for (const g of kept) if (t >= g.s && t < g.e) return g.off + (t - g.s) / segSpeed(g);
   return null;
 }
 function cutToRaw(ct) {
-  for (const g of kept) if (ct >= g.off && ct < g.off + (g.e - g.s)) return g.s + (ct - g.off);
+  for (const g of kept) if (ct >= g.off && ct < g.off + segLen(g)) return g.s + (ct - g.off) * segSpeed(g);
   return kept.length ? kept.at(-1).e : 0;
 }
-function cutTotal() { return kept.reduce((a, g) => a + g.e - g.s, 0); }
+function cutTotal() { return kept.reduce((a, g) => a + segLen(g), 0); }
 
 function ensureFont(id) {
   if (loadedFonts.has(id)) return; loadedFonts.add(id);
@@ -366,12 +368,13 @@ function renderTimeline() {
     const b = document.createElement("div");
     b.className = `blk ${g.keep ? "keep" : "cut"}${sel === g.id ? " sel" : ""}`;
     b.style.left = g.s * pps + "px"; b.style.width = Math.max(2, (g.e - g.s) * pps - 2) + "px";
-    b.textContent = (g.keep && reo && pn.get(g.id) ? pn.get(g.id) + " · " : "") + (g.keep ? g.text || "…" : g.reason || "cortado"); b.title = `#${g.id} ${g.s.toFixed(2)}–${g.e.toFixed(2)} s\n${g.text || ""}`;
+    const tag = g.keep ? (segSpeed(g) < 1 ? `◷ ${String(segSpeed(g)).replace(".", ",")}x · ` : "") + (g.mudo ? "mudo · " : "") : "";
+    b.textContent = (g.keep && reo && pn.get(g.id) ? pn.get(g.id) + " · " : "") + tag + (g.keep ? g.text || "…" : g.reason || "cortado"); b.title = `#${g.id} ${g.s.toFixed(2)}–${g.e.toFixed(2)} s\n${g.text || ""}`;
     b.onclick = () => select(g.id, true);
     b.ondblclick = () => toggle(g.id);
     return b;
   }));
-  drawWave(); renderInfo(); renderFx(); renderBroll(); renderOrder(); renderClips();
+  drawWave(); renderInfo(); renderFx(); renderBroll(); renderOrder(); renderClips(); renderMusic();
 }
 
 function drawWave() {
@@ -418,10 +421,35 @@ function renderInfo() {
   const btn = document.createElement("button"); btn.className = g.keep ? "secondary" : "primary"; btn.disabled = st.cut_locked;
   btn.textContent = g.keep ? "Cortar" : "Manter"; btn.onclick = () => toggle(g.id);
   row.append(reason, btn); box.replaceChildren(head, text, row);
+  if (!g.keep) return;
+  // speed + sound of the stretch (talks, demos: slow motion on the action, image-only stretches for music)
+  const sp = document.createElement("div"); sp.className = "prop";
+  const seg = document.createElement("div"); seg.className = "seg";
+  for (const v of [1, .5, .35, .25]) {
+    const x = document.createElement("button"); x.textContent = String(v).replace(".", ",") + "x"; x.disabled = st.cut_locked;
+    x.className = segSpeed(g) === v ? "on" : ""; x.onclick = () => { if (v === 1) delete g.speed; else g.speed = v; afterCutChange(); };
+    seg.append(x);
+  }
+  const l1 = document.createElement("label"); l1.textContent = "Velocidade"; sp.append(l1, seg);
+  const mu = document.createElement("label"); mu.className = "check small";
+  const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = segSilent(g); cb.disabled = st.cut_locked || segSpeed(g) < 1;
+  cb.onchange = () => { g.mudo = cb.checked; if (!g.mudo) delete g.mudo; afterCutChange(); };
+  mu.append(cb, document.createTextNode(" sem som (só imagem; a legenda some)"));
+  const r2 = document.createElement("div"); r2.className = "prop"; const l2 = document.createElement("label"); l2.textContent = "Som"; r2.append(l2, mu);
+  const pk = document.createElement("button"); pk.className = "secondary wide"; pk.disabled = st.cut_locked || g.e - g.s < 2.5;
+  pk.textContent = "Câmera lenta no pico de ação (2 s a 0,35x)"; pk.title = "Acha o momento de mais movimento e brilho do trecho e separa 2 s em câmera lenta";
+  pk.onclick = async () => {
+    pk.disabled = true; pk.textContent = "Procurando o pico…";
+    try { const r = await api(`/api/p/${name}/lenta`, { method: "POST", body: JSON.stringify({ id: g.id }) }); await reloadState();
+          $("#video").currentTime = r.s; } catch (err) { alert(err.message); }
+  };
+  const note = document.createElement("p"); note.className = "muted small";
+  note.textContent = "Câmera lenta sai interpolada (sem pulos) e sem som. Use em demonstração, ação ou detalhe; fala em câmera lenta não funciona.";
+  box.append(sp, r2, pk, note);
 }
 
 function renderDur() {
-  const k = st.segments.filter((g) => g.keep).reduce((a, g) => a + g.e - g.s, 0);
+  const k = st.segments.filter((g) => g.keep).reduce((a, g) => a + segLen(g), 0);
   $("#durinfo").textContent = `${fmt(st.duration)} → ${fmt(k)} · ${st.segments.filter((g) => !g.keep).length} cortes`;
 }
 
@@ -458,6 +486,52 @@ function bindClips() {
   };
 }
 
+// ------------------------------------------------------------ music (a licensed track; viral songs go in Instagram's editor)
+function renderMusic() {
+  const box = $("#musicbox"), mu = st.music;
+  if (!mu || !mu.src) { box.className = "selinfo muted"; box.textContent = "Sem música no vídeo exportado."; $("#music").removeAttribute("src"); return; }
+  box.className = "selinfo";
+  const head = document.createElement("div"); head.className = "small"; head.textContent = "♪ " + mu.src.split(/[\\/]/).pop();
+  const r1 = document.createElement("div"); r1.className = "prop";
+  const l1 = document.createElement("label"); l1.textContent = "Volume";
+  const vol = document.createElement("input"); vol.type = "range"; vol.min = "-36"; vol.max = "-6"; vol.value = mu.db ?? -18;
+  const out = document.createElement("output"); out.textContent = (mu.db ?? -18) + " dB";
+  vol.oninput = () => { mu.db = +vol.value; out.textContent = mu.db + " dB"; }; vol.onchange = () => save({ music: mu });
+  r1.append(l1, vol, out);
+  const r2 = document.createElement("label"); r2.className = "check small";
+  const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = mu.duck !== false;
+  cb.onchange = () => { mu.duck = cb.checked; save({ music: mu }); };
+  r2.append(cb, document.createTextNode(" abaixar quando alguém fala"));
+  const del = document.createElement("button"); del.className = "secondary wide"; del.textContent = "Tirar a música";
+  del.onclick = () => { st.music = null; renderMusic(); save({ music: null }); };
+  box.replaceChildren(head, r1, r2, del);
+  const url = `/api/p/${name}/music?f=${encodeURIComponent(mu.src)}`;
+  if (!$("#music").src.endsWith(url)) $("#music").src = url;
+}
+function musicFrame(t, playing) {               // follows the CUT timeline; ducks while a caption group is on screen
+  const a = $("#music"), mu = st.music; if (!mu || !mu.src || !a.src) { if (!a.paused) a.pause(); return; }
+  const ct = rawToCut(t);
+  if (!playing || ct == null) { if (!a.paused) a.pause(); return; }
+  const want = a.duration ? ct % a.duration : ct;
+  if (a.paused) { a.currentTime = want; a.play().catch(() => {}); } else if (Math.abs(a.currentTime - want) > .3) a.currentTime = want;
+  const talking = mu.duck !== false && groups.some((g) => ct >= g.s && ct < g.e);
+  a.volume = Math.min(1, Math.pow(10, ((mu.db ?? -18) + 12 - (talking ? 18 : 0)) / 20));
+}
+async function setMusic(src) {
+  const music = { src, db: -18, duck: true };
+  try { const r = await api(`/api/p/${name}/state`, { method: "PUT", body: JSON.stringify({ music }) }); st.music = music; st.rev = r.rev; renderMusic(); }
+  catch (e) { alert(e.message); }
+}
+function bindMusic() {
+  $("#musicform").onsubmit = (e) => { e.preventDefault(); const p = $("#musicpath").value.trim().replace(/^"|"$/g, ""); if (!p || !name) return; $("#musicpath").value = ""; setMusic(p); };
+  $("#musicup").onchange = async (e) => {
+    const f = e.target.files[0]; e.target.value = ""; if (!f || !name) return;
+    try { const r = await api(`/api/p/${name}/musicup`, { method: "POST", body: f, timeout: 10 * 60 * 1000,
+                                                         headers: { "X-Filename": encodeURIComponent(f.name), "Content-Type": "application/octet-stream" } });
+          setMusic(r.path); } catch (err) { alert(err.message); }
+  };
+}
+
 // ------------------------------------------------------------ chat
 function renderChat() {
   const box = $("#msgs"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
@@ -489,7 +563,10 @@ function update() {
     $("#tc").textContent = tcode(cut ? ct ?? 0 : t);
     $("#tctotal").textContent = tcode(cut ? cutTotal() : st.duration);
     $("#tlcode").textContent = tcode(t);
-    drawCaption(); camera(t); brollFrame(t, !v.paused); fxFrame(t, !v.paused);
+    const sg = kept.find((g) => t >= g.s && t < g.e);                // slow motion / silent stretch in the preview
+    const rate = sg ? segSpeed(sg) : 1; if (v.playbackRate !== rate) v.playbackRate = rate;
+    v.muted = !!(sg && segSilent(sg));
+    drawCaption(); camera(t); brollFrame(t, !v.paused); fxFrame(t, !v.paused); musicFrame(t, !v.paused);
     if (!$("#bgfill").hidden && v.readyState >= 2) {                  // blurred fill behind vertical footage
       const c = $("#bgfill"), g = c.getContext("2d"), k = Math.max(c.width / v.videoWidth, c.height / v.videoHeight);
       g.drawImage(v, (c.width - v.videoWidth * k) / 2, (c.height - v.videoHeight * k) / 2, v.videoWidth * k, v.videoHeight * k);
@@ -520,7 +597,7 @@ function renderAll() {
 }
 
 async function init() {
-  bindCaptionUI(); bindLookUI(); bindFx(); bindBroll(); bindClips(); bindReview(); bindMarca(); bindPlane(); bindResizers(); applyLayout();
+  bindCaptionUI(); bindLookUI(); bindFx(); bindBroll(); bindClips(); bindMusic(); bindReview(); bindMarca(); bindPlane(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
   for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };

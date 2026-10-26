@@ -77,6 +77,12 @@
   marcado, pessoas excluídas pela máscara, homografia RANSAC e suavização), deformado na perspectiva antes da câmera
   virtual e escondido atrás da pessoa quando ela passa na frente. Sem marcação (ou com fundo desfocado), vira
   elemento comum. O preview não recorta a pessoa; a exportação recorta.
+- **Câmera lenta e trechos sem som.** Velocidade por trecho (0,5x, 0,35x, 0,25x, interpolada, sem som e sem
+  legenda) e opção "sem som" (só imagem). **Câmera lenta no pico de ação**: acha o momento de mais movimento e
+  brilho e separa 2 s em 0,35x (`app_project.py lenta`). A timeline, as legendas, o motion e o B-roll contam com a
+  duração esticada.
+- **Trilha licenciada com ducking automático** (aba Sons): abaixa ~19 dB sob a voz e volta sem fala
+  (`mix_audio.py --music`). Música viral segue pelo editor do Instagram.
 - **Fala de vários clipes.** Um projeto pode juntar vários vídeos numa sequência só (aba Corte › Clipes de fala, ou
   `app_project.py clips`): cada clipe é transcrito e cortado, e as frases de qualquer clipe podem ser reordenadas.
   `cut.py` aceita trechos de vários vídeos (`[início, fim, arquivo]`). Clipe sem áudio entra inteiro.

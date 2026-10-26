@@ -129,6 +129,12 @@
         <div class="group-title">Som selecionado</div>
         <div id="ssel" class="selinfo muted"></div>
         <p id="sfxwarn" class="small muted"></p>
+        <div class="group-title">Música</div>
+        <p class="muted small">Música viral: adicione no editor do Instagram ao publicar (fica com a licença do Instagram; música colocada fora dele costuma ser silenciada). Aqui, só uma trilha que você licenciou (Artlist, Epidemic…): ela abaixa sozinha quando alguém fala.</p>
+        <div id="musicbox" class="selinfo muted"></div>
+        <form id="musicform" class="prop"><input id="musicpath" placeholder="Caminho do arquivo licenciado (.mp3, .wav, .m4a)" autocomplete="off"><button class="secondary">+</button></form>
+        <label class="secondary wide filebtn center">Enviar trilha licenciada<input type="file" id="musicup" accept="audio/*,.mp3,.wav,.m4a" hidden></label>
+        <audio id="music" preload="auto"></audio>
       </div>
 
       <div id="tab-revisao" hidden>

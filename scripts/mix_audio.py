@@ -9,6 +9,9 @@ Usage: python mix_audio.py <video.mp4> <enhanced_speech.wav> <out.mp4> [--bg bac
   because this script replaces the render's audio.
 - Two-pass loudnorm (measure, then exact linear gain). Video stream is copied (no re-encode).
 - Prints the loudness measured on the OUTPUT file (not the input) - report that number.
+- --music: a track the user LICENSED (Artlist, Epidemic…; never a downloaded song — viral Instagram songs are added
+  in Instagram's editor). Looped/trimmed to the video, faded, at --music-db, and ducked under the voice with a
+  sidechain compressor (the voice is the key) unless --no-duck.
 - --clean: plan B when Adobe Enhance Speech isn't available - pass the video itself (or its audio) as
   <speech> and the voice gets high-pass 90 Hz + FFT denoise + gentle compression before the mix.
 """
@@ -19,6 +22,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("video"); ap.add_argument("speech"); ap.add_argument("out")
 ap.add_argument("--bg"); ap.add_argument("--bg-level", type=float, default=0.35); ap.add_argument("--sfx")
 ap.add_argument("--clean", action="store_true", help="limpa a voz com ffmpeg (sem Adobe)")
+ap.add_argument("--music"); ap.add_argument("--music-db", type=float, default=-18); ap.add_argument("--no-duck", action="store_true")
 a = ap.parse_args(); sys.stdout.reconfigure(encoding="utf-8")
 FF = imageio_ffmpeg.get_ffmpeg_exe()
 mix = os.path.join(tempfile.gettempdir(), "reels_mix.wav")
@@ -31,6 +35,19 @@ else:
 if a.sfx:
     ins += ["-i", a.sfx]; chain += f"[{n}:a]"; n += 1
 if a.clean: pre = f"[0:a]{CLEAN}[v0];" + pre; chain = "[v0]" + chain[5:]
+if a.music:
+    e_ =subprocess.run([FF, "-hide_banner", "-i", a.video], capture_output=True, text=True, encoding="utf-8", errors="replace").stderr
+    hh, mm, ss = re.search(r"Duration: (\d+):(\d+):([\d.]+)", e_).groups(); vd = int(hh) * 3600 + int(mm) * 60 + float(ss)
+    ins += ["-stream_loop", "-1", "-i", a.music]
+    voice = chain[:chain.index("]") + 1]                          # the voice label ([0:a] or [v0]) is the duck key
+    mus = (f"[{n}:a]atrim=0:{vd:.3f},asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo,"
+           f"afade=t=in:d=0.6,afade=t=out:st={max(0, vd - 1.5):.3f}:d=1.5,volume={a.music_db}dB")
+    if a.no_duck:
+        pre += f"{mus}[mu];"; chain += "[mu]"
+    else:
+        pre += f"{voice}asplit=2[vk][vm];{mus}[m0];[m0][vk]sidechaincompress=threshold=0.02:ratio=12:attack=40:release=450:makeup=1[mu];"
+        chain = "[vm]" + chain[len(voice):] + "[mu]"
+    n += 1
 mixer = f"{chain}amix=inputs={n}:normalize=0," if n > 1 else f"{chain}"
 pre_mix = os.path.join(tempfile.gettempdir(), "reels_premix.wav")
 subprocess.run([FF, "-loglevel", "error", "-y", *ins, "-filter_complex", f"{pre}{mixer}highpass=f=70,aresample=48000[a]",

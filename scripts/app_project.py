@@ -20,6 +20,7 @@ Claude Code is the brain: it reads the state, answers the chat and edits the cut
     python app_project.py lock <name> on|off             approve / reopen the cut
     python app_project.py order <name> <id> <id> ...      play order of kept segments (reorder phrases)
     python app_project.py clips <name> <video|folder> ...  add speech clips: transcribed, cut, appended to the timeline
+    python app_project.py lenta <name> <seg_id> [2.0] [0.35]   slow motion on the action peak of a kept segment
     python app_project.py media <name> <video>           add a clip to the project's media (B-roll): proxy + filmstrip
     python app_project.py broll <name> <media_id> <t0> <t1> [ss] [full|card]   B-roll over the speech (raw seconds)
     python app_project.py export <name>                  cut + captions + loudness -> Downloads
@@ -355,15 +356,47 @@ def _run(tag, cmd):
         raise RuntimeError(f"{tag}: {Path(cmd[1]).name} falhou — {last[0][-300:]}")
 
 
+def action_peak(name, s, e):
+    """Time of the strongest action between s and e (raw seconds): motion between frames + brightness (a flame, a
+    spark, a jump), smoothed over ~0.7 s, read from the light preview. Used to place slow motion."""
+    import numpy as np
+    w, h = 96, 160
+    raw = subprocess.run([_ff(), "-loglevel", "error", "-ss", f"{s:.3f}", "-t", f"{e - s:.3f}", "-i", str(folder(name) / "preview.mp4"),
+                          "-vf", f"fps=15,scale={w}:{h}", "-f", "rawvideo", "-pix_fmt", "gray", "-"], capture_output=True).stdout
+    fr = np.frombuffer(raw, np.uint8)[: len(raw) // (w * h) * w * h].reshape(-1, h, w).astype(np.float32)
+    if len(fr) < 3: return (s + e) / 2
+    mot = np.r_[0, np.abs(np.diff(fr, axis=0)).mean(axis=(1, 2))]; bri = fr.reshape(len(fr), -1)
+    bri = np.percentile(bri, 98, axis=1)                    # the brightest spots, not the average
+    z = lambda x: (x - x.mean()) / (x.std() + 1e-6)
+    score = np.convolve(z(mot) + .6 * z(bri), np.ones(11) / 11, mode="same")
+    return s + float(np.argmax(score)) / 15
+
+
+def slow_peak(name, seg_id, length=2.0, sp=.35):
+    """Split a kept segment around its action peak and play that piece in slow motion (silent)."""
+    st = load(name); g = next((x for x in st["segments"] if x["id"] == seg_id), None)
+    if not g or not g["keep"]: raise KeyError(f"trecho {seg_id} não está mantido")
+    p = action_peak(name, g["s"], g["e"])
+    a = max(g["s"], min(p - length / 2, g["e"] - length)); b = min(g["e"], a + length)
+    a, b = round(a, 2), round(b, 2)
+    set_seg(name, f"{a}-{b}", True)
+    def fn(st):
+        x = min((x for x in st["segments"] if x["keep"]), key=lambda x: abs(x["s"] - a) + abs(x["e"] - b))
+        x.update(speed=sp, reason=x.get("reason") or "câmera lenta no pico")
+    update(name, fn)
+    return a, b, p
+
+
 def cut_list(st, kept):
     """Kept segments in play order -> keep.json for cut.py: [[s, e]] (one video) or [[s, e, source]] (clips)."""
-    if not st.get("clips"): return [[g["s"], g["e"]] for g in kept]
+    def opts(g): return [dict(speed=speed(g), mudo=silent(g))] if silent(g) else []
+    if not st.get("clips"): return [[g["s"], g["e"], st["src"], *opts(g)] for g in kept]
     out = []
     for g in kept:                                       # a segment never spans two clips (each clip is cut on its own)
         c = next((c for c in st["clips"] if c["off"] - .01 <= g["s"] < c["off"] + c["dur"]), st["clips"][-1])
         a, b = max(0.0, g["s"] - c["off"]), g["e"] - c["off"]
         if c.get("sdur"): b = min(b, c["sdur"])
-        if b - a > .02: out.append([round(a, 3), round(b, 3), c["src"]])
+        if b - a > .02: out.append([round(a, 3), round(b, 3), c["src"], *opts(g)])
     return out
 
 
@@ -448,16 +481,21 @@ def play_order(st):
     return [by[i] for i in out]
 
 
+def speed(g): return float(g.get("speed") or 1.0)
+def seg_len(g): return (g["e"] - g["s"]) / speed(g)          # on the cut timeline (slow motion stretches it)
+def silent(g): return bool(g.get("mudo")) or speed(g) < 1    # slow motion never carries the (slowed) voice
+
+
 def raw_to_cut(t, segs, end=False):
     """Raw-source time -> cut timeline for segments in play order (they may be reordered). A time inside a
     removed stretch snaps to the next kept clip in the source (or, for an end time, the end of the previous one)."""
     off, starts = 0.0, {}
     for g in segs:
-        if g["s"] <= t < g["e"]: return off + t - g["s"]
-        starts[g["id"]] = off; off += g["e"] - g["s"]
+        if g["s"] <= t < g["e"]: return off + (t - g["s"]) / speed(g)
+        starts[g["id"]] = off; off += seg_len(g)
     if end:
         prev = max((g for g in segs if g["e"] <= t), key=lambda g: g["e"], default=None)
-        return starts[prev["id"]] + prev["e"] - prev["s"] if prev else 0.0
+        return starts[prev["id"]] + seg_len(prev) if prev else 0.0
     nxt = min((g for g in segs if g["s"] > t), key=lambda g: g["s"], default=None)
     return starts[nxt["id"]] if nxt else off
 
@@ -488,9 +526,10 @@ def motion_fn(F, m, c0, c1, accent, n, total):
 def remap_words(words, segs):
     out, off = [], 0.0
     for g in segs:
-        for w in words_in(words, g["s"], g["e"]):
-            out.append(dict(w, s=round(off + max(0, w["s"] - g["s"]), 3), e=round(off + min(g["e"], w["e"]) - g["s"], 3)))
-        off += g["e"] - g["s"]
+        if not silent(g):                                 # no captions where the voice is muted (slow motion, image only)
+            for w in words_in(words, g["s"], g["e"]):
+                out.append(dict(w, s=round(off + max(0, w["s"] - g["s"]), 3), e=round(off + min(g["e"], w["e"]) - g["s"], 3)))
+        off += seg_len(g)
     return out
 
 
@@ -608,7 +647,11 @@ def export(name):
         if not c["enabled"]: reel.groups = []
         reel.render("render.mp4", lambda f: job(name, "export", step="Renderizando", pct=25 + int(f * 65)))
         job(name, "export", step="Ajustando o volume (-14 LUFS)", pct=92)
-        subprocess.run([PY, str(HERE / "mix_audio.py"), "render.mp4", "render.mp4", "final.mp4"], check=True, capture_output=True)
+        mus = st.get("music") or {}
+        extra = (["--music", mus["src"], "--music-db", str(float(mus.get("db", -18)))] + ([] if mus.get("duck", True) else ["--no-duck"])
+                 if mus.get("src") and Path(mus["src"]).is_file() else [])
+        if extra: job(name, "export", step="Música (abaixa na fala) e volume (-14 LUFS)", pct=92)
+        subprocess.run([PY, str(HERE / "mix_audio.py"), "render.mp4", "render.mp4", "final.mp4", *extra], check=True, capture_output=True)
         out = Path.home() / "Downloads" / f"{name}_cinex{'' if fmt == 'vertical' else '_16x9'}.mp4"
         shutil.copy2(d / "final.mp4", out)
         job(name, "export", step="Pronto", pct=100, done=True, out=str(out))
@@ -665,6 +708,9 @@ if __name__ == "__main__":
         update(a.args[0], lambda s: s.update(order=[int(x) for x in a.args[1:]])); _show(a.args[0])
     elif a.cmd == "export": export(a.args[0])
     elif a.cmd == "media": print("mídia", add_media(a.args[0], a.args[1]))
+    elif a.cmd == "lenta":
+        x = a.args; r = slow_peak(x[0], int(x[1]), float(x[2]) if len(x) > 2 else 2.0, float(x[3]) if len(x) > 3 else .35)
+        print(f"câmera lenta em {r[0]:.2f}-{r[1]:.2f} (pico em {r[2]:.2f})"); _show(x[0])
     elif a.cmd == "clips": add_clips(a.args[0], a.args[1:]); _show(a.args[0])
     elif a.cmd == "broll":
         x = a.args; add_broll(x[0], int(x[1]), float(x[2]), float(x[3]), float(x[4]) if len(x) > 4 else 0.0, x[5] if len(x) > 5 else "full"); _show(x[0])

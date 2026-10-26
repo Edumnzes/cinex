@@ -140,6 +140,15 @@ ou de uma pasta inteira (os vídeos entram em ordem de nome) ou envie do computa
 pausas cortadas e entra no fim da sequência; a régua marca onde cada um começa. Depois é só escolher e reordenar as
 frases de qualquer clipe. A transcrição leva alguns minutos por clipe.
 
+**Câmera lenta e trechos sem som:** clique num trecho mantido na aba **Corte** e escolha a velocidade (1x, 0,5x,
+0,35x, 0,25x) ou marque **sem som** (fica só a imagem, sem legenda — bom para a música). **Câmera lenta no pico de
+ação** acha o momento de mais movimento e brilho do trecho (uma chama, um salto) e deixa 2 s em 0,35x. A câmera lenta
+sai interpolada (sem quadros repetidos) e sem som.
+
+**Trilha licenciada (opcional):** na aba **Sons**, em Música, escolha um arquivo que você licenciou (Artlist,
+Epidemic…). Ele abaixa sozinho quando alguém fala e volta nos trechos sem fala. Música viral continua indo pelo
+editor do Instagram.
+
 **B-roll (trilha V2):** na aba **B-roll**, adicione outros clipes (cole o caminho ou envie do computador; o original
 não sai do lugar e vídeo HDR é convertido). **+ Na agulha** cobre a fala a partir do ponto atual: a imagem troca e o
 áudio continua sendo a fala. Arraste o bloco na trilha V2, estique pela borda e clique na faixa de quadros para

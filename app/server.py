@@ -41,7 +41,8 @@ def marca_info(h):
     return dict(handle=h, arquivos=st, marca=brand.load_brand(h) if st["marca.json"] else None, perfil_atualizado=head,
                 referencias=refs, estilo_nicho=f"nicho_{h}" if prof.exists() else None, desempenho=rep,
                 analisando=(d / ".analisando").exists())
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca", "motion_engine", "broll"}
+EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca", "motion_engine", "broll", "music"}
+AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 
@@ -200,6 +201,10 @@ class H(BaseHTTPRequestHandler):
                         out.append([round((g[0] + g[2] / 2) / 360, 3), round((g[1] + g[3] / 2) / 640, 3)] if g else 0)
                     return self._send(200, out)
                 if sub == "preview.mp4": return self._file(d / "preview.mp4", "video/mp4")
+                if sub == "music":                     # the project's licensed track, for the preview
+                    mu = (P.load(name).get("music") or {}) if (d / "cinex.json").exists() else {}
+                    if not mu.get("src") or Path(mu["src"]).suffix.lower() not in AUDIO_EXT: return self._err(404, "sem música")
+                    return self._file(mu["src"])
                 if sub == "media" and len(parts) == 5:          # B-roll proxy (<id>.mp4) and filmstrip (<id>.jpg)
                     if not re.fullmatch(r"\d{1,5}\.(mp4|jpg)", parts[4]): return self._err(404, "não encontrado")
                     return self._file(d / "media" / parts[4])
@@ -243,6 +248,25 @@ class H(BaseHTTPRequestHandler):
                 subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "clips", name, *paths],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
                 return self._send(200, {"ok": True})
+            if sub == "lenta":                         # slow motion on the action peak of a kept segment
+                r = P.slow_peak(name, int(self._json().get("id", 0)))
+                return self._send(200, {"s": r[0], "e": r[1], "pico": r[2]})
+            if sub == "musicup":                       # licensed track sent from the browser -> <project>/music/
+                from urllib.parse import unquote
+                fn = Path(unquote(self.headers.get("X-Filename", ""))).name
+                if not re.fullmatch(r"[\w .()&'-]{1,120}", fn) or Path(fn).suffix.lower() not in AUDIO_EXT:
+                    return self._err(400, "envie um áudio (.mp3, .wav, .m4a…)")
+                n = int(self.headers.get("Content-Length") or 0)
+                if not 0 < n <= 200 * 1024 * 1024: return self._err(400, "arquivo grande demais (máx. 200 MB)")
+                dd = P.folder(name) / "music"; dd.mkdir(exist_ok=True); dest = dd / fn
+                with open(dest, "wb") as f:
+                    left = n
+                    while left > 0:
+                        chunk = self.rfile.read(min(1 << 20, left))
+                        if not chunk: break
+                        f.write(chunk); left -= len(chunk)
+                if left: dest.unlink(missing_ok=True); return self._err(400, "envio interrompido")
+                return self._send(200, {"path": str(dest)})
             if sub == "media":                         # add a B-roll clip by path (the file stays where it is)
                 src = Path(str(self._json().get("src", "")).strip().strip('"')).expanduser()
                 if not src.is_file() or src.suffix.lower() not in P.VIDEO_EXT: return self._err(400, f"vídeo não encontrado: {src}")
@@ -283,8 +307,15 @@ class H(BaseHTTPRequestHandler):
                         return self._err(400, "som inválido")
                 if "segments" in body:
                     for g in body["segments"]:
-                        if not (isinstance(g.get("s"), (int, float)) and isinstance(g.get("e"), (int, float)) and isinstance(g.get("keep"), bool)):
+                        if not (isinstance(g.get("s"), (int, float)) and isinstance(g.get("e"), (int, float)) and isinstance(g.get("keep"), bool)
+                                and g.get("speed", 1) in (1, .5, .35, .25) and isinstance(g.get("mudo", False), bool)):
                             return self._err(400, "segmento inválido")
+                if "music" in body:                    # licensed track only (viral songs go in Instagram's editor)
+                    mu = body["music"]
+                    if mu is not None and not (isinstance(mu, dict) and Path(str(mu.get("src", ""))).is_file()
+                                               and Path(mu["src"]).suffix.lower() in AUDIO_EXT and isinstance(mu.get("db", -18), (int, float))
+                                               and -40 <= mu.get("db", -18) <= 0 and isinstance(mu.get("duck", True), bool)):
+                        return self._err(400, "música inválida")
                 st = P.update(name, lambda s: s.update(body))
                 return self._send(200, {"rev": st["rev"]})
             if sub == "revisao":                       # instant review of the project state (scripts/revisao.py)
