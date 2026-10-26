@@ -22,3 +22,6 @@ desktop.ini
 
 # Manual de edição do autor (fonte das regras em references/manual-edicao.md), mantido só localmente
 docs/*.pdf
+
+# GSD planning (local only)
+.planning/
