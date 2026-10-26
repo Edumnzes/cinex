@@ -125,7 +125,7 @@ def new(src, name=None, prompt=None):
     d = folder(name); d.mkdir(parents=True, exist_ok=True)
     if not (d / "cinex.json").exists():
         _write_json(d / "cinex.json", dict(version=1, rev=0, name=name, src=str(src), duration=round(duration(src), 2),
-                                           segments=[], cut_locked=False, captions=dict(CAPTIONS), camera=dict(CAMERA), color=dict(COLOR), format="vertical", keywords=[], fix={},
+                                           segments=[], cut_locked=False, captions=dict(CAPTIONS), camera=dict(CAMERA), color=dict(COLOR), motions=[], sfx=[], format="vertical", keywords=[], fix={},
                                            chat=[], created=_now()))
     prepare(name, prompt)
     return name
@@ -212,6 +212,37 @@ def set_seg(name, ref, keep, reason=None):
 
 
 # ------------------------------------------------------------ export: cut -> captions -> loudness -> Downloads
+def raw_to_cut(t, segs, end=False):
+    """Raw-source time -> cut timeline. A time inside a removed stretch snaps to the next kept clip
+    (or, for an end time, to the end of the previous one)."""
+    off = 0.0
+    for g in segs:
+        if t < g["s"]: return off if not end else max(0.0, off)
+        if t < g["e"]: return off + t - g["s"]
+        off += g["e"] - g["s"]
+    return off
+
+
+# motion templates of the app -> formats.py (one function each; the engine places them away from faces)
+MOTIONS = {
+    "titulo": "Título / capítulo", "topico": "Tópico numerado", "nome": "Nome de quem fala", "citacao": "Citação",
+    "frase": "Frase grande", "seguir": "Chamada: seguir", "salvar": "Chamada: salvar",
+}
+
+
+def motion_fn(F, m, c0, c1, accent, n, total):
+    tx, t2 = m.get("text", ""), m.get("text2", "")
+    k = m["type"]
+    if k == "titulo": return lambda ov, t: F.chapter_label(ov, t, c0, c1, tx.upper(), accent)
+    if k == "topico": return lambda ov, t: F.tip_card(ov, t, c0, c1, n, total, tx, accent)
+    if k == "nome": return lambda ov, t: F.name_card(ov, t, c0, c1, tx, t2, accent)
+    if k == "citacao": return lambda ov, t: F.quote_card(ov, t, c0, c1, tx, t2, accent)
+    if k == "frase": return lambda ov, t: F.big_phrase(ov, t, c0, c1, tx, [w for w in t2.replace(",", " ").split() if w], accent)
+    if k == "seguir": return lambda ov, t: F.cta_follow(ov, t, c0, c1, tx or "Siga para mais", accent)
+    if k == "salvar": return lambda ov, t: F.cta_save(ov, t, c0, c1, tx or "Salve para não esquecer", accent)
+    raise ValueError(f"motion desconhecido: {k}")
+
+
 def remap_words(words, segs):
     out, off = [], 0.0
     for g in segs:
@@ -269,7 +300,19 @@ def export(name):
         dur = duration(d / "cut.mp4")
         z = max(1.0, min(1.25, float(cam["zoom"])))
         cuts = json.loads((d / "cuts.json").read_text()) if (d / "cuts.json").exists() else []
-        reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, z, z, R.eio)],
+        import formats as F                              # after R.W/R.H: it copies the frame size on import
+        acc = rgba(c["accent"]); ms = sorted(st.get("motions", []), key=lambda m: m["t0"]); fns, hide, sfx = [], [], []
+        tops = [m for m in ms if m["type"] == "topico"]
+        for m in ms:
+            c0, c1 = raw_to_cut(m["t0"], kept), raw_to_cut(m["t1"], kept, end=True)
+            if c1 - c0 < .3: continue                     # the element sits entirely inside a removed stretch
+            n = tops.index(m) + 1 if m in tops else 0
+            fns.append(motion_fn(F, m, c0, c1, acc, n, len(tops)))
+            if m["type"] in ("citacao", "frase"): hide.append((c0, c1))   # the line is already on screen
+            if m.get("sfx"): sfx.append((c0, m["sfx"], -12))
+        for s in st.get("sfx", []):
+            if any(g["s"] <= s["t"] < g["e"] for g in kept): sfx.append((raw_to_cut(s["t"], kept), s["cat"], float(s.get("gain", -12))))
+        reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, z, z, R.eio)], motions=fns, sfx=sorted(sfx), hide_captions=hide,
                       ranges=[(0, dur + 1, "big" if cam["follow"] else None)],
                       keywords=st.get("keywords", []), fix=st.get("fix", {}), caption_style="app", accent=rgba(c["accent"]),
                       look=col["look"] if col["look"] in R.GRADES else "none", jumpcuts="auto" if cam["punch"] else [], cuts=cuts,
@@ -297,6 +340,8 @@ def _show(name):
     for g in st["segments"]:
         print(f"  #{g['id']:<3} {g['s']:7.2f}-{g['e']:7.2f}  {'KEEP' if g['keep'] else 'cut '}  {g['reason'][:30]:30}  {g['text'][:90]}")
     print("legendas:", json.dumps(st["captions"], ensure_ascii=False))
+    for m in st.get("motions", []): print(f"  motion #{m['id']} {m['t0']:.2f}-{m['t1']:.2f} {m['type']}: {m.get('text', '')} {m.get('text2', '')} sfx={m.get('sfx') or '-'}")
+    for s in st.get("sfx", []): print(f"  sfx #{s['id']} {s['t']:.2f} {s['cat']} {s.get('gain', -12)} dB")
     for m in unread(name): print(f"  [não lida] {m['t']} {m['text']}")
 
 

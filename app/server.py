@@ -21,7 +21,7 @@ STATIC = APP / "static"
 PORT = 8765
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)       # no console window flashing on Windows
 MAX_BODY = 25 * 1024 * 1024                     # font uploads
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color"}
+EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 
@@ -116,6 +116,14 @@ class H(BaseHTTPRequestHandler):
             if parts == ["api", "projects"]: return self._send(200, P.projects())
             if parts == ["api", "fonts"]:
                 return self._send(200, [dict(id=f["id"], label=f["label"], weights=f["weights"]) for f in fonts().values()])
+            if parts == ["api", "sfx"]:                 # sound categories of ~/reels-banco/sfx
+                import banco
+                return self._send(200, {k: len(v) for k, v in sorted(banco.sfx().items())})
+            if parts[:2] == ["api", "sfx"] and len(parts) == 3:
+                import banco
+                if parts[2] not in banco.sfx(): return self._err(404, "categoria sem sons")
+                f = banco.sfx_file(parts[2], float(parse_qs(u.query).get("t", ["0"])[0] or 0))
+                return self._file(f)
             if parts[:2] == ["api", "font"] and len(parts) == 3:
                 fid = parts[2]
                 if fid in fonts(): return self._file(fonts()[fid]["path"], "font/ttf")
@@ -172,6 +180,12 @@ class H(BaseHTTPRequestHandler):
                 body = {k: v for k, v in self._json().items() if k in EDITABLE}
                 if body.get("format", "vertical") not in ("vertical", "horizontal"): return self._err(400, "formato inválido")
                 if not all(isinstance(body.get(k, {}), dict) for k in ("camera", "color", "captions")): return self._err(400, "valor inválido")
+                for m in body.get("motions", []):
+                    if not (isinstance(m, dict) and m.get("type") in P.MOTIONS and isinstance(m.get("t0"), (int, float))
+                            and isinstance(m.get("t1"), (int, float)) and m["t1"] > m["t0"]): return self._err(400, "motion inválido")
+                for s_ in body.get("sfx", []):
+                    if not (isinstance(s_, dict) and isinstance(s_.get("t"), (int, float)) and isinstance(s_.get("cat"), str)):
+                        return self._err(400, "som inválido")
                 if "segments" in body:
                     for g in body["segments"]:
                         if not (isinstance(g.get("s"), (int, float)) and isinstance(g.get("e"), (int, float)) and isinstance(g.get("keep"), bool)):

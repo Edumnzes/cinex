@@ -253,7 +253,7 @@ function ensureFont(id) {
 let lastKey = "";
 function drawCaption() {
   const cap = $("#cap"), c = st && st.captions;
-  if (!c || !c.enabled || !words.length) { cap.replaceChildren(); lastKey = ""; return; }
+  if (!c || !c.enabled || !words.length || fxHidesCaptions($("#video").currentTime)) { cap.replaceChildren(); lastKey = ""; return; }
   const ct = rawToCut($("#video").currentTime);
   const g = ct == null ? null : groups.find((x) => x.s <= ct && ct < x.e);
   const key = g ? `${g.s}|${JSON.stringify(c)}|${g.w.map((w) => w.s <= ct && ct < w.e + 0.05).join()}` : "";
@@ -353,7 +353,7 @@ function renderTimeline() {
     b.ondblclick = () => toggle(g.id);
     return b;
   }));
-  drawWave(); renderInfo();
+  drawWave(); renderInfo(); renderFx();
 }
 
 function drawWave() {
@@ -442,7 +442,7 @@ function update() {
     $("#tc").textContent = tcode(cut ? ct ?? 0 : t);
     $("#tctotal").textContent = tcode(cut ? cutTotal() : st.duration);
     $("#tlcode").textContent = tcode(t);
-    drawCaption(); camera(t);
+    drawCaption(); camera(t); fxFrame(t, !v.paused);
     if (!$("#bgfill").hidden && v.readyState >= 2) {                  // blurred fill behind vertical footage
       const c = $("#bgfill"), g = c.getContext("2d"), k = Math.max(c.width / v.videoWidth, c.height / v.videoHeight);
       g.drawImage(v, (c.width - v.videoWidth * k) / 2, (c.height - v.videoHeight * k) / 2, v.videoWidth * k, v.videoHeight * k);
@@ -458,20 +458,21 @@ function seekFromEvent(e, el) {
 // ------------------------------------------------------------ wiring
 function tab(n) {
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.classList.toggle("on", b.dataset.tab === n);
-  for (const t of ["legendas", "camera", "cor", "corte"]) $("#tab-" + t).hidden = n !== t;
+  for (const t of ["legendas", "camera", "cor", "motion", "sons", "corte"]) $("#tab-" + t).hidden = n !== t;
 }
 
 function renderAll() {
   if (!st) { $("#phempty").hidden = false; return; }
   st.camera = { follow: true, zoom: 1.0, punch: true, ...(st.camera || {}) };
   st.color = { correct: true, look: "natural", ...(st.color || {}) };
+  fxDefaults(); ensureFont("sans"); ensureFont("serif");
   $("#progname").textContent = st.name; renderFormat(); renderLookUI();
   buildGroups(); renderCaptionsUI(); renderChat(); renderDur(); renderTimeline(); lastKey = ""; drawCaption();
   $("#exportbtn").disabled = !st.segments.length;
 }
 
 async function init() {
-  bindCaptionUI(); bindLookUI(); bindResizers(); applyLayout();
+  bindCaptionUI(); bindLookUI(); bindFx(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
   for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };

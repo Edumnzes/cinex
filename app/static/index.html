@@ -32,6 +32,8 @@
       <button data-tab="corte">Corte</button>
       <button data-tab="camera">Câmera</button>
       <button data-tab="cor">Cor</button>
+      <button data-tab="motion">Motion</button>
+      <button data-tab="sons">Sons</button>
     </nav>
     <div class="pbody">
       <div id="tab-legendas">
@@ -77,6 +79,22 @@
         <p class="muted small note">A prévia do look é aproximada.</p>
       </div>
 
+      <div id="tab-motion" hidden>
+        <div class="group-title">Adicionar no ponto da agulha</div>
+        <div class="mtemplates" id="mtemplates"></div>
+        <div class="group-title">Elemento selecionado</div>
+        <div id="msel" class="selinfo muted"></div>
+        <p class="muted small note">Cada elemento precisa de uma função: explicar, provar, situar ou chamar para ação. O motor posiciona fora do rosto.</p>
+      </div>
+
+      <div id="tab-sons" hidden>
+        <div class="group-title">Banco de sons</div>
+        <div id="sfxcats" class="sfxcats"></div>
+        <div class="group-title">Som selecionado</div>
+        <div id="ssel" class="selinfo muted"></div>
+        <p id="sfxwarn" class="small muted"></p>
+      </div>
+
       <div id="tab-corte" hidden>
         <div class="group-title">Trecho selecionado</div>
         <div id="selinfo" class="selinfo muted">Clique num clipe da linha do tempo.</div>
@@ -100,6 +118,7 @@
         <canvas id="bgfill" width="64" height="36" hidden></canvas>
         <video id="video" playsinline preload="auto"></video>
         <div class="vig" id="vig"></div>
+        <div class="mglayer" id="mg"></div>
         <div class="cap" id="cap"></div>
         <div class="ph-empty" id="phempty">Abra ou crie um projeto</div>
       </div>
@@ -144,14 +163,17 @@
     <div class="timeline" id="timeline">
       <div class="tlinner" id="tlinner">
         <div class="row rulerrow"><div class="thead"></div><div class="ruler" id="ruler"></div></div>
+        <div class="row"><div class="thead"><b>M1</b><span>Motion</span></div><div class="lane" id="mlane"></div></div>
         <div class="row"><div class="thead"><b>C1</b><span>Legendas</span></div><div class="lane" id="caplane"></div></div>
         <div class="row tall"><div class="thead"><b>V1</b><span>Vídeo</span></div><div class="lane" id="blocks"></div></div>
         <div class="row tall"><div class="thead"><b>A1</b><span>Áudio</span></div><div class="lane"><canvas id="wave" height="56"></canvas></div></div>
+        <div class="row"><div class="thead"><b>S1</b><span>Sons</span></div><div class="lane" id="slane"></div></div>
         <div class="playhead" id="playhead"></div>
       </div>
     </div>
   </section>
 </main>
+<script src="/static/fx.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

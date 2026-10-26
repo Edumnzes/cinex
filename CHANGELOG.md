@@ -37,6 +37,12 @@
 - Motor: janela de corte com a proporção da saída, então vídeo horizontal vira 9:16 seguindo o rosto
   (`cut.py --fit keep` mantém o quadro inteiro para a câmera escolher o enquadramento).
 - Servidor em HTTP/1.1 (respostas grandes não são mais cortadas) e o app não trava se um pedido demorar.
+- **Fase 3 do app: motion e efeitos sonoros.** Trilha M1 com elementos (título, tópico numerado, nome, citação,
+  frase grande, chamadas "siga" e "salve") adicionados no ponto da agulha, arrastáveis e com duração ajustável pela
+  borda; texto e som de entrada editados no inspetor; prévia ao vivo no monitor. Trilha S1 com sons do banco
+  (`~/reels-banco/sfx`), volume por som, prévia de áudio durante a reprodução e aviso quando passa do limite do
+  manual (~2 sons a cada 10 s). Na exportação, cada elemento usa o modelo do `formats.py` (posicionado fora do
+  rosto) e as legendas somem enquanto uma citação ou frase grande está na tela.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

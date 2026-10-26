@@ -54,7 +54,7 @@ input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; }
 
 /* ---------- workspace (Premiere panel layout) */
 .workspace { display: grid; gap: 4px; padding: 4px; height: calc(100% - 46px);
-  grid-template-columns: var(--c-insp, 300px) minmax(0, 1fr) var(--c-chat, 290px); grid-template-rows: minmax(0, 1fr) var(--r-tl, 236px);
+  grid-template-columns: var(--c-insp, 300px) minmax(0, 1fr) var(--c-chat, 290px); grid-template-rows: minmax(0, 1fr) var(--r-tl, 300px);
   grid-template-areas: "insp mon chat" "tl tl tl"; }
 /* Mobile layout: the 9:16 monitor stands full height on the left; the tools share the rest. */
 body.lay-mobile .workspace {
@@ -111,6 +111,36 @@ body.resizing video { pointer-events: none; }
 .looks button.on { border-color: var(--accent); background: var(--accent-soft); }
 .looks i { width: 22px; height: 22px; border-radius: 4px; flex: none; }
 .note { border-left: 2px solid var(--line2); padding-left: 8px; }
+.ptabs { overflow-x: auto; scrollbar-width: none; } .ptabs::-webkit-scrollbar { display: none; } .ptabs button { flex: none; }
+.mtemplates { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mtemplates button { border: 1px solid var(--line); font-size: 13px; text-align: left; padding: 6px 8px; }
+.mtemplates button::before { content: "+ "; color: var(--accent); }
+.selinfo .prop > label:first-child { width: 72px; }
+.sfxcats { display: flex; flex-direction: column; gap: 2px; }
+.sfxrow { display: grid; grid-template-columns: 32px 1fr auto auto; align-items: center; gap: 6px; font-size: 13px; }
+.sfxrow .secondary { padding: 3px 8px; font-size: 12px; }
+.warn { color: #e8b04b; }
+.blk.mblk { background: #5a3d1e; border-color: #d18a3d; color: #f6d9b5; }
+.blk.sblk { width: 3px; padding: 0; background: #e8b04b; border: 0; overflow: visible; color: #e8b04b; font-size: 10px; text-indent: 6px; border-radius: 1px; }
+.blk.sblk::before { content: ""; position: absolute; left: -4px; top: 50%; width: 9px; height: 9px; background: #e8b04b; transform: translateY(-50%) rotate(45deg); }
+.blk.sblk.sel { box-shadow: 0 0 0 2px var(--accent); }
+.grip { position: absolute; right: 0; top: 0; bottom: 0; width: 7px; cursor: ew-resize; }
+.mglayer { position: absolute; inset: 0; pointer-events: none; font-family: "cx-sans", system-ui; }
+.mg { position: absolute; left: 50%; transform: translate(-50%, -50%); text-align: center; line-height: 1.15; color: #fff; white-space: nowrap; }
+.mg-titulo, .mg-seguir, .mg-salvar { padding: .45em 1.1em; border-radius: 999px; font-weight: 800; }
+.mg-titulo { background: rgba(11, 17, 32, .91); color: var(--acc); }
+.mg-seguir, .mg-salvar { background: var(--acc); color: #000; }
+.mg-topico { display: flex; align-items: center; gap: .6em; width: 79.6%; padding: .55em .8em; border-radius: .7em; background: rgba(11, 17, 32, .91);
+  text-align: left; white-space: normal; font-weight: 800; border: 1px solid rgba(255, 255, 255, .16); }
+.mg-topico .num { flex: none; width: 1.84em; height: 1.84em; border-radius: 50%; background: var(--acc); color: #000; display: grid; place-items: center; font-size: 1.24em; }
+.mg-nome { display: flex; align-items: center; gap: .55em; padding: .45em 1.2em .45em .7em; border-radius: .56em; background: rgba(11, 17, 32, .91); text-align: left; }
+.mg-nome .bar { width: .2em; align-self: stretch; border-radius: .1em; background: var(--acc); }
+.mg-nome b { display: block; font-weight: 900; } .mg-nome small { display: block; font-size: .64em; color: #a0aab9; font-weight: 700; }
+.mg-citacao { width: 76%; white-space: normal; font-family: "cx-serif", Georgia, serif; font-style: italic; font-weight: 700; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+.mg-citacao q::before { content: "“"; } .mg-citacao q::after { content: "”"; }
+.mg-citacao small { display: inline-block; margin-top: .5em; font-family: "cx-sans", system-ui; font-style: normal; font-size: .42em; padding: .4em 1em; border-radius: 999px; background: rgba(11,17,32,.91); color: var(--acc); }
+.mg-frase { width: 81.5%; white-space: normal; font-weight: 900; paint-order: stroke fill; -webkit-text-stroke: .18em #000; }
+.mg-frase .hl { color: var(--acc); }
 .ph-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
 .cap { position: absolute; left: 7.4%; right: 7.4%; transform: translateY(-50%); text-align: center; pointer-events: none; line-height: 1.15; }
 .cap .line { white-space: nowrap; display: inline-block; transform-origin: center; }
