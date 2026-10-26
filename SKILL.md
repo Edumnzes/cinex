@@ -141,7 +141,8 @@ Every brand learns from its own results. Data sits with the brand profile in `~/
   "atualize o desempenho"), read the brand's Reels grid (views) and each reel's caption/likes/comments (public), and —
   logged in as the brand, read-only — "Ver insights" (tempo médio, duração, % não seguidores, compartilhamentos,
   salvamentos, seguidores, visitas). Record each reel with `desempenho.py set <handle> '{codigo, url, data, views, ...,
-  tags: {formato, tema, gancho, estilo, editado_cinex, duracao}}'` — tag from the caption and the cover, and mark
+  tags: {formato, cenario, tema, gancho, estilo, editado_cinex, duracao}}'` — tag from the caption and the cover
+  (cenario: "situação real" / "escritório" / "arte/convite" — where and how it was shot), and mark
   reels edited by Cinex (match videos.md). `desempenho.py relatorio` ranks each tag against the profile's median
   (followers + profile visits and shares + saves weigh most, then views and retention); `aplicar` writes winners with ≥ 3 reels into `marca.json`.
   Insights on the web: the reel's media id is its shortcode decoded as base-64 (alphabet `A–Z a–z 0–9 - _`); open
