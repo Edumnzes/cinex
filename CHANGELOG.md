@@ -77,6 +77,9 @@
   marcado, pessoas excluídas pela máscara, homografia RANSAC e suavização), deformado na perspectiva antes da câmera
   virtual e escondido atrás da pessoa quando ela passa na frente. Sem marcação (ou com fundo desfocado), vira
   elemento comum. O preview não recorta a pessoa; a exportação recorta.
+- **Seis formatos de exportação:** 9:16, 4:5 (feed), 1:1, 16:9, 4:3 e LED 512×384 (painel de feira, desenhado em
+  2x e reduzido no final). Preparo do vídeo, área segura e QA (`qa.py --platform`) por formato; a prévia do app
+  tem o formato escolhido.
 - **Limpar a imagem por trecho.** Efeito retrato (fundo desfocado, só a pessoa da frente nítida, sem halo) e
   enquadramento manual (zoom até 2,5x com centro escolhido na prévia), recortado do 4K no `cut.py` (`crop`).
 - **Câmera lenta e trechos sem som.** Velocidade por trecho (0,5x, 0,35x, 0,25x, interpolada, sem som e sem

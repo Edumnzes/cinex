@@ -292,7 +292,7 @@ class H(BaseHTTPRequestHandler):
                 self._media_job(name, dest); return self._send(200, {"ok": True})
             if sub == "state":
                 body = {k: v for k, v in self._json().items() if k in EDITABLE}
-                if body.get("format", "vertical") not in ("vertical", "horizontal"): return self._err(400, "formato inválido")
+                if body.get("format", "vertical") not in P.FORMATS: return self._err(400, "formato inválido")
                 if not all(isinstance(body.get(k, {}), dict) for k in ("camera", "color", "captions")): return self._err(400, "valor inválido")
                 for m in body.get("motions", []):
                     if not (isinstance(m, dict) and m.get("type") in P.MOTIONS and isinstance(m.get("t0"), (int, float))

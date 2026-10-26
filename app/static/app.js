@@ -129,16 +129,17 @@ function buildGroups() {
   });
 }
 
-function frameSize() { return st && st.format === "horizontal" ? [1920, 1080] : [1080, 1920]; }
+const FORMATS = { vertical: [1080, 1920], feed: [1080, 1350], quadrado: [1080, 1080], horizontal: [1920, 1080], "4x3": [1440, 1080], led: [1024, 768] };
+function frameSize() { return FORMATS[(st && st.format) || "vertical"] || FORMATS.vertical; }
 function renderFormat() {
-  const f = (st && st.format) || "vertical";
-  $("#phone").classList.toggle("wide", f === "horizontal");
-  document.body.classList.toggle("lay-mobile", f === "vertical");       // app layout follows the preview shape
+  const f = (st && st.format) || "vertical", [FW, FH] = frameSize();
+  $("#phone").style.setProperty("--ar", FW / FH);                         // preview has the export's shape
+  document.body.classList.toggle("lay-mobile", FH > FW);                  // tall formats: preview on the left
   applyLayout();
   if (st) requestAnimationFrame(renderTimeline);                          // the timeline panel changed width
-  const v = $("#video"), fit = f === "horizontal" && v.videoHeight > v.videoWidth;   // vertical footage in 16:9
+  const v = $("#video"), fit = FW > FH && v.videoHeight > v.videoWidth;   // vertical footage in a wide format
   $("#phone").classList.toggle("fit", fit); $("#bgfill").hidden = !fit;
-  for (const b of $("#fmtseg").children) b.classList.toggle("on", b.dataset.f === f);
+  $("#fmtsel").value = f;
   lastKey = ""; drawCaption();
 }
 
@@ -638,7 +639,7 @@ async function init() {
     afterCutChange();
   }, true); bindReview(); bindMarca(); bindPlane(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
-  for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
+  $("#fmtsel").onchange = (e) => { if (!st) return; st.format = e.target.value; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };
   const jump = (dir) => {
     const t = $("#video").currentTime, list = $("#skipcut").checked ? kept : st.segments;

@@ -33,7 +33,12 @@ sys.path.insert(0, str(HERE)); import hdr as HDR    # HLG/PQ phone footage → S
 ROOT = Path.home() / "reels"
 PY = sys.executable
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
-FORMATS = {"vertical": (1080, 1920), "horizontal": (1920, 1080)}    # Mobile 9:16 / Desktop 16:9
+# export formats: render size (W, H). LED panels are drawn at 2x (1024x768) and scaled down at the end (OUT_SIZE):
+# text and motion stay crisp on a 512x384 trade-show screen.
+FORMATS = {"vertical": (1080, 1920), "feed": (1080, 1350), "quadrado": (1080, 1080), "horizontal": (1920, 1080),
+           "4x3": (1440, 1080), "led": (1024, 768)}
+OUT_SIZE = {"led": (512, 384)}
+SUFFIX = {"vertical": "", "feed": "_4x5", "quadrado": "_1x1", "horizontal": "_16x9", "4x3": "_4x3", "led": "_led512x384"}
 CAMERA = {"follow": True, "zoom": 1.0, "punch": True}     # follow the face, base zoom, zoom step on jump cuts
 COLOR = {"correct": True, "look": "natural"}              # automatic correction per shot, then a look
 CAPTIONS = {"enabled": True, "font": "sans", "weight": "Black", "color": "#FFFFFF", "accent": "#FFD400", "size": 62,
@@ -548,11 +553,33 @@ def remap_words(words, segs):
     return out
 
 
-def source_is_vertical(d):
-    """From the preview proxy, which already has the phone rotation applied."""
+def source_aspect(d):
+    """Width / height of the source, from the preview proxy (phone rotation already applied)."""
     e = subprocess.run([_ff(), "-hide_banner", "-i", str(d / "preview.mp4")], capture_output=True, text=True, encoding="utf-8", errors="replace").stderr
     w, h = map(int, re.search(r"Video:.*?(\d{2,5})x(\d{2,5})", e).groups())
-    return h > w
+    return w / h
+
+
+def source_is_vertical(d): return source_aspect(d) < 1
+
+
+def cut_plan(fmt, src_ar):
+    """How cut.py prepares the source for a format: (fit, base size).
+    Vertical footage in a wide format -> whole picture over a blurred fill. A source as narrow as the format or
+    narrower (vertical phone video in 9:16, 4:5, 1:1) -> 4/3 of the frame: room on the sides for the camera to centre
+    the face and zoom, still sharp. A wider source in a narrower format -> the frame size: the scaled source is already
+    wider than the frame, so the camera picks the window (follows the face)."""
+    FW, FH = FORMATS[fmt]; ar = FW / FH; ev = lambda v: int(round(v / 2) * 2)
+    if src_ar < 1 and ar > 1: return "blur", (FW, FH)
+    if src_ar <= ar * 1.05: return "keep", (ev(FW * 4 / 3), ev(FH * 4 / 3))
+    return "keep", (FW, FH)
+
+
+def safe_area(fmt, FH):
+    """(top, bottom) rows text must stay inside: Reels/Stories have Instagram's UI on top and bottom; the rest only
+    needs a margin (feed crops nothing, LED panels have no UI)."""
+    if fmt == "vertical": return 270, FH - 480
+    m = int(FH * .06); return m, FH - m
 
 
 def rgba(h, a=255):
@@ -569,11 +596,7 @@ def export(name):
         job(name, "export", step="Cortando", pct=3, done=False, error=None, out=None)
         _write_json(d / "keep.json", cut_list(st, kept))
         cam = {**CAMERA, **st.get("camera", {})}; col = {**COLOR, **st.get("color", {})}
-        vert_src = source_is_vertical(d)
-        if fmt == "horizontal" and vert_src: fit, base = "blur", (FW, FH)              # whole picture on a blurred fill
-        elif fmt == "vertical" and vert_src: fit, base = "keep", (1440, 2560)        # room for zoom, stays sharp
-        elif fmt == "vertical": fit, base = "keep", (1080, 1920)                     # wide shot: the camera picks a 9:16 window
-        else: fit, base = "keep", (2560, 1440)
+        fit, base = cut_plan(fmt, source_aspect(d))
         subprocess.run([PY, str(HERE / "cut.py"), st["src"], "keep.json", "cut.mp4", "--size", f"{base[0]}x{base[1]}", "--crf", "16", "--fit", fit],
                        check=True, capture_output=True)
         words = json.loads((d / "words_raw.json").read_text(encoding="utf-8"))
@@ -583,7 +606,7 @@ def export(name):
         job(name, "export", step="Desenhando legendas", pct=25)
         sys.path.insert(0, str(HERE)); import reels_lib as R
         R.W, R.H = FW, FH                               # the engine reads the frame size at render time
-        R.SAFE_TOP, R.SAFE_BOTTOM = (270, FH - 480) if fmt == "vertical" else (60, FH - 60)
+        R.SAFE_TOP, R.SAFE_BOTTOM = safe_area(fmt, FH)
         fam = c["font"]
         if fam not in R.FONTS:                          # a font file the user picked in the app (project fonts/)
             fp = d / "fonts" / fam
@@ -667,8 +690,13 @@ def export(name):
                  if mus.get("src") and Path(mus["src"]).is_file() else [])
         if extra: job(name, "export", step="Música (abaixa na fala) e volume (-14 LUFS)", pct=92)
         subprocess.run([PY, str(HERE / "mix_audio.py"), "render.mp4", "render.mp4", "final.mp4", *extra], check=True, capture_output=True)
-        out = Path.home() / "Downloads" / f"{name}_cinex{'' if fmt == 'vertical' else '_16x9'}.mp4"
-        shutil.copy2(d / "final.mp4", out)
+        out = Path.home() / "Downloads" / f"{name}_cinex{SUFFIX.get(fmt, '_' + fmt)}.mp4"
+        if fmt in OUT_SIZE:                              # drawn at 2x, delivered at the panel's native size
+            ow, oh = OUT_SIZE[fmt]
+            subprocess.run([_ff(), "-loglevel", "error", "-y", "-i", str(d / "final.mp4"), "-vf", f"scale={ow}:{oh}:flags=lanczos",
+                            "-c:v", "libx264", "-crf", "16", "-preset", "medium", "-pix_fmt", "yuv420p", "-c:a", "copy",
+                            "-movflags", "+faststart", str(out)], check=True, capture_output=True)
+        else: shutil.copy2(d / "final.mp4", out)
         job(name, "export", step="Pronto", pct=100, done=True, out=str(out))
         say(name, f"Vídeo exportado: {out.name} ({dur:.1f} s), na pasta Downloads.")
     except subprocess.CalledProcessError as e:

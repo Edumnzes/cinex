@@ -117,9 +117,11 @@ someone in the background, a scene without PPE). The app has a live preview: exp
    answer with `say`, and start `wait` again. The user's edits in the app land in the same file — re-read with
    `show` before changing anything, never overwrite their choices without saying so.
 5. Export is the app's button (or `app_project.py export <name>`): cut → captions with the engine → −14 LUFS →
-   `Downloads/<name>_cinex.mp4` (or `_cinex_16x9.mp4` when `format` is "horizontal" — Desktop 16:9; vertical footage
-   is then fitted over a blurred fill). Then run `qa.py` on `~/reels/<name>/final.mp4` (`--platform desktop` for
-   16:9) and report it in the chat.
+   `Downloads/<name>_cinex<suffix>.mp4`. `format`: "vertical" 9:16 (Reels/Stories, no suffix), "feed" 4:5 (`_4x5`),
+   "quadrado" 1:1 (`_1x1`), "horizontal" 16:9 (`_16x9`), "4x3" (`_4x3`), "led" 512x384 trade-show panel (drawn at
+   1024x768, scaled down at the end; `_led512x384`). Vertical footage in a wide format is fitted over a blurred
+   fill; safe area = Instagram UI only in 9:16, a 6% margin elsewhere. Then run `qa.py` on the delivered file
+   (`--platform reels|desktop|feed|quadrado|4x3|led`) and report it in the chat.
 
 ## E. Reference styles and the "AI look" review
 

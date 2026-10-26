@@ -172,7 +172,11 @@
     <div class="rz x r only-mobile" data-var="--c-mon" data-sign="1" data-min="260" data-max="900" title="Arraste para redimensionar · duplo clique: padrão"></div>
     <div class="phead"><span class="ptitle">Programa</span><span id="progname" class="muted small"></span>
       <div class="spacer"></div>
-      <div class="seg" id="fmtseg" role="group" aria-label="Formato"><button data-f="vertical" title="Mobile 9:16 — Reels, Stories, TikTok, Shorts">Mobile</button><button data-f="horizontal" title="Desktop 16:9 — YouTube, site, apresentações">Desktop</button></div>
+      <select id="fmtsel" class="fmtsel" aria-label="Formato" title="Formato do vídeo exportado">
+        <option value="vertical">9:16 · Reels, Stories</option><option value="feed">4:5 · Feed</option>
+        <option value="quadrado">1:1 · Quadrado</option><option value="horizontal">16:9 · YouTube, site</option>
+        <option value="4x3">4:3 · Apresentação</option><option value="led">LED 512×384 · Painel</option>
+      </select>
       <label class="check small"><input type="checkbox" id="skipcut" checked> Pular cortes</label>
     </div>
     <div class="stage">

@@ -1,6 +1,6 @@
 """Technical QA of the exported file (manual 14: export is a control step, not a click on "render").
 
-Usage: python qa.py final.mp4 [--platform reels|stories] [--project project.py] [--decisions decisoes.json]
+Usage: python qa.py final.mp4 [--platform reels|stories|desktop|feed|quadrado|4x3|led] [--project project.py] [--decisions decisoes.json]
 
 One full decode of the file (proves it plays to the end) with ffmpeg filters:
   resolution / aspect / fps / duration / audio present        -> from the stream header
@@ -22,6 +22,10 @@ SPECS = {  # Instagram only for now (decided with the user)
     "reels":   dict(size=(1080, 1920), fps=(29.9, 30.1), dur=(3, 180), lufs=(-15.5, -12.5), peak=-1.0),
     "stories": dict(size=(1080, 1920), fps=(23.9, 60.1), dur=(1, 60), lufs=(-15.5, -12.5), peak=-1.0),
     "desktop": dict(size=(1920, 1080), fps=(29.9, 30.1), dur=(3, 3600), lufs=(-15.5, -12.5), peak=-1.0),   # 16:9 (YouTube, site)
+    "feed":    dict(size=(1080, 1350), fps=(29.9, 30.1), dur=(3, 3600), lufs=(-15.5, -12.5), peak=-1.0),   # 4:5
+    "quadrado": dict(size=(1080, 1080), fps=(29.9, 30.1), dur=(3, 3600), lufs=(-15.5, -12.5), peak=-1.0),  # 1:1
+    "4x3":     dict(size=(1440, 1080), fps=(29.9, 30.1), dur=(3, 3600), lufs=(-15.5, -12.5), peak=-1.0),   # presentations
+    "led":     dict(size=(512, 384), fps=(29.9, 30.1), dur=(3, 3600), lufs=(-15.5, -12.5), peak=-1.0),     # trade-show LED panel
 }
 
 

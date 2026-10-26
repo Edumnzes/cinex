@@ -125,11 +125,12 @@ Abre em http://127.0.0.1:8765 (só no seu computador). Na tela:
   posição, uma ou duas linhas, quantas palavras por vez.
 - **Conversa com o Cinex:** peça ajustes por escrito. Quem responde é o Claude Code, que precisa estar
   com a conversa aberta.
-- **Mobile ou Desktop:** escolha no monitor. No Mobile a prévia vertical fica em pé à esquerda e as ferramentas
-  ocupam o resto da tela; no Desktop a prévia é horizontal, no centro. Vídeo gravado em pé no 16:9 fica inteiro,
-  com fundo desfocado.
+- **Formato:** escolha no monitor — 9:16 (Reels, Stories), 4:5 (feed), 1:1, 16:9 (YouTube, site), 4:3
+  (apresentação) ou LED 512×384 (painel de feira). Nos formatos em pé a prévia fica à esquerda e as ferramentas
+  ocupam o resto; nos largos a prévia fica no centro. Vídeo gravado em pé num formato largo fica inteiro, com fundo
+  desfocado. O LED é desenhado em 1024×768 e reduzido no final, para o texto ficar nítido no painel.
 - **Tamanho dos painéis:** arraste as bordas para aumentar ou diminuir cada bloco (duplo clique volta ao padrão).
-- **Aprovar e travar corte** e **Exportar:** o vídeo final vai para `Downloads/<nome>_cinex.mp4` (ou `_cinex_16x9.mp4`).
+- **Aprovar e travar corte** e **Exportar:** o vídeo final vai para `Downloads/<nome>_cinex.mp4` (ou com o formato no nome: `_4x5`, `_1x1`, `_16x9`, `_4x3`, `_led512x384`).
 
 O app faz corte, legendas, enquadramento (seguir rosto, zoom, zoom nos cortes), cor (correção automática e looks),
 motion (títulos, tópicos, nome, citação, frase grande, chamadas), efeitos sonoros do seu banco e a ordem das frases
