@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR" data-resolution="portrait">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Serif"; src: url("fonts/SerifItalic.ttf"); font-style: italic; font-weight: 700; }
+      @font-face { font-family: "Sans"; src: url("fonts/Montserrat.ttf"); font-weight: 100 900; }
+      :root { --ink: #ffffff; --accent: #f3e3c3; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: transparent; }
+      #root { position: relative; width: 100%; height: 100%; perspective: 1400px; }
+      /* Cinex "autoridade editorial": small sentence-case line + emphasis word in large serif italic */
+      #lead { position: absolute; left: 0; right: 0; top: 1040px; text-align: center; color: var(--ink);
+              font: 600 44px/1 "Sans"; letter-spacing: -0.01em; text-shadow: 0 6px 24px rgba(0,0,0,.45); }
+      #lead span { display: inline-block; }
+      #word-wrap { position: absolute; left: 0; right: 0; top: 1090px; text-align: center; overflow: hidden; padding: 0 0 30px; }
+      #word { display: inline-block; color: var(--accent); font: italic 700 190px/1.05 "Serif"; letter-spacing: -0.02em;
+              transform-origin: 50% 100%; text-shadow: 0 14px 40px rgba(0,0,0,.45); }
+      #rule { position: absolute; left: 390px; top: 1320px; width: 300px; height: 24px; overflow: visible; }
+      #rule path { fill: none; stroke: var(--accent); stroke-width: 5; stroke-linecap: round; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="4" data-width="1080" data-height="1920">
+      <div id="lead" class="clip" data-start="0" data-duration="4" data-track-index="0">
+        <span>nós</span> <span>estamos</span> <span>pagando</span>
+      </div>
+      <div id="word-wrap" class="clip" data-start="0" data-duration="4" data-track-index="1"><span id="word">60%</span></div>
+      <svg id="rule" class="clip" data-start="0" data-duration="4" data-track-index="2" viewBox="0 0 300 24">
+        <path d="M6 14 C 80 4, 190 22, 294 8" />
+      </svg>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const len = document.querySelector("#rule path").getTotalLength();
+      gsap.set("#rule path", { strokeDasharray: len, strokeDashoffset: len });
+      // lead words rise one by one (one gentle stagger, not an effect per word)
+      tl.fromTo("#lead span", { y: 26, opacity: 0, filter: "blur(6px)" },
+                { y: 0, opacity: 1, filter: "blur(0px)", duration: 0.45, ease: "power3.out", stagger: 0.07 }, 0.1);
+      // emphasis word: masked reveal from below + slight 3D tilt settling with a spring
+      tl.fromTo("#word", { yPercent: 105, rotationX: -55, opacity: 0.2 },
+                { yPercent: 0, rotationX: 0, opacity: 1, duration: 0.9, ease: "back.out(1.6)" }, 0.45);
+      tl.to("#rule path", { strokeDashoffset: 0, duration: 0.55, ease: "power2.inOut" }, 1.1);
+      // exit together, quick
+      tl.to(["#lead", "#word-wrap", "#rule"], { y: -24, opacity: 0, duration: 0.35, ease: "power2.in" }, 3.55);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

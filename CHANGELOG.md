@@ -57,6 +57,8 @@
 - Legenda com **fonte e tamanho próprios para a palavra de ênfase** (ex.: legenda pequena e a palavra-chave grande em
   serifa itálica), no app e no motor. Perfis de estilo criados só por observação (`estilo.py criar`), com look base
   até a cor ser medida; 4 perfis observados nas referências do Instagram ficam no banco do usuário.
+- **Protótipo de motion em HTML com HyperFrames** (`motion_html/`): renderizado com transparência e composto pelo
+  motor; abre caminho para tipografia de designer, máscaras e 3D no motion.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.
