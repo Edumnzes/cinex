@@ -29,7 +29,8 @@ FORMATS = {"vertical": (1080, 1920), "horizontal": (1920, 1080)}    # Mobile 9:1
 CAMERA = {"follow": True, "zoom": 1.0, "punch": True}     # follow the face, base zoom, zoom step on jump cuts
 COLOR = {"correct": True, "look": "natural"}              # automatic correction per shot, then a look
 CAPTIONS = {"enabled": True, "font": "sans", "weight": "Black", "color": "#FFFFFF", "accent": "#FFD400", "size": 62,
-            "stroke": 6, "lines": 1, "words": 3, "upper": True, "y": 1300}
+            "stroke": 6, "lines": 1, "words": 3, "upper": True, "y": 1300,
+            "kfont": "", "kscale": 1.0}                          # emphasis word: own font ("" = same) and size
 
 
 def _ff():
@@ -312,16 +313,24 @@ def export(name):
             if not fp.is_file(): raise FileNotFoundError(f"fonte {fam} não encontrada")
             R.FONTS[fam] = str(fp); R.DEFAULT_W[fam] = None
         w = c["weight"] if R.DEFAULT_W.get(fam) else None
-        R.CAPTION_STYLES["app"] = dict(upper=c["upper"], fam=fam, w=w, size=int(c["size"]), stroke=int(c["stroke"]), kfam=fam, kw=w,
-                                       ksize=int(c["size"]), glow=False, max_words=int(c["words"]), max_chars=999,
+        kf = c.get("kfont") or fam
+        if kf not in R.FONTS:
+            fp = d / "fonts" / kf
+            if not fp.is_file(): raise FileNotFoundError(f"fonte {kf} não encontrada")
+            R.FONTS[kf] = str(fp); R.DEFAULT_W[kf] = None
+        kw = w if kf == fam else R.DEFAULT_W.get(kf)
+        R.CAPTION_STYLES["app"] = dict(upper=c["upper"], fam=fam, w=w, size=int(c["size"]), stroke=int(c["stroke"]), kfam=kf, kw=kw,
+                                       ksize=int(c["size"] * float(c.get("kscale", 1.0))), glow=False, max_words=int(c["words"]), max_chars=999,
                                        lines=int(c["lines"]), color=rgba(c["color"]))
         dur = duration(d / "cut.mp4")
         if str(col["look"]).startswith("ref:"):          # look copied from a reference profile (estilo.py)
             import estilo
-            ref = estilo.load(col["look"][4:])["regras"]["cor"]
-            src = estilo.colour(d / "cut.mp4", duration(d / "cut.mp4"), base[0], base[1])
-            R.register_transfer("ref", src["lab_mean"], src["lab_std"], ref["lab_mean"], ref["lab_std"], ref.get("forca", .6))
-            col["look"] = "ref"
+            ref = estilo.load(col["look"][4:])["regras"].get("cor") or {}
+            if ref.get("lab_mean"):
+                src = estilo.colour(d / "cut.mp4", duration(d / "cut.mp4"), base[0], base[1])
+                R.register_transfer("ref", src["lab_mean"], src["lab_std"], ref["lab_mean"], ref["lab_std"], ref.get("forca", .6))
+                col["look"] = "ref"
+            else: col["look"] = ref.get("look_base", "natural")
         z = max(1.0, min(1.25, float(cam["zoom"])))
         cuts = json.loads((d / "cuts.json").read_text()) if (d / "cuts.json").exists() else []
         import formats as F                              # after R.W/R.H: it copies the frame size on import

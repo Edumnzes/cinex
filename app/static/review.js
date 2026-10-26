@@ -14,7 +14,7 @@ function bindReview() {
       st.estilo = e.id;
       if (e.legenda) Object.assign(st.captions, e.legenda);
       if (e.camera) Object.assign(st.camera, e.camera);
-      st.color.look = "ref:" + e.id;
+      st.color.look = e.tem_cor ? "ref:" + e.id : (e.cor_base || "natural");
     }
     renderAll(); save({ estilo: st.estilo, captions: st.captions, camera: st.camera, color: st.color });
   };
@@ -42,7 +42,7 @@ async function loadEstilos() {
 function estiloLook() {             // LOOKS entry for the applied reference, so the Cor tab can show/select it
   const e = st && estilos.find((x) => x.id === st.estilo);
   for (const k of Object.keys(LOOKS)) if (k.startsWith("ref:")) delete LOOKS[k];
-  if (e) LOOKS["ref:" + e.id] = ["Ref: " + e.id, e.css || "", .08, "linear-gradient(135deg,#6c65c7,#2383e2)"];
+  if (e && e.tem_cor) LOOKS["ref:" + e.id] = ["Ref: " + e.id, e.css || "", .08, "linear-gradient(135deg,#6c65c7,#2383e2)"];
 }
 
 function renderEstilo() {
@@ -54,9 +54,13 @@ function renderEstilo() {
   const line = (k, v) => { if (v == null || v === "") return; const r = document.createElement("div"); r.className = "kv";
     const a = document.createElement("span"); a.className = "muted"; a.textContent = k; const b = document.createElement("span"); b.textContent = v; r.append(a, b); rows.push(r); };
   const r = e.ritmo || {};
-  line("Vídeos", `${e.videos}${e.revisado ? "" : " · regras visuais ainda não preenchidas"}`);
+  line("Origem", e.origem === "observação" ? "observado no Instagram (sem medição de ritmo e cor)" : `${e.videos} vídeo(s) medidos`);
+  if (!e.revisado) line("Status", "regras visuais ainda não preenchidas");
   line("Ritmo", r.plano_mediano_s != null ? `plano de ${r.plano_mediano_s} s · ${r.cortes_por_10s} cortes/10 s · ${r.cortes_nos_3s} no gancho` : "");
   if (e.legenda) line("Legenda", `${e.legenda.upper ? "CAIXA ALTA" : "normal"} · ${e.legenda.words || "?"} palavras · ${e.legenda.lines || 1} linha(s)`);
+  if (e.legenda && e.legenda.kfont) line("Ênfase", `palavra-chave em ${e.legenda.kfont === "serif" ? "serifa itálica" : e.legenda.kfont}, ${Math.round((e.legenda.kscale || 1) * 100)}%`);
+  if (!e.tem_cor && e.cor_base) line("Cor", `look ${e.cor_base} (até medir a referência)`);
+  if (Array.isArray(e.motion)) line("Motion", e.motion.join(" · "));
   line("Gancho", e.gancho); line("Notas", e.notas);
   const imgs = document.createElement("div"); imgs.className = "refsheets";
   for (const f of e.folhas.filter((f) => f.startsWith("quadros") || f.startsWith("gancho")).slice(0, 4)) {

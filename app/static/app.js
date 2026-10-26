@@ -271,6 +271,11 @@ function drawCaption() {
   const spans = g.w.map((w) => {
     const s = document.createElement("span"); s.className = "w"; s.textContent = w.d;
     s.style.color = w.key ? c.accent : c.color;
+    if (w.key && (c.kfont || (c.kscale || 1) !== 1)) {          // emphasis word: own font and size (reels_lib kfam/ksize)
+      const kf = c.kfont || c.font; ensureFont(kf);
+      s.style.fontFamily = `"cx-${kf}", system-ui`; s.style.fontSize = px(c.size * (c.kscale || 1)) + "px";
+      if (kf === "serif") { s.style.fontStyle = "italic"; s.style.fontWeight = 700; }
+    }
     if (c.stroke) { s.style.webkitTextStroke = `${px(c.stroke * 2)}px #000`; }
     s.style.textShadow = `0 ${px(6)}px ${px(18)}px rgba(0,0,0,.55)`;
     if (c.upper && w.s <= ct && ct < w.e + 0.05) s.style.transform = "scale(1.06)";
@@ -297,6 +302,8 @@ function renderCaptionsUI() {
   const fsel = $("#c-font");
   const opts = [...fonts.map((f) => new Option(f.label, f.id)), ...projectFonts.map((f) => new Option(f + " (projeto)", f))];
   fsel.replaceChildren(...opts); fsel.value = c.font;
+  $("#c-kfont").replaceChildren(new Option("Mesma da legenda", ""), ...opts.map((o) => new Option(o.text, o.value))); $("#c-kfont").value = c.kfont || "";
+  $("#c-kscale").value = Math.round((c.kscale || 1) * 100); $("#o-kscale").textContent = Math.round((c.kscale || 1) * 100) + "%";
   const f = fonts.find((x) => x.id === c.font);
   $("#weightrow").hidden = !(f && f.weights.length);
   if (f && f.weights.length) { $("#c-weight").replaceChildren(...f.weights.map((w) => new Option(w, w))); $("#c-weight").value = c.weight; }
@@ -317,6 +324,8 @@ function bindCaptionUI() {
   $("#c-accent").oninput = (e) => set("accent", e.target.value.toUpperCase());
   for (const k of ["size", "stroke", "y"]) $("#c-" + k).oninput = (e) => set(k, +e.target.value);
   $("#c-font").onchange = (e) => set("font", e.target.value);
+  $("#c-kfont").onchange = (e) => set("kfont", e.target.value);
+  $("#c-kscale").oninput = (e) => set("kscale", +e.target.value / 100);
   $("#c-weight").onchange = (e) => set("weight", e.target.value);
   for (const seg of document.querySelectorAll(".seg")) for (const b of seg.children) b.onclick = () => set(seg.dataset.key, +b.dataset.v);
   $("#c-keywords").onchange = (e) => { if (!st) return; st.keywords = e.target.value.split(",").map((s) => s.trim()).filter(Boolean); saveCaptions(); };

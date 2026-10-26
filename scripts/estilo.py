@@ -4,6 +4,8 @@
     python estilo.py list
     python estilo.py show <id>
     python estilo.py set <id> <regra> '<json>'      fill a rule after looking at the sheets (legenda, camera, motion, sfx, gancho, notas)
+    python estilo.py criar <id> [--formato X] [--link URL ...]   profile from observation only (no files): rules by hand,
+                                                    regras.cor.look_base names a built-in look until colour is measured
 
 `analisar` measures what can be measured and writes ~/reels-banco/estilos/<id>/:
     perfil.json      medidas (cut rhythm, colour statistics, loudness, speech pace) + regras (rules the app applies)
@@ -177,10 +179,18 @@ if __name__ == "__main__":
     if a.cmd == "analisar":
         if not a.nome or not re.fullmatch(r"[a-z0-9_-]{1,40}", a.nome): sys.exit("--nome obrigatório: minúsculas, números, _ ou -")
         analyse(a.args, a.nome, a.formato, a.link, not a.sem_fala)
+    elif a.cmd == "criar":
+        if not re.fullmatch(r"[a-z0-9_-]{1,40}", a.args[0]): sys.exit("id: minúsculas, números, _ ou -")
+        f = ROOT / a.args[0]; f.mkdir(parents=True, exist_ok=True); p = f / "perfil.json"
+        if p.exists(): sys.exit(f"{p} já existe")
+        p.write_text(json.dumps(dict(id=a.args[0], criado=datetime.date.today().isoformat(), atualizado=datetime.date.today().isoformat(),
+                                     formato=a.formato, links=[a.link] if a.link else [], medidas=dict(videos=[], cor=None, planos={}),
+                                     regras={k: None for k in RULES}, revisado=False, origem="observação"), ensure_ascii=False, indent=1), encoding="utf-8")
+        print(p)
     elif a.cmd == "list":
         for d in profiles():
             r = d["regras"]; print(f"{d['id']:20} {'revisado' if d.get('revisado') else 'medido  '} {len(d['medidas']['videos'])} vídeo(s) "
-                                   f"· plano {r['ritmo']['plano_mediano_s']} s · legenda {'ok' if r.get('legenda') else '—'}")
+                                   f"· plano {(r.get('ritmo') or {}).get('plano_mediano_s', '?')} s · legenda {'ok' if r.get('legenda') else '—'}")
     elif a.cmd == "show": print(json.dumps(load(a.args[0]), ensure_ascii=False, indent=1))
     elif a.cmd == "set":
         nome, regra, val = a.args[0], a.args[1], json.loads(a.args[2])

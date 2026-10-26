@@ -124,6 +124,8 @@ class H(BaseHTTPRequestHandler):
                     out.append(dict(id=e["id"], revisado=e.get("revisado", False), formato=e.get("formato"), links=e.get("links", []),
                                     videos=len(e["medidas"]["videos"]), ritmo=r.get("ritmo"), legenda=r.get("legenda"), camera=r.get("camera"),
                                     css=(r.get("cor") or {}).get("css", ""), gancho=r.get("gancho"), notas=r.get("notas"),
+                                    tem_cor=bool((r.get("cor") or {}).get("lab_mean")), cor_base=(r.get("cor") or {}).get("look_base"),
+                                    motion=r.get("motion"), sfx=r.get("sfx"), origem=e.get("origem", "medido"),
                                     folhas=sorted(p.name for p in folder.glob("*.jpg") if not p.name.startswith("_"))))
                 return self._send(200, out)
             if parts[:2] == ["api", "estilos"] and len(parts) == 4:
