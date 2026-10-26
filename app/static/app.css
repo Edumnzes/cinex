@@ -172,6 +172,7 @@ body.resizing video { pointer-events: none; }
 .mg-citacao small { display: inline-block; margin-top: .5em; font-family: "cx-sans", system-ui; font-style: normal; font-size: .42em; padding: .4em 1em; border-radius: 999px; background: rgba(11,17,32,.91); color: var(--acc); }
 .mg-frase { width: 81.5%; white-space: normal; font-weight: 900; paint-order: stroke fill; -webkit-text-stroke: .18em #000; }
 .mg-frase .hl { color: var(--acc); }
+.mg-gigante { font-weight: 900; text-transform: uppercase; letter-spacing: -.04em; color: var(--acc); line-height: .9; }
 .ph-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
 .cap { position: absolute; left: 7.4%; right: 7.4%; transform: translateY(-50%); text-align: center; pointer-events: none; line-height: 1.15; }
 .cap .line { white-space: nowrap; display: inline-block; transform-origin: center; }

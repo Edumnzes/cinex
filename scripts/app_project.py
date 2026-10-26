@@ -246,6 +246,7 @@ def raw_to_cut(t, segs, end=False):
 MOTIONS = {
     "titulo": "Título / capítulo", "topico": "Tópico numerado", "nome": "Nome de quem fala", "citacao": "Citação",
     "frase": "Frase grande", "seguir": "Chamada: seguir", "salvar": "Chamada: salvar",
+    "gigante": "Palavra gigante (atrás da pessoa)",
 }
 
 
@@ -257,6 +258,7 @@ def motion_fn(F, m, c0, c1, accent, n, total):
     if k == "nome": return lambda ov, t: F.name_card(ov, t, c0, c1, tx, t2, accent)
     if k == "citacao": return lambda ov, t: F.quote_card(ov, t, c0, c1, tx, t2, accent)
     if k == "frase": return lambda ov, t: F.big_phrase(ov, t, c0, c1, tx, [w for w in t2.replace(",", " ").split() if w], accent)
+    if k == "gigante": return lambda ov, t: F.big_phrase(ov, t, c0, c1, tx.upper(), tx.split(), accent)   # classic: no matte
     if k == "seguir": return lambda ov, t: F.cta_follow(ov, t, c0, c1, tx or "Siga para mais", accent)
     if k == "salvar": return lambda ov, t: F.cta_save(ov, t, c0, c1, tx or "Salve para não esquecer", accent)
     raise ValueError(f"motion desconhecido: {k}")
@@ -353,7 +355,8 @@ def export(name):
                 job(name, "export", step=f"Motion {len(ovs) + len(fns) + 1}/{len(ms)} (HTML)", pct=20)
                 try:
                     mov, _ = MH.render(m, FW, FH, c["accent"], c1 - c0, n, len(tops), cache=d / "motion_cache")
-                    ovs.append(dict(src=str(mov), t0=c0, t1=c1, cx=FW / 2, w=FW, prefer=MH.PREFER[m["type"]] * FH / 1920))
+                    ovs.append(dict(src=str(mov), t0=c0, t1=c1, cx=FW / 2, w=FW, prefer=MH.PREFER[m["type"]] * FH / 1920,
+                                    atras=bool(m.get("atras", m["type"] == "gigante"))))   # behind the person (matte)
                     done = True
                 except Exception as e:                     # one bad element never blocks the export
                     say(name, f"Motion {m['type']} em HTML falhou, usei o clássico: {str(e)[:160]}")

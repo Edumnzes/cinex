@@ -11,6 +11,7 @@ const MT = {   // type: [label, default seconds, default text, default text2, y 
   frase: ["Frase grande", 3, "Frase que prende a atenção", "", 820],
   seguir: ["Siga", 3, "Siga para mais", "", 420],
   salvar: ["Salve", 3, "Salve para não esquecer", "", 420],
+  gigante: ["Palavra gigante", 2.5, "75%", "", 640],
 };
 const SFX_GAIN = -12;
 let fxCats = {}, selM = null, selS = null, fxLastT = 0, fxKey = "";
@@ -54,6 +55,10 @@ function renderMotionEditor() {
   if (m.type === "nome") field("Cargo", txt("text2", "opcional"));
   if (m.type === "citacao") field("Autor", txt("text2", "opcional"));
   if (m.type === "frase") field("Destacar", txt("text2", "palavras na cor de destaque"));
+  { const cb = el("input"); cb.type = "checkbox"; cb.checked = m.atras ?? m.type === "gigante";
+    cb.onchange = () => { m.atras = cb.checked; renderFx(); fxSave(); };
+    const lab = el("label", "check small"); lab.append(cb, document.createTextNode(" recorta a pessoa por cima (aparece na exportação, motor HTML)"));
+    field("Atrás da pessoa", lab); }
   field("Início (s)", num("t0")); field("Fim (s)", num("t1"));
   const sel = el("select"); sel.append(new Option("Sem som", ""), ...Object.keys(fxCats).map((c) => new Option(c, c)));
   sel.value = m.sfx || ""; sel.onchange = () => { m.sfx = sel.value; if (m.sfx) fxPlay(m.sfx, SFX_GAIN); renderFx(); fxSave(); };
@@ -114,7 +119,7 @@ function renderSfxWarn() {
 function renderFx() {
   if (!st) return; fxDefaults();
   $("#mlane").replaceChildren(...st.motions.map((m) => {
-    const b = el("div", "blk mblk" + (m.id === selM ? " sel" : ""), (m.sfx ? "♪ " : "") + MT[m.type][0] + ": " + (m.text || ""));
+    const b = el("div", "blk mblk" + (m.id === selM ? " sel" : ""), (m.sfx ? "♪ " : "") + ((m.atras ?? m.type === "gigante") ? "◐ " : "") + MT[m.type][0] + ": " + (m.text || ""));
     b.style.left = m.t0 * pps + "px"; b.style.width = Math.max(6, (m.t1 - m.t0) * pps - 1) + "px"; b.title = b.textContent;
     const h = el("i", "grip"); b.append(h);
     drag(b, (dt, edge) => { if (edge) m.t1 = Math.max(m.t0 + .3, Math.min(st.duration, m.t1o + dt));
@@ -181,7 +186,8 @@ function fxFrame(t, playing) {
 function mgNode(m, k, acc, FH) {
   const px = (v) => v * k + "px", n = el("div", "mg mg-" + m.type); n.dataset.id = m.id;
   n.style.top = (MT[m.type][4] / 1920) * 100 + "%"; n.style.setProperty("--acc", acc);
-  n.style.fontSize = px({ titulo: 32, topico: 50, nome: 50, citacao: 62, frase: 78, seguir: 40, salvar: 40 }[m.type]);
+  n.style.fontSize = px({ titulo: 32, topico: 50, nome: 50, citacao: 62, frase: 78, seguir: 40, salvar: 40, gigante: 200 }[m.type]);
+  if (m.atras ?? m.type === "gigante") n.style.opacity = .55;      // preview can't cut the person: shown faded
   if (m.type === "topico") {
     const i = st.motions.filter((x) => x.type === "topico").sort((a, b) => a.t0 - b.t0).indexOf(m) + 1;
     n.append(el("b", "num", String(i)), el("span", "", m.text));

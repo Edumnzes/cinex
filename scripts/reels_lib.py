@@ -349,6 +349,30 @@ def slot(t0, t1, h, prefer=None, margin=32):
     return best
 
 
+class _Matte:
+    """Person matte for "text behind the subject": MediaPipe selfie segmenter (Apache-2.0, CPU, ~0.1 s per frame at
+    360x640). Model in ~/reels-banco/modelos/selfie_multiclass_256x256.tflite (or REELS_MATTE_MODEL). The alpha is
+    smoothed over consecutive frames (EMA) so the edge doesn't shimmer. Created only when something sits behind."""
+    def __init__(self):
+        import os, mediapipe as mp
+        from mediapipe.tasks.python import vision, BaseOptions
+        model = os.environ.get("REELS_MATTE_MODEL") or str(Path.home() / "reels-banco" / "modelos" / "selfie_multiclass_256x256.tflite")
+        if not Path(model).exists(): raise FileNotFoundError(f"modelo de recorte não encontrado: {model}")
+        self.mp = mp
+        self.seg = vision.ImageSegmenter.create_from_options(vision.ImageSegmenterOptions(
+            base_options=BaseOptions(model_asset_path=model), running_mode=vision.RunningMode.IMAGE, output_confidence_masks=True))
+        self.prev = None; self.pt = None
+    def alpha(self, img, t):
+        h, w = img.shape[:2]; sw, sh = (360, 640) if h >= w else (640, 360)
+        small = np.ascontiguousarray(cv2.resize(img, (sw, sh), interpolation=cv2.INTER_AREA))
+        a = 1.0 - self.seg.segment(self.mp.Image(image_format=self.mp.ImageFormat.SRGB, data=small)).confidence_masks[0].numpy_view()
+        a = np.clip((a - .25) / .5, 0, 1).astype(np.float32)                      # firmer edge, no grey halo
+        if self.prev is not None and self.pt is not None and 0 < t - self.pt <= 1.5 / FPS:
+            a = .6 * a + .4 * self.prev                                           # temporal smoothing between frames
+        self.prev, self.pt = a, t
+        return cv2.GaussianBlur(cv2.resize(a, (w, h), interpolation=cv2.INTER_LINEAR), (0, 0), 1.6)[..., None]
+
+
 class Reel:
     """
     src        1440x2560 (or any 9:16) cut, audio included
@@ -423,6 +447,7 @@ class Reel:
                 o.setdefault("t1", o["t0"] + o["clip"].dur / o.get("speed", 1.0))
                 self.overlays.append(o)
         self.flashes, self.sfx = list(flashes), list(sfx)
+        self._matte = None                       # created on first use by an overlay with atras=True
         self.sfx_dir = Path(sfx_dir) if sfx_dir else Path.home() / "reels-sfx"
         self.src = src
         probe = subprocess.run([FFM, "-hide_banner", "-i", src], capture_output=True, text=True).stderr
@@ -914,17 +939,27 @@ class Reel:
             paste(ov, RR(cw + 8, ch + 8, 44, (255, 255, 255, 60)), W / 2, cy, s, a)
             paste(ov, im, W / 2, cy, s, a)
 
-    def _overlays(self, ov, t):
+    def _overlays(self, ov, t, behind=False):
         for o in self.overlays:
+            if bool(o.get("atras")) != behind: continue
             if not (o["t0"] <= t < o["t1"]): continue
             im = o["clip"].frame(t - o["t0"])
             if im is None: continue
+            if behind and "cy" not in o:            # behind the person: centre on the head (it should overlap, not avoid)
+                fb = next((f for f in (self.face_box(o["t0"] + d) for d in (.5, .2, 1.0, 0)) if f), None)
+                o["cy"] = (fb[1] + fb[3]) / 2 + .1 * (fb[3] - fb[1]) if fb else o.get("prefer", 640)
             cy = o["cy"] if "cy" in o else slot(o["t0"], o["t1"], o["clip"].h, prefer=o.get("prefer", 700))
             a = o.get("a", 1.0) * min(1, (t - o["t0"]) / .08, (o["t1"] - t) / .08)   # 2-3 frame soft edges
             paste(ov, im, o.get("cx", W / 2), cy, 1.0, a)
 
     def compose(self, frame, t, debug=False):
         img = self.bg_fx(self._broll_full(grade(self.color_correct(self.camera(frame, t), t), self.look), t), t)
+        if any(o.get("atras") and o["t0"] <= t < o["t1"] for o in self.overlays):   # text BEHIND the person
+            if self._matte is None: self._matte = _Matte()
+            back = Image.new("RGBA", (W, H)); self._overlays(back, t, behind=True)
+            b = np.asarray(back, dtype=np.float32); ba = b[..., 3:4] / 255
+            a = self._matte.alpha(img, t)
+            img = (img * (1 - ba * (1 - a)) + b[..., :3] * ba * (1 - a)).astype(np.uint8)
         ov = Image.new("RGBA", (W, H))
         self._broll_cards(ov, t)
         self._overlays(ov, t)

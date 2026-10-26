@@ -1,0 +1,15 @@
+<!-- gigante: one or two giant words that fill the width — made to sit BEHIND the person (atras). H=560 -->
+<!--CSS-->
+#wrap { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%); text-align: center; white-space: nowrap; }
+#word { display: inline-block; font: 900 200px / .9 "Sans"; letter-spacing: -.04em; text-transform: uppercase; color: var(--accent); }
+#word span { display: inline-block; }
+<!--BODY-->
+<div id="wrap" class="clip" data-start="0" data-duration="$DUR" data-track-index="0"><span id="word">$CHARS</span></div>
+<!--JS-->
+// fit the word(s) to 94% of the frame width, capped so one short word doesn't become a wall
+const w = document.getElementById("word"), target = document.body.clientWidth * .94;
+const fs = Math.min(200 * target / w.getBoundingClientRect().width, document.body.clientHeight * .95);
+w.style.fontSize = fs + "px";
+tl.fromTo("#word span", { yPercent: 60, opacity: 0 }, { yPercent: 0, opacity: 1, duration: .55, ease: "power4.out", stagger: .04 }, 0);
+tl.fromTo("#word", { scale: .96 }, { scale: 1.03, duration: OUT, ease: "none" }, 0);          // slow push while it holds
+tl.to("#word", { opacity: 0, duration: .3, ease: "power2.in" }, OUT);

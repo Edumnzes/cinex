@@ -66,6 +66,11 @@
 - **Motion em HTML na exportação**: os 7 elementos (título, tópico, nome, citação, frase grande, siga, salve) agora são
   renderizados com o HyperFrames a partir de modelos em `motion_html/templates/` (máscaras, molas, 3D leve, tipografia
   com serifa itálica), com cache por conteúdo e o motion clássico como reserva. Escolha no app em Motion › Motor.
+- **Máscara: texto atrás da pessoa.** O motor recorta a pessoa quadro a quadro (MediaPipe, modelo
+  `selfie_multiclass_256x256.tflite` em `~/reels-banco/modelos`, roda no processador, ~0,1 s por quadro, só nos trechos
+  com elemento atrás) e monta as camadas vídeo → elemento atrás → pessoa → elementos da frente → legenda, com
+  suavização entre quadros. Novo elemento **Palavra gigante** (modelo HTML que ocupa a largura e fica na altura da
+  cabeça) e a opção **Atrás da pessoa** para qualquer elemento do motor HTML.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

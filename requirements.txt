@@ -7,3 +7,4 @@ opencv-python>=5.0,<6
 pillow>=11,<13
 numpy>=2.0,<3
 truststore>=0.10,<1
+mediapipe>=1.1,<2       # máscara (texto atrás da pessoa); modelo baixado à parte para ~/reels-banco/modelos
