@@ -135,6 +135,16 @@ O app faz corte, legendas, enquadramento (seguir rosto, zoom, zoom nos cortes), 
 motion (títulos, tópicos, nome, citação, frase grande, chamadas), efeitos sonoros do seu banco e a ordem das frases
 (arraste na aba Corte; dá para abrir o vídeo com uma frase forte do meio).
 
+**B-roll (trilha V2):** na aba **B-roll**, adicione outros clipes (cole o caminho ou envie do computador; o original
+não sai do lugar e vídeo HDR é convertido). **+ Na agulha** cobre a fala a partir do ponto atual: a imagem troca e o
+áudio continua sendo a fala. Arraste o bloco na trilha V2, estique pela borda e clique na faixa de quadros para
+escolher de onde o clipe começa. Modo **Tela cheia** ou **Cartão**, com aproximação lenta opcional. Serve para
+mostrar o que a pessoa descreve ou esconder um problema da imagem (cabo, pessoa no fundo, cena sem EPI).
+
+**Música:** o Cinex não cria trilhas. Use músicas reais, de preferência as virais da biblioteca do Instagram,
+adicionadas no próprio editor do Instagram na hora de publicar (música colocada fora do Instagram costuma ser
+silenciada). O Claude sugere a música e o ponto de entrada. Contas comerciais só têm acesso à biblioteca livre.
+
 **Estilo e revisão:** mande vídeos de referência de um estilo que você quer seguir; o Claude mede e monta um perfil
 (`~/reels-banco/estilos`). Na aba **Revisão** você aplica o estilo ao projeto e pede uma revisão do que ainda tem
 cara de edição automática.

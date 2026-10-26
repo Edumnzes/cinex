@@ -146,15 +146,15 @@ function renderFx() {
   renderMotionEditor(); renderSfxEditor(); renderSfxWarn(); fxKey = "";
 }
 
-function drag(b, move, start, end, click) {
+function drag(b, move, start, end, click, light = renderFxLight, full = renderFx) {   // light: reposition while dragging
   b.onpointerdown = (e) => {
     e.preventDefault(); const edge = e.target.classList.contains("grip"), x0 = e.clientX; let moved = false;
     b.setPointerCapture(e.pointerId); start();
     b.onpointermove = (ev) => {
       const dx = ev.clientX - x0; if (Math.abs(dx) > 3) moved = true;
-      if (moved) { move(dx / pps, edge); b.style.left = ""; renderFxLight(); }
+      if (moved) { move(dx / pps, edge); b.style.left = ""; light(); }
     };
-    b.onpointerup = () => { b.onpointermove = b.onpointerup = null; if (moved) end(); else { end(); click(); } renderFx(); };
+    b.onpointerup = () => { b.onpointermove = b.onpointerup = null; if (moved) end(); else { end(); click(); } full(); };
   };
 }
 function renderFxLight() {        // reposition blocks while dragging without rebuilding them

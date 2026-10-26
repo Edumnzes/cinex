@@ -22,6 +22,7 @@ PORT = 8765
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)       # no console window flashing on Windows
 MAX_BODY = 25 * 1024 * 1024                     # font uploads
 MAX_REF = 600 * 1024 * 1024                     # niche reference videos (streamed to disk)
+MAX_MEDIA = 8 * 1024 * 1024 * 1024              # B-roll clips sent from the browser (4K phone clips are big)
 HANDLE_RE = re.compile(r"^[a-z0-9._]{1,40}$")
 
 
@@ -40,7 +41,7 @@ def marca_info(h):
     return dict(handle=h, arquivos=st, marca=brand.load_brand(h) if st["marca.json"] else None, perfil_atualizado=head,
                 referencias=refs, estilo_nicho=f"nicho_{h}" if prof.exists() else None, desempenho=rep,
                 analisando=(d / ".analisando").exists())
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca", "motion_engine"}
+EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca", "motion_engine", "broll"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 
@@ -89,7 +90,9 @@ class H(BaseHTTPRequestHandler):
         self.end_headers()
         if self.command != "HEAD": self.wfile.write(body)
 
-    def _err(self, code, msg): self._send(code, {"error": msg})
+    def _err(self, code, msg):
+        self.close_connection = True       # keep-alive: an unread request body (refused upload) must not leak into the next request
+        self._send(code, {"error": msg})
 
     def _json(self):
         n = int(self.headers.get("Content-Length") or 0)
@@ -197,6 +200,9 @@ class H(BaseHTTPRequestHandler):
                         out.append([round((g[0] + g[2] / 2) / 360, 3), round((g[1] + g[3] / 2) / 640, 3)] if g else 0)
                     return self._send(200, out)
                 if sub == "preview.mp4": return self._file(d / "preview.mp4", "video/mp4")
+                if sub == "media" and len(parts) == 5:          # B-roll proxy (<id>.mp4) and filmstrip (<id>.jpg)
+                    if not re.fullmatch(r"\d{1,5}\.(mp4|jpg)", parts[4]): return self._err(404, "não encontrado")
+                    return self._file(d / "media" / parts[4])
             return self._err(404, "rota não encontrada")
         except ValueError as e: return self._err(400, str(e))
 
@@ -219,9 +225,34 @@ class H(BaseHTTPRequestHandler):
                 return self._send(200, {"name": name})
             if parts[:2] == ["api", "marca"] and len(parts) >= 4:
                 return self._marca_post(parts)
+            if parts[:2] == ["api", "p"] and len(parts) == 6 and parts[3] == "media" and parts[5] == "remover":
+                if not (P.folder(parts[2]) / "cinex.json").exists(): return self._err(404, "projeto não existe")
+                self._json(); P.remove_media(parts[2], int(parts[4])); return self._send(200, {"ok": True})
             if parts[:2] != ["api", "p"] or len(parts) != 4: return self._err(404, "rota não encontrada")
             name, sub = parts[2], parts[3]
             if not (P.folder(name) / "cinex.json").exists(): return self._err(404, "projeto não existe")
+            if sub == "media":                         # add a B-roll clip by path (the file stays where it is)
+                src = Path(str(self._json().get("src", "")).strip().strip('"')).expanduser()
+                if not src.is_file() or src.suffix.lower() not in P.VIDEO_EXT: return self._err(400, f"vídeo não encontrado: {src}")
+                self._media_job(name, src); return self._send(200, {"ok": True})
+            if sub == "mediaup":                       # B-roll clip sent from the browser, streamed into <project>/media/
+                from urllib.parse import unquote
+                fn = Path(unquote(self.headers.get("X-Filename", ""))).name
+                if not re.fullmatch(r"[\w .()-]{1,120}", fn) or Path(fn).suffix.lower() not in P.VIDEO_EXT:
+                    return self._err(400, "envie um vídeo (.mov, .mp4, .m4v…)")
+                n = int(self.headers.get("Content-Length") or 0)
+                if not 0 < n <= MAX_MEDIA: return self._err(400, "vídeo grande demais (máx. 8 GB)")
+                dd = P.folder(name) / "media"; dd.mkdir(exist_ok=True)
+                dest = dd / f"up_{fn}"; k = 2
+                while dest.exists(): dest = dd / f"up_{Path(fn).stem}-{k}{Path(fn).suffix}"; k += 1
+                left = n
+                with open(dest, "wb") as f:
+                    while left > 0:
+                        chunk = self.rfile.read(min(1 << 20, left))
+                        if not chunk: break
+                        f.write(chunk); left -= len(chunk)
+                if left: dest.unlink(missing_ok=True); return self._err(400, "envio interrompido")
+                self._media_job(name, dest); return self._send(200, {"ok": True})
             if sub == "state":
                 body = {k: v for k, v in self._json().items() if k in EDITABLE}
                 if body.get("format", "vertical") not in ("vertical", "horizontal"): return self._err(400, "formato inválido")
@@ -231,6 +262,9 @@ class H(BaseHTTPRequestHandler):
                             and isinstance(m.get("t1"), (int, float)) and m["t1"] > m["t0"]): return self._err(400, "motion inválido")
                 if not (isinstance(body.get("order", []), list) and all(isinstance(i, int) for i in body.get("order", []))):
                     return self._err(400, "ordem inválida")
+                for b in body.get("broll", []):
+                    if not (isinstance(b, dict) and isinstance(b.get("media"), int) and all(isinstance(b.get(k), (int, float)) for k in ("t0", "t1", "ss"))
+                            and b["t1"] > b["t0"] and b["ss"] >= 0 and b.get("mode", "full") in ("full", "card")): return self._err(400, "b-roll inválido")
                 for s_ in body.get("sfx", []):
                     if not (isinstance(s_, dict) and isinstance(s_.get("t"), (int, float)) and isinstance(s_.get("cat"), str)):
                         return self._err(400, "som inválido")
@@ -241,13 +275,14 @@ class H(BaseHTTPRequestHandler):
                 st = P.update(name, lambda s: s.update(body))
                 return self._send(200, {"rev": st["rev"]})
             if sub == "revisao":                       # instant review of the project state (scripts/revisao.py)
-                import revisao
+                self._json(); import revisao
                 return self._send(200, revisao.review(name))
             if sub == "chat":
                 text = str(self._json().get("text", "")).strip()[:4000]
                 if not text: return self._err(400, "mensagem vazia")
                 P.say(name, text, who="user"); return self._send(200, {"ok": True})
             if sub == "export":
+                self._json()
                 if running(name): return self._err(409, "exportação já em andamento")
                 P.job(name, "export", step="Começando", pct=1, done=False, error=None, out=None)
                 subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "export", name],
@@ -297,9 +332,9 @@ def _marca_post(self, parts):
         self._analyse_refs(h)
         return self._send(200, e)
     if len(parts) == 6 and sub == "refs" and parts[5] == "remover":
-        brand.remove_ref(h, int(parts[4])); return self._send(200, {"ok": True})
+        self._json(); brand.remove_ref(h, int(parts[4])); return self._send(200, {"ok": True})
     if sub == "analisar":                              # re-measure all niche videos into estilos/nicho_<handle>
-        self._analyse_refs(h); return self._send(200, {"ok": True})
+        self._json(); self._analyse_refs(h); return self._send(200, {"ok": True})
     return self._err(404, "rota não encontrada")
 
 
@@ -314,7 +349,13 @@ def _analyse_refs(self, h):
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
 
 
+def _media_job(self, name, src):
+    subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "media", name, str(src)],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
+
+
 H._marca_post = _marca_post
+H._media_job = _media_job
 H._analyse_refs = _analyse_refs
 
 

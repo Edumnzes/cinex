@@ -99,8 +99,13 @@ brain**: you propose the cut, answer the app's chat and change the project. Curr
 (titulo|topico|nome|citacao|frase|seguir|salvar), t0, t1 in raw seconds, text, text2, sfx}]) and SFX (`sfx`:
 [{id, t, cat, gain}], categories of ~/reels-banco/sfx; manual: ~2 per 10 s, key events only)
 motion engine (`motion_engine`: "html" = HyperFrames templates in motion_html/templates, "classico" = formats.py; any HTML element can have `"atras": true` = behind the person via the MediaPipe matte, type `gigante` defaults to it); type `cenario` = 3D text stuck to a surface: `quad` = 4 corners clockwise from top-left, normalised to the SOURCE frame, `tmark` = time it was marked; the export tracks it with scripts/plane_track.py and warps it in perspective behind the person and phrase order (`order`: kept segment ids in play order; `app_project.py order <name> <id> ...`; missing ids
-follow their source predecessor). The app has a live preview: export only when
-the user asks for the file.
+follow their source predecessor), and B-roll on track V2: clips in `media` ([{id, name, src, dur, ready}], added with
+`app_project.py media <name> <video>` or from the app by path/upload — the original file stays where it is; a light
+proxy + filmstrip go to `~/reels/<name>/media/`, HDR converted) and windows in `broll` ([{id, media, t0, t1 in raw
+seconds over the speech, ss = entry point in the clip, mode "full"|"card", zoom}]; `app_project.py broll <name>
+<media_id> <t0> <t1> [ss] [full|card]`). The picture changes, the voice keeps playing; a window entirely over
+removed stretches is skipped. Use it to show what the speaker describes or to hide a problem in the A-roll (a cable,
+someone in the background, a scene without PPE). The app has a live preview: export only when the user asks for the file.
 1. Start the server once, in the background: `python app/server.py` → http://127.0.0.1:8765 (local only).
 2. Create the project: `python scripts/app_project.py new <video> --name <name> --prompt "<marca.json termos>"`
    (proxy, transcription, waveform and an automatic pause cut). The user can also create it from the app.
@@ -249,7 +254,11 @@ Only the audio goes to Adobe (smaller, and the picture never leaves the machine)
    (`--sfx` re-adds the SFX timeline that `project.py full` wrote, since this step replaces the audio)
    (0.25–0.4 for noisy locations so it doesn't sound pasted-on; 0.1–0.2 indoors). It normalises in two passes and
    prints the loudness measured on the OUTPUT file — report that number (target −14 LUFS, peak ≤ −1 dBTP).
-   Music is not configured yet: don't add music. Log the treatment in `audio_strategy`.
+   **Music:** never generate or synthesize a track. The user wants real songs, preferably viral and available in
+   Instagram's library: suggest the song and where it should start, and the user adds it in the Instagram editor
+   (songs mixed in outside Instagram get muted; business accounts only get the royalty-free library — say so).
+   Never download or embed third-party music; a file the user licensed (Artlist, etc.) can be mixed with `--bg`.
+   Log the treatment in `audio_strategy`.
 If the Adobe connector isn't available, say so and use plan B: `python scripts/mix_audio.py render.mp4 render.mp4 final.mp4 --clean`
 (the render's own audio as "speech", cleaned with high-pass 90 Hz + FFT denoise + gentle compression, ~−14 LUFS).
 

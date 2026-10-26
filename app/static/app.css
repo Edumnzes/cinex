@@ -246,3 +246,18 @@ canvas#wave { display: block; height: 56px; margin-top: 4px; cursor: text; }
 }
 .phead .seg button, .phead .check { white-space: nowrap; }
 body.lay-mobile #progname { display: none; }
+
+/* ---------- B-roll (track V2 + preview) */
+.phone video.bvid { position: absolute; inset: 0; pointer-events: none; transition: none; }
+.phone video.bvid.card { inset: auto; left: 50%; top: 36.5%; width: 83.7%; height: auto; max-height: 37.5%; border-radius: 3.7cqw;
+  box-shadow: 0 0 0 4px rgba(255,255,255,.24); }
+.blk.bblk { background: #23334f center / auto 100% repeat-x; border-color: #5b84c9; color: #dce8ff; text-shadow: 0 1px 2px #000; }
+.medialist { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.mediarow { display: grid; grid-template-columns: 64px 1fr auto 24px; gap: 6px; align-items: center; padding: 5px 6px; border-radius: var(--r); background: var(--panel2); font-size: 13px; }
+.mediarow .mthumb { width: 64px; height: 36px; border-radius: 3px; background: #000 left center / auto 100% no-repeat; }
+.mediarow .minfo { min-width: 0; display: flex; flex-direction: column; }
+.mediarow .minfo b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mediarow .secondary { padding: 3px 8px; font-size: 12px; }
+.bstrip { position: relative; height: 40px; margin: 4px 0 8px; border-radius: 4px; background: #000 left center / 100% 100% no-repeat; cursor: pointer; }
+.bstrip .bwin { position: absolute; top: -2px; bottom: -2px; border: 2px solid var(--accent); border-radius: 4px; background: rgba(255,255,255,.14); pointer-events: none; }
+.blk.bblk.off { opacity: .45; border-style: dashed; }

@@ -77,6 +77,14 @@
   marcado, pessoas excluídas pela máscara, homografia RANSAC e suavização), deformado na perspectiva antes da câmera
   virtual e escondido atrás da pessoa quando ela passa na frente. Sem marcação (ou com fundo desfocado), vira
   elemento comum. O preview não recorta a pessoa; a exportação recorta.
+- **B-roll no app (trilha V2).** Aba B-roll para adicionar clipes ao projeto (caminho ou envio pelo navegador;
+  prévia leve e faixa de quadros, HDR convertido) e cobrir a fala com eles: arrastar, esticar, escolher a entrada
+  no clipe, tela cheia ou cartão, aproximação lenta. A prévia toca o clipe sincronizado com o corte; a exportação
+  usa o B-roll do motor. CLI: `app_project.py media` e `app_project.py broll`.
+- **Música:** a skill não gera trilhas; sugere músicas reais (de preferência virais do Instagram) para adicionar
+  no editor do Instagram.
+- Servidor do app: lê o corpo de toda requisição e fecha a conexão nas respostas de erro, para que um pedido não
+  "vaze" no seguinte com a conexão reaproveitada (exportar e revisar podiam falhar de forma intermitente).
 - **HDR do iPhone.** Vídeos HLG/PQ são detectados e convertidos para SDR (Rec.709) no corte, na prévia do app,
   no B-roll do motor e no `compose.py` (`scripts/hdr.py`). Antes saíam lavados e com a cor errada.
 - `mix_audio.py --clean`: limpeza de voz só com ffmpeg, plano B quando o Adobe Enhance não está disponível.

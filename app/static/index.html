@@ -33,6 +33,7 @@
       <button data-tab="corte">Corte</button>
       <button data-tab="camera">Câmera</button>
       <button data-tab="cor">Cor</button>
+      <button data-tab="broll">B-roll</button>
       <button data-tab="motion">Motion</button>
       <button data-tab="sons">Sons</button>
       <button data-tab="revisao">Revisão</button>
@@ -112,6 +113,16 @@
         <p class="muted small note">Cada elemento precisa de uma função: explicar, provar, situar ou chamar para ação. O motor posiciona fora do rosto.</p>
       </div>
 
+      <div id="tab-broll" hidden>
+        <div class="group-title">Clipes do projeto</div>
+        <div id="medialist" class="medialist"></div>
+        <form id="mediaform" class="prop"><input id="mediapath" placeholder="Caminho do vídeo (C:\…\IMG_1234.MOV)" autocomplete="off"><button class="secondary">+</button></form>
+        <label class="secondary wide filebtn center">Enviar clipe do computador<input type="file" id="mediaup" accept="video/*,.mov,.mp4,.m4v" hidden></label>
+        <p id="mediastatus" class="muted small"></p>
+        <div class="group-title">B-roll selecionado</div>
+        <div id="bsel" class="selinfo muted"></div>
+      </div>
+
       <div id="tab-sons" hidden>
         <div class="group-title">Banco de sons</div>
         <div id="sfxcats" class="sfxcats"></div>
@@ -157,6 +168,7 @@
       <div class="phone" id="phone">
         <canvas id="bgfill" width="64" height="36" hidden></canvas>
         <video id="video" playsinline preload="auto"></video>
+        <video id="bvid" class="bvid" muted playsinline preload="auto" hidden></video>
         <div class="vig" id="vig"></div>
         <div class="mglayer" id="mg"></div>
         <div class="planes" id="planes"></div>
@@ -208,6 +220,7 @@
         <div class="row rulerrow"><div class="thead"></div><div class="ruler" id="ruler"></div></div>
         <div class="row"><div class="thead"><b>M1</b><span>Motion</span></div><div class="lane" id="mlane"></div></div>
         <div class="row"><div class="thead"><b>C1</b><span>Legendas</span></div><div class="lane" id="caplane"></div></div>
+        <div class="row"><div class="thead"><b>V2</b><span>B-roll</span></div><div class="lane" id="blane"></div></div>
         <div class="row tall"><div class="thead"><b>V1</b><span>Vídeo</span></div><div class="lane" id="blocks"></div></div>
         <div class="row tall"><div class="thead"><b>A1</b><span>Áudio</span></div><div class="lane"><canvas id="wave" height="56"></canvas></div></div>
         <div class="row"><div class="thead"><b>S1</b><span>Sons</span></div><div class="lane" id="slane"></div></div>
@@ -218,6 +231,7 @@
 </main>
 <script src="/static/fx.js"></script>
 <script src="/static/plane.js"></script>
+<script src="/static/broll.js"></script>
 <script src="/static/order.js"></script>
 <script src="/static/review.js"></script>
 <script src="/static/marca.js"></script>

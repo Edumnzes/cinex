@@ -3,6 +3,7 @@
 One folder per video in ~/reels/<name>/ with:
     cinex.json     segments (keep / cut + reason), caption settings, chat, rev   <- the shared state
     preview.mp4    light H.264 proxy the browser can play (phones record HEVC .MOV)
+    media/         B-roll clips: <id>.mp4 proxy + <id>.jpg filmstrip (+ uploaded files); st["media"] / st["broll"]
     words_raw.json transcription of the source (transcribe.py)
     waveform.json  audio peaks for the timeline
     prep.json / export.json   progress of the background jobs
@@ -16,6 +17,8 @@ Claude Code is the brain: it reads the state, answers the chat and edits the cut
     python app_project.py seg <name> <id|s-e> keep|cut ["reason"]   change one segment (or a time range)
     python app_project.py lock <name> on|off             approve / reopen the cut
     python app_project.py order <name> <id> <id> ...      play order of kept segments (reorder phrases)
+    python app_project.py media <name> <video>           add a clip to the project's media (B-roll): proxy + filmstrip
+    python app_project.py broll <name> <media_id> <t0> <t1> [ss] [full|card]   B-roll over the speech (raw seconds)
     python app_project.py export <name>                  cut + captions + loudness -> Downloads
 """
 import json, os, re, shutil, subprocess, sys, time, datetime
@@ -216,6 +219,74 @@ def set_seg(name, ref, keep, reason=None):
     return update(name, fn)
 
 
+# ------------------------------------------------------------ media (B-roll clips) + B-roll windows
+VIDEO_EXT = {".mov", ".mp4", ".m4v", ".mkv", ".webm", ".avi", ".mts"}
+STRIP_H = 96                                             # filmstrip frame height (app media list + "entrada" picker)
+
+
+def add_media(name, src):
+    """Register a clip (the original file stays where it is) and build a light proxy + filmstrip for the app.
+    Returns the media id. The entry shows up at once with ready=False; the app polls until it's ready."""
+    src = Path(src).expanduser().resolve()
+    if not src.is_file() or src.suffix.lower() not in VIDEO_EXT: raise FileNotFoundError(f"vídeo não encontrado: {src}")
+    d = folder(name) / "media"; d.mkdir(exist_ok=True)
+    holder = {}
+    def reg(st):
+        st.setdefault("media", [])
+        mid = max((m["id"] for m in st["media"]), default=0) + 1; holder["id"] = mid
+        st["media"].append(dict(id=mid, name=src.name, src=str(src), dur=0, ready=False, error=None))
+    update(name, reg); mid = holder["id"]
+    try:
+        dur = duration(src); n = max(1, min(40, round(dur)))
+        subprocess.run([_ff(), "-loglevel", "error", "-y", "-i", str(src), "-an", "-vf", HDR.vf(src, "scale=-2:720"),
+                        "-c:v", "libx264", "-preset", "veryfast", "-crf", "27", "-g", "15", "-movflags", "+faststart",
+                        str(d / f"{mid}.mp4")], check=True, capture_output=True)
+        subprocess.run([_ff(), "-loglevel", "error", "-y", "-i", str(src), "-vf",
+                        HDR.vf(src, f"fps={n / dur:.5f},scale=-2:{STRIP_H}", ) + f",tile={n}x1", "-frames:v", "1", "-q:v", "4",
+                        str(d / f"{mid}.jpg")], check=True, capture_output=True)
+        upd = dict(dur=round(dur, 2), strip=n, hdr=HDR.is_hdr(src), ready=True)
+    except Exception as e:
+        upd = dict(error=str(getattr(e, "stderr", b"") or e)[-300:], ready=False)
+    update(name, lambda st: next(m for m in st["media"] if m["id"] == mid).update(upd))
+    return mid
+
+
+def remove_media(name, mid):
+    """Drop a clip and the B-roll that uses it. Deletes only the app's own files (proxy, filmstrip, uploaded copy)."""
+    d = folder(name) / "media"
+    def fn(st):
+        m = next((x for x in st.get("media", []) if x["id"] == mid), None)
+        if not m: raise KeyError(f"mídia {mid} não encontrada")
+        st["media"].remove(m); st["broll"] = [b for b in st.get("broll", []) if b["media"] != mid]
+        if Path(m["src"]).parent.resolve() == d.resolve(): Path(m["src"]).unlink(missing_ok=True)   # uploaded into the project
+    update(name, fn)
+    for ext in ("mp4", "jpg"): (d / f"{mid}.{ext}").unlink(missing_ok=True)
+
+
+def add_broll(name, mid, t0, t1, ss=0.0, mode="full"):
+    def fn(st):
+        if not any(m["id"] == mid for m in st.get("media", [])): raise KeyError(f"mídia {mid} não encontrada")
+        st.setdefault("broll", [])
+        st["broll"].append(dict(id=max((b["id"] for b in st["broll"]), default=0) + 1, media=mid, t0=round(t0, 2), t1=round(t1, 2),
+                                ss=round(ss, 2), mode=mode, zoom=True))
+    return update(name, fn)
+
+
+def broll_windows(st, kept, FH):
+    """B-roll of the app (raw seconds over the speech) -> reels_lib `broll=` windows on the cut timeline."""
+    media = {m["id"]: m for m in st.get("media", []) if m.get("ready")}; out = []
+    for b in sorted(st.get("broll", []), key=lambda b: b["t0"]):
+        m = media.get(b["media"])
+        if not m: continue
+        c0, c1 = raw_to_cut(b["t0"], kept), raw_to_cut(b["t1"], kept, end=True)
+        if c1 - c0 < .2:                                  # crosses into a reordered phrase: keep its own length
+            if any(g["s"] <= b["t0"] < g["e"] for g in kept): c1 = c0 + (b["t1"] - b["t0"])
+            else: continue                                # entirely inside a removed stretch
+        out.append(dict(t0=c0, t1=c1, src=m["src"], ss=float(b.get("ss", 0)), mode=b.get("mode", "full"),
+                        zoom=(1.0, 1.08) if b.get("zoom", True) else (1.0, 1.0), prefer=700 * FH / 1920))
+    return out
+
+
 # ------------------------------------------------------------ export: cut -> captions -> loudness -> Downloads
 def play_order(st):
     """Kept segments in PLAY order. `order` lists segment ids (set by the app when phrases are reordered);
@@ -381,6 +452,7 @@ def export(name):
         for s in st.get("sfx", []):
             if any(g["s"] <= s["t"] < g["e"] for g in kept): sfx.append((raw_to_cut(s["t"], kept), s["cat"], float(s.get("gain", -12))))
         reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, z, z, R.eio)], motions=fns, overlays=ovs, planes=planes, sfx=sorted(sfx), hide_captions=hide,
+                      broll=broll_windows(st, kept, FH),
                       ranges=[(0, dur + 1, "big" if cam["follow"] else None)],
                       keywords=st.get("keywords", []), fix=st.get("fix", {}), caption_style="app", accent=rgba(c["accent"]),
                       look=col["look"] if col["look"] in R.GRADES else "none", jumpcuts="auto" if cam["punch"] else [], cuts=cuts,
@@ -412,6 +484,8 @@ def _show(name):
     print("legendas:", json.dumps(st["captions"], ensure_ascii=False))
     for m in st.get("motions", []): print(f"  motion #{m['id']} {m['t0']:.2f}-{m['t1']:.2f} {m['type']}: {m.get('text', '')} {m.get('text2', '')} sfx={m.get('sfx') or '-'}")
     for s in st.get("sfx", []): print(f"  sfx #{s['id']} {s['t']:.2f} {s['cat']} {s.get('gain', -12)} dB")
+    for m in st.get("media", []): print(f"  mídia #{m['id']} {m['name']} {m.get('dur', 0):.1f}s {'pronta' if m.get('ready') else m.get('error') or 'preparando'}")
+    for b in st.get("broll", []): print(f"  b-roll #{b['id']} {b['t0']:.2f}-{b['t1']:.2f} mídia {b['media']} a partir de {b.get('ss', 0)}s {b.get('mode', 'full')}")
     for m in unread(name): print(f"  [não lida] {m['t']} {m['text']}")
 
 
@@ -442,4 +516,7 @@ if __name__ == "__main__":
     elif a.cmd == "order":                             # play order of kept segment ids (missing ones follow the source)
         update(a.args[0], lambda s: s.update(order=[int(x) for x in a.args[1:]])); _show(a.args[0])
     elif a.cmd == "export": export(a.args[0])
+    elif a.cmd == "media": print("mídia", add_media(a.args[0], a.args[1]))
+    elif a.cmd == "broll":
+        x = a.args; add_broll(x[0], int(x[1]), float(x[2]), float(x[3]), float(x[4]) if len(x) > 4 else 0.0, x[5] if len(x) > 5 else "full"); _show(x[0])
     else: print(__doc__)
