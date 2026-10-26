@@ -135,6 +135,10 @@ O app faz corte, legendas, enquadramento (seguir rosto, zoom, zoom nos cortes), 
 motion (títulos, tópicos, nome, citação, frase grande, chamadas), efeitos sonoros do seu banco e a ordem das frases
 (arraste na aba Corte; dá para abrir o vídeo com uma frase forte do meio).
 
+**Estilo e revisão:** mande vídeos de referência de um estilo que você quer seguir; o Claude mede e monta um perfil
+(`~/reels-banco/estilos`). Na aba **Revisão** você aplica o estilo ao projeto e pede uma revisão do que ainda tem
+cara de edição automática.
+
 ## Estrutura do repositório
 
 ```
@@ -154,6 +158,8 @@ cinex/
 ├── scripts/
 │   ├── setup_env.py          # cria ~/reelsenv e instala dependências
 │   ├── app_project.py        # projetos do app: estado compartilhado com o Claude Code
+│   ├── estilo.py             # perfis de estilo medidos em vídeos de referência
+│   ├── revisao.py            # revisão "cara de IA" do projeto
 │   ├── transcribe.py         # transcrição com faster-whisper (tempo por palavra)
 │   ├── energy.py             # mapa de energia do áudio (pausas)
 │   ├── faces.py              # detecção de rostos (YuNet) + folha de miniaturas

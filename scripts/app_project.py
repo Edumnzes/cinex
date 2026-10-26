@@ -316,6 +316,12 @@ def export(name):
                                        ksize=int(c["size"]), glow=False, max_words=int(c["words"]), max_chars=999,
                                        lines=int(c["lines"]), color=rgba(c["color"]))
         dur = duration(d / "cut.mp4")
+        if str(col["look"]).startswith("ref:"):          # look copied from a reference profile (estilo.py)
+            import estilo
+            ref = estilo.load(col["look"][4:])["regras"]["cor"]
+            src = estilo.colour(d / "cut.mp4", duration(d / "cut.mp4"), base[0], base[1])
+            R.register_transfer("ref", src["lab_mean"], src["lab_std"], ref["lab_mean"], ref["lab_std"], ref.get("forca", .6))
+            col["look"] = "ref"
         z = max(1.0, min(1.25, float(cam["zoom"])))
         cuts = json.loads((d / "cuts.json").read_text()) if (d / "cuts.json").exists() else []
         import formats as F                              # after R.W/R.H: it copies the frame size on import

@@ -21,7 +21,7 @@ STATIC = APP / "static"
 PORT = 8765
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)       # no console window flashing on Windows
 MAX_BODY = 25 * 1024 * 1024                     # font uploads
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order"}
+EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 
@@ -116,6 +116,21 @@ class H(BaseHTTPRequestHandler):
             if parts == ["api", "projects"]: return self._send(200, P.projects())
             if parts == ["api", "fonts"]:
                 return self._send(200, [dict(id=f["id"], label=f["label"], weights=f["weights"]) for f in fonts().values()])
+            if parts == ["api", "estilos"]:             # style profiles of ~/reels-banco/estilos (estilo.py)
+                import estilo
+                out = []
+                for e in estilo.profiles():
+                    r = e["regras"]; folder = estilo.ROOT / e["id"]
+                    out.append(dict(id=e["id"], revisado=e.get("revisado", False), formato=e.get("formato"), links=e.get("links", []),
+                                    videos=len(e["medidas"]["videos"]), ritmo=r.get("ritmo"), legenda=r.get("legenda"), camera=r.get("camera"),
+                                    css=(r.get("cor") or {}).get("css", ""), gancho=r.get("gancho"), notas=r.get("notas"),
+                                    folhas=sorted(p.name for p in folder.glob("*.jpg") if not p.name.startswith("_"))))
+                return self._send(200, out)
+            if parts[:2] == ["api", "estilos"] and len(parts) == 4:
+                import estilo
+                if not (re.fullmatch(r"[a-z0-9_-]{1,40}", parts[2]) and re.fullmatch(r"(gancho|folha|quadros)_\d+\.jpg", parts[3])):
+                    return self._err(404, "não encontrado")
+                return self._file(estilo.ROOT / parts[2] / parts[3], "image/jpeg")
             if parts == ["api", "sfx"]:                 # sound categories of ~/reels-banco/sfx
                 import banco
                 return self._send(200, {k: len(v) for k, v in sorted(banco.sfx().items())})
@@ -144,6 +159,7 @@ class H(BaseHTTPRequestHandler):
                     return self._send(200, dict(rev=rev, prep=P.read_job(name, "prep"), export=P.read_job(name, "export")))
                 if sub == "words": return self._file(d / "words_raw.json", "application/json")
                 if sub == "waveform": return self._file(d / "waveform.json", "application/json")
+                if sub == "revisao": return self._file(d / "revisao.json", "application/json")
                 if sub == "faces":                     # preview only needs the biggest face centre (0..1) per 0.1 s
                     p = d / "faces_preview.json"
                     if not p.exists(): return self._err(404, "rostos ainda não analisados")
@@ -194,6 +210,9 @@ class H(BaseHTTPRequestHandler):
                             return self._err(400, "segmento inválido")
                 st = P.update(name, lambda s: s.update(body))
                 return self._send(200, {"rev": st["rev"]})
+            if sub == "revisao":                       # instant review of the project state (scripts/revisao.py)
+                import revisao
+                return self._send(200, revisao.review(name))
             if sub == "chat":
                 text = str(self._json().get("text", "")).strip()[:4000]
                 if not text: return self._err(400, "mensagem vazia")

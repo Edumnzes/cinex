@@ -116,6 +116,24 @@ the user asks for the file.
    is then fitted over a blurred fill). Then run `qa.py` on `~/reels/<name>/final.mp4` (`--platform desktop` for
    16:9) and report it in the chat.
 
+## E. Reference styles and the "AI look" review
+
+The goal is editing that doesn't look automatic. Two tools, both visible in the app's **Revisão** tab:
+1. **Style profiles** (`scripts/estilo.py`, saved in `~/reels-banco/estilos/<id>/`). When the user sends reference
+   videos of a style they like (files; for Instagram links ask them to send the file — never download without their
+   OK), run `python scripts/estilo.py analisar <v1> <v2> ... --nome <id> [--formato <fmt>] [--link URL]`. It measures
+   cut rhythm, the colour look (Lab statistics, used for a partial look transfer on export), loudness and speech pace,
+   and writes sheets. **Read `quadros_N.jpg` and `gancho_N.jpg`** and fill what can't be measured:
+   `estilo.py set <id> legenda '{"font","weight","upper","size","stroke","lines","words","color","accent","y"}'`
+   (sizes on the 1080x1920 scale), `camera '{"zoom","punch"}'`, `motion`, `sfx`, `gancho`, `notas`, then
+   `set <id> revisado true`. Copy decisions (rhythm, type, placement, look), never content, words, logos or audio.
+   The user applies a profile in the app ("Aplicar estilo"): captions, camera and `color.look = "ref:<id>"`.
+2. **Review** (`scripts/revisao.py <projeto> [--quadros]`): flags regularity and sameness (equal shot lengths, motions
+   or sounds on a beat, the same element in a row, a sound on every element, one word per caption, CTA too early) and
+   compares with the applied profile. Instant, no export. When the user asks for a review in the chat, run it with
+   `--quadros` (uses the last exported final.mp4, if any), look at `revisao_quadros.jpg` for what numbers miss (text
+   over a face, cheap-looking motion, flat moments) and answer with `app_project.py say`, concrete and prioritised.
+
 ## 0. Environment (once per machine, ~2 min)
 
 ```

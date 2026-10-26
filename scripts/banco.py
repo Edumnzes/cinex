@@ -2,6 +2,7 @@
 
 Lives OUTSIDE the git repo (licensed files can't be redistributed):  ~/reels-banco  (or env REELS_BANCO)
     referencias/<formato>/referencias.md   links + what to copy from each reference (one folder per format id)
+    estilos/<id>/perfil.json               style profile measured from reference videos (scripts/estilo.py)
     fontes/        *.ttf|*.otf  + fontes.json (optional index: familia, arquivo, licenca, uso)
     motions/<categoria>/  alpha video (.mov ProRes 4444 / .webm VP9), .gif, or a folder of PNGs  + motions.json (optional)
     sfx/<categoria>/      *.wav|*.mp3  (pop, whoosh, click, ding, riser, impact, flash, tick, error...)
@@ -49,6 +50,7 @@ Pasta lida pela skill `cinex` (fora do Git de propósito: arquivos licenciados n
 
 | Pasta | O que colocar | Como a skill usa |
 |---|---|---|
+| `estilos/<id>/` | criado pelo `estilo.py` a partir de vídeos de referência: perfil.json + folhas | estilo aplicado no app (legenda, câmera, look) e comparado na revisão |
 | `referencias/<formato>/` | `referencias.md` com links e o que copiar; prints/vídeos opcionais | lida quando o formato é escolhido; vira o padrão do plano editorial |
 | `fontes/` | `.ttf` / `.otf` + licença; opcional `fontes.json` | registradas automaticamente; a marca escolhe no `marca.json → fontes` |
 | `motions/<categoria>/` | vídeo com transparência (`.mov` ProRes 4444 ou `.webm` VP9), `.gif` ou pasta de PNGs | sobrepostos no vídeo (`overlays=[...]`) |

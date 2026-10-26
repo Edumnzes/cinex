@@ -34,6 +34,7 @@
       <button data-tab="cor">Cor</button>
       <button data-tab="motion">Motion</button>
       <button data-tab="sons">Sons</button>
+      <button data-tab="revisao">Revisão</button>
     </nav>
     <div class="pbody">
       <div id="tab-legendas">
@@ -93,6 +94,17 @@
         <div class="group-title">Som selecionado</div>
         <div id="ssel" class="selinfo muted"></div>
         <p id="sfxwarn" class="small muted"></p>
+      </div>
+
+      <div id="tab-revisao" hidden>
+        <div class="group-title">Estilo de referência</div>
+        <div class="prop"><label>Perfil</label><select id="estilosel"></select></div>
+        <div id="estiloinfo" class="selinfo muted"></div>
+        <button id="estiloapply" class="secondary wide">Aplicar estilo ao projeto</button>
+        <p class="muted small">Aplica a legenda, a câmera e o look de cor medidos nas referências. Dá para ajustar depois em cada aba.</p>
+        <div class="group-title">Cara de inteligência artificial?</div>
+        <div class="row2b"><button id="revrun" class="primary">Revisar agora</button><button id="revask" class="secondary">Pedir comentário ao Cinex</button></div>
+        <div id="revlist" class="revlist"></div>
       </div>
 
       <div id="tab-corte" hidden>
@@ -179,6 +191,7 @@
 </main>
 <script src="/static/fx.js"></script>
 <script src="/static/order.js"></script>
+<script src="/static/review.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

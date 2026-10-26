@@ -49,7 +49,7 @@ async function openProject(n) {
   st = j.state; projectFonts = j.project_fonts || [];
   showJobs(j.prep, j.export);
   if (st && st.segments.length) await loadMedia();
-  renderAll();
+  renderAll(); loadReview(); $("#estilosel").value = (st && st.estilo) || ""; renderEstilo();
 }
 
 async function loadMedia() {
@@ -190,13 +190,16 @@ function renderLookUI() {
   const L = LOOKS[c.look] || LOOKS.none;
   $("#video").style.filter = L[1]; $("#vig").style.opacity = Math.min(1, L[2] * 2.2);
 }
-function bindLookUI() {
+function bindLookButtons() {
   $("#looks").replaceChildren(...Object.entries(LOOKS).map(([id, L]) => {
     const b = document.createElement("button"); b.dataset.look = id;
     const sw = document.createElement("i"); sw.style.background = L[3]; b.append(sw, document.createTextNode(L[0]));
     b.onclick = () => { if (!st) return; st.color.look = id; renderLookUI(); save({ color: st.color }); };
     return b;
   }));
+}
+function bindLookUI() {
+  bindLookButtons();
   const cam = (k, v) => { if (!st) return; st.camera[k] = v; renderLookUI(); clearTimeout(camTimer); camTimer = setTimeout(() => save({ camera: st.camera }), 400); };
   let camTimer = null;
   $("#k-follow").onchange = (e) => cam("follow", e.target.checked);
@@ -455,7 +458,7 @@ function seekFromEvent(e, el) {
 // ------------------------------------------------------------ wiring
 function tab(n) {
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.classList.toggle("on", b.dataset.tab === n);
-  for (const t of ["legendas", "camera", "cor", "motion", "sons", "corte"]) $("#tab-" + t).hidden = n !== t;
+  for (const t of ["legendas", "camera", "cor", "motion", "sons", "revisao", "corte"]) $("#tab-" + t).hidden = n !== t;
 }
 
 function renderAll() {
@@ -463,13 +466,14 @@ function renderAll() {
   st.camera = { follow: true, zoom: 1.0, punch: true, ...(st.camera || {}) };
   st.color = { correct: true, look: "natural", ...(st.color || {}) };
   fxDefaults(); ensureFont("sans"); ensureFont("serif");
+  estiloLook(); bindLookButtons();
   $("#progname").textContent = st.name; renderFormat(); renderLookUI();
   buildGroups(); renderCaptionsUI(); renderChat(); renderDur(); renderTimeline(); lastKey = ""; drawCaption();
   $("#exportbtn").disabled = !st.segments.length;
 }
 
 async function init() {
-  bindCaptionUI(); bindLookUI(); bindFx(); bindResizers(); applyLayout();
+  bindCaptionUI(); bindLookUI(); bindFx(); bindReview(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
   for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };

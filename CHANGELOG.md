@@ -47,6 +47,13 @@
   open, restaurar a ordem original). Frase = trechos mantidos separados só por pausas curtas, então move a frase
   inteira. A prévia toca na nova ordem, a V1 numera as frases e legendas, motion e sons acompanham cada frase na
   exportação (`order` no cinex.json; `app_project.py order`). Edições por intervalo preservam os ids dos trechos.
+- **Estilos de referência** (`scripts/estilo.py`): mede vídeos de referência (ritmo de cortes, look de cor em Lab,
+  volume, ritmo de fala) e gera folhas para o Claude ler a tipografia e completar as regras; o perfil fica em
+  `~/reels-banco/estilos/<id>/` e é aplicado no app com um clique (legenda, câmera e look copiado por
+  transferência estatística de cor, `register_transfer` no motor).
+- **Revisão "cara de IA"** (`scripts/revisao.py` e aba Revisão do app): aponta regularidade e repetição (planos
+  iguais, motion e sons no compasso, som em todo elemento, uma palavra por legenda, CTA cedo) e compara com o
+  estilo aplicado, sem exportar; o Claude completa com a leitura visual dos quadros.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

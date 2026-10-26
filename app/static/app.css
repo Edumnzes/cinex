@@ -120,6 +120,14 @@ body.resizing video { pointer-events: none; }
 .sfxrow { display: grid; grid-template-columns: 32px 1fr auto auto; align-items: center; gap: 6px; font-size: 13px; }
 .sfxrow .secondary { padding: 3px 8px; font-size: 12px; }
 .warn { color: #e8b04b; }
+.kv { display: grid; grid-template-columns: 64px 1fr; gap: 6px; font-size: 12px; margin: 2px 0; }
+.refsheets { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; }
+.refsheets img { width: 100%; border-radius: 4px; display: block; }
+.row2b { display: flex; gap: 6px; } .row2b button { flex: 1; }
+.revlist { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.revitem { padding: 8px 10px; border-radius: var(--r); background: var(--panel2); font-size: 13px; border-left: 3px solid var(--line2); }
+.revitem small { display: block; color: var(--muted); margin-top: 3px; }
+.revitem.lv-hi { border-left-color: #e05d5d; } .revitem.lv-md { border-left-color: #e8b04b; } .revitem.lv-ok { border-left-color: #4fa785; }
 .orderlist { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .orow { display: grid; grid-template-columns: 14px 18px 1fr auto; grid-template-rows: auto auto; gap: 0 6px; align-items: center;
   padding: 6px 6px; border-radius: var(--r); background: var(--panel2); border: 1px solid transparent; cursor: pointer; font-size: 13px; }

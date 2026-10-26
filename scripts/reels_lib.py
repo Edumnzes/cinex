@@ -133,9 +133,21 @@ def _grade_tables(name):
     vig = (1 - g["vig"] * np.clip((r - .35) / .65, 0, 1) ** 1.6).astype(np.float32)[..., None]
     _gc[name] = (luts, vig, g["sat"]); return _gc[name]
 
+def register_transfer(name, src_mean, src_std, dst_mean, dst_std, k=.6):
+    """Look copied from a reference (estilo.py): move this footage's Lab mean/std towards the reference's,
+    with strength k (0..1). Std ratios are capped so a flat or extreme reference can't wreck the image."""
+    sm, ss, dm, ds = (np.float32(v) for v in (src_mean, src_std, dst_mean, dst_std))
+    r = np.clip(ds / np.maximum(ss, 1e-3), .6, 1.6)
+    GRADES[name] = dict(transfer=(sm, r, dm, float(k)))
+
 def grade(img, name):
     """Apply a look from GRADES to an RGB uint8 frame (1080x1920)."""
     if not name or GRADES.get(name) is None: return img
+    if "transfer" in GRADES[name]:
+        sm, r, dm, k = GRADES[name]["transfer"]
+        lab = cv2.cvtColor(img, cv2.COLOR_RGB2LAB).astype(np.float32)
+        lab = lab + k * ((lab - sm) * r + dm - lab)
+        return cv2.cvtColor(np.clip(lab, 0, 255).astype(np.uint8), cv2.COLOR_LAB2RGB)
     luts, vig, sat = _grade_tables(name)
     out = np.dstack([cv2.LUT(img[..., c], luts[c]) for c in range(3)]).astype(np.float32)
     if abs(sat - 1) > .01:
