@@ -25,6 +25,8 @@ ROOT = Path.home() / "reels"
 PY = sys.executable
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 FORMATS = {"vertical": (1080, 1920), "horizontal": (1920, 1080)}    # Mobile 9:16 / Desktop 16:9
+CAMERA = {"follow": True, "zoom": 1.0, "punch": True}     # follow the face, base zoom, zoom step on jump cuts
+COLOR = {"correct": True, "look": "natural"}              # automatic correction per shot, then a look
 CAPTIONS = {"enabled": True, "font": "sans", "weight": "Black", "color": "#FFFFFF", "accent": "#FFD400", "size": 62,
             "stroke": 6, "lines": 1, "words": 3, "upper": True, "y": 1300}
 
@@ -123,7 +125,7 @@ def new(src, name=None, prompt=None):
     d = folder(name); d.mkdir(parents=True, exist_ok=True)
     if not (d / "cinex.json").exists():
         _write_json(d / "cinex.json", dict(version=1, rev=0, name=name, src=str(src), duration=round(duration(src), 2),
-                                           segments=[], cut_locked=False, captions=dict(CAPTIONS), format="vertical", keywords=[], fix={},
+                                           segments=[], cut_locked=False, captions=dict(CAPTIONS), camera=dict(CAMERA), color=dict(COLOR), format="vertical", keywords=[], fix={},
                                            chat=[], created=_now()))
     prepare(name, prompt)
     return name
@@ -139,6 +141,10 @@ def prepare(name, prompt=None):
                             str(d / "preview.mp4")], check=True)
         if not (d / "waveform.json").exists():
             job(name, "prep", step="Lendo o áudio", pct=20); waveform(src, d / "waveform.json")
+        if not (d / "faces_preview.json").exists():
+            job(name, "prep", step="Encontrando rostos", pct=25)
+            subprocess.run([PY, str(HERE / "faces.py"), str(d / "preview.mp4"), str(d / "faces_preview.json")],
+                           check=True, capture_output=True)
         if not (d / "words_raw.json").exists():
             job(name, "prep", step="Transcrevendo (pode levar alguns minutos)", pct=30)
             subprocess.run([PY, str(HERE / "transcribe.py"), src, str(d / "words_raw.json")]
@@ -235,8 +241,13 @@ def export(name):
         if not kept: raise ValueError("nenhum trecho mantido no corte")
         job(name, "export", step="Cortando", pct=3, done=False, error=None, out=None)
         _write_json(d / "keep.json", [[g["s"], g["e"]] for g in kept])
-        fit = "blur" if fmt == "horizontal" and source_is_vertical(d) else "crop"
-        subprocess.run([PY, str(HERE / "cut.py"), st["src"], "keep.json", "cut.mp4", "--size", f"{FW}x{FH}", "--crf", "16", "--fit", fit],
+        cam = {**CAMERA, **st.get("camera", {})}; col = {**COLOR, **st.get("color", {})}
+        vert_src = source_is_vertical(d)
+        if fmt == "horizontal" and vert_src: fit, base = "blur", (FW, FH)              # whole picture on a blurred fill
+        elif fmt == "vertical" and vert_src: fit, base = "keep", (1440, 2560)        # room for zoom, stays sharp
+        elif fmt == "vertical": fit, base = "keep", (1080, 1920)                     # wide shot: the camera picks a 9:16 window
+        else: fit, base = "keep", (2560, 1440)
+        subprocess.run([PY, str(HERE / "cut.py"), st["src"], "keep.json", "cut.mp4", "--size", f"{base[0]}x{base[1]}", "--crf", "16", "--fit", fit],
                        check=True, capture_output=True)
         words = json.loads((d / "words_raw.json").read_text(encoding="utf-8"))
         _write_json(d / "words.json", remap_words(words, kept))
@@ -256,9 +267,13 @@ def export(name):
                                        ksize=int(c["size"]), glow=False, max_words=int(c["words"]), max_chars=999,
                                        lines=int(c["lines"]), color=rgba(c["color"]))
         dur = duration(d / "cut.mp4")
-        reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, 1.0, 1.0, R.eio)], ranges=[(0, dur + 1, "big")],
+        z = max(1.0, min(1.25, float(cam["zoom"])))
+        cuts = json.loads((d / "cuts.json").read_text()) if (d / "cuts.json").exists() else []
+        reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, z, z, R.eio)],
+                      ranges=[(0, dur + 1, "big" if cam["follow"] else None)],
                       keywords=st.get("keywords", []), fix=st.get("fix", {}), caption_style="app", accent=rgba(c["accent"]),
-                      look="none", jumpcuts=[], cuts=[], correct=False, cap_y=int(c["y"] / 1920 * FH))     # y is stored on the 9:16 scale; same relative height
+                      look=col["look"] if col["look"] in R.GRADES else "none", jumpcuts="auto" if cam["punch"] else [], cuts=cuts,
+                      correct=bool(col["correct"]), cap_y=int(c["y"] / 1920 * FH))     # y is stored on the 9:16 scale; same relative height
         if not c["enabled"]: reel.groups = []
         reel.render("render.mp4", lambda f: job(name, "export", step="Renderizando", pct=25 + int(f * 65)))
         job(name, "export", step="Ajustando o volume (-14 LUFS)", pct=92)

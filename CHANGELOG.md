@@ -30,6 +30,13 @@
   fundo desfocado nas laterais (`cut.py --fit blur`). `qa.py --platform desktop` confere o 16:9.
 - Painéis redimensionáveis: arraste a borda do inspetor, da conversa (Desktop), da prévia (Mobile) ou o topo da
   linha do tempo; cada layout guarda os próprios tamanhos e o duplo clique na borda volta ao padrão.
+- **Fase 2 do app: câmera, zoom e cor.** Aba Câmera: seguir o rosto (câmera virtual parada quando a pessoa está
+  parada, acompanhando suave quando ela anda), zoom de 100 a 125 % e degrau de zoom nos cortes (o motor decide
+  em quais). Aba Cor: correção automática por plano e seis looks (Natural, Sem look, Quente suave, Teal e laranja,
+  Moody, Dia vivo). Prévia aproximada no app; a exportação usa o motor completo.
+- Motor: janela de corte com a proporção da saída, então vídeo horizontal vira 9:16 seguindo o rosto
+  (`cut.py --fit keep` mantém o quadro inteiro para a câmera escolher o enquadramento).
+- Servidor em HTTP/1.1 (respostas grandes não são mais cortadas) e o app não trava se um pedido demorar.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

@@ -30,8 +30,8 @@
     <nav class="ptabs">
       <button data-tab="legendas" class="on">Legendas</button>
       <button data-tab="corte">Corte</button>
-      <button disabled title="Em breve">Efeitos</button>
-      <button disabled title="Em breve">Cor</button>
+      <button data-tab="camera">Câmera</button>
+      <button data-tab="cor">Cor</button>
     </nav>
     <div class="pbody">
       <div id="tab-legendas">
@@ -57,6 +57,26 @@
         <div class="prop"><label>Destacar</label><input id="c-keywords" placeholder="palavras, separadas, por vírgula"></div>
       </div>
 
+      <div id="tab-camera" hidden>
+        <div class="group-title">Enquadramento</div>
+        <div class="prop"><label>Seguir rosto</label><label class="switch"><input type="checkbox" id="k-follow"><span></span></label></div>
+        <p class="muted small">A câmera virtual mantém o rosto bem enquadrado: fica parada quando a pessoa está parada e acompanha suavemente quando ela anda.</p>
+        <div class="group-title">Zoom</div>
+        <div class="prop"><label>Zoom</label><input type="range" id="k-zoom" min="100" max="125"><output id="o-zoom"></output></div>
+        <div class="prop"><label>Nos cortes</label><label class="switch"><input type="checkbox" id="k-punch"><span></span></label></div>
+        <p class="muted small">Nos cortes, um degrau de zoom disfarça o "pulo" quando o enquadramento seria o mesmo. O motor decide em quais cortes precisa.</p>
+        <p class="muted small note">A prévia é aproximada; o vídeo exportado usa o enquadramento exato.</p>
+      </div>
+
+      <div id="tab-cor" hidden>
+        <div class="group-title">Correção</div>
+        <div class="prop"><label>Automática</label><label class="switch"><input type="checkbox" id="k-correct"><span></span></label></div>
+        <p class="muted small">Acerta exposição e balanço de branco em cada plano antes do look. Aparece no vídeo exportado.</p>
+        <div class="group-title">Look</div>
+        <div class="looks" id="looks"></div>
+        <p class="muted small note">A prévia do look é aproximada.</p>
+      </div>
+
       <div id="tab-corte" hidden>
         <div class="group-title">Trecho selecionado</div>
         <div id="selinfo" class="selinfo muted">Clique num clipe da linha do tempo.</div>
@@ -79,6 +99,7 @@
       <div class="phone" id="phone">
         <canvas id="bgfill" width="64" height="36" hidden></canvas>
         <video id="video" playsinline preload="auto"></video>
+        <div class="vig" id="vig"></div>
         <div class="cap" id="cap"></div>
         <div class="ph-empty" id="phempty">Abra ou crie um projeto</div>
       </div>

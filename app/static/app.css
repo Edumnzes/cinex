@@ -104,7 +104,13 @@ body.resizing video { pointer-events: none; }
 .phone.wide { width: min(100cqw, 100cqh * 16 / 9); aspect-ratio: 16 / 9; }
 #bgfill { position: absolute; inset: 0; width: 100%; height: 100%; filter: blur(14px) brightness(.85); transform: scale(1.15); }
 .phone.fit video { position: relative; object-fit: contain; }
-.phone video { width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; }
+.phone video { width: 100%; height: 100%; object-fit: cover; display: block; cursor: pointer; transition: transform .25s ease-out, object-position .25s ease-out; }
+.vig { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.9) 100%); opacity: 0; }
+.looks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.looks button { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); text-align: left; font-size: 13px; }
+.looks button.on { border-color: var(--accent); background: var(--accent-soft); }
+.looks i { width: 22px; height: 22px; border-radius: 4px; flex: none; }
+.note { border-left: 2px solid var(--line2); padding-left: 8px; }
 .ph-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
 .cap { position: absolute; left: 7.4%; right: 7.4%; transform: translateY(-50%); text-align: center; pointer-events: none; line-height: 1.15; }
 .cap .line { white-space: nowrap; display: inline-block; transform-origin: center; }

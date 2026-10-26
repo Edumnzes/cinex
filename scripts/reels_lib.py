@@ -415,6 +415,9 @@ class Reel:
         self.src = src
         probe = subprocess.run([FFM, "-hide_banner", "-i", src], capture_output=True, text=True).stderr
         m = re.search(r"Video:.*?(\d{3,5})x(\d{3,5})", probe); self.SW, self.SH = int(m.group(1)), int(m.group(2))
+        # base crop window with the OUTPUT aspect: the whole frame for a 9:16 base, a moving 9:16 window over a
+        # horizontal source (the virtual camera follows the face across it), and the reverse for 16:9 output.
+        self.CW0 = min(self.SW, self.SH * W / H); self.CH0 = self.CW0 * H / W
         d = re.search(r"Duration: (\d+):(\d+):([\d.]+)", probe); self.dur = int(d.group(1)) * 3600 + int(d.group(2)) * 60 + float(d.group(3))
         self.zk, self.scenes, self.ranges, self.motions, self.bgw = list(zoom_keys), list(scenes), list(ranges), list(motions), list(bg)
         self.keywords, self.cap_y = {k.upper() for k in keywords}, cap_y
@@ -539,7 +542,7 @@ class Reel:
            critically damped spring with a dead zone (hysteresis), max speed and max acceleration, so moves
            start and stop smoothly and small head motion never moves the frame.
         3. Range boundaries sit on cuts, so the camera re-frames instantly there (reads as a new shot)."""
-        k = self.SW / 360
+        kx, ky = self.SW / 360, self.SH / 640          # faces.py analyses a 360x640 frame
         tgt = {}; self.face_raw = {}; self.range_mode = {}
         for ri, rg in enumerate(self.ranges):
             a, b, mode = rg[0], rg[1], rg[2]
@@ -552,8 +555,8 @@ class Reel:
             if not idx: continue
             picks = [self._pick(self.faces[i]["f"], mode) if mode else None for i in idx]
             for i, f in zip(idx, picks):
-                if f: self.face_raw[i] = [v * k for v in f[:4]]
-            pts = [((f[0] + f[2] / 2) * k, (f[1] + f[3] / 2) * k) if f else None for f in picks]
+                if f: self.face_raw[i] = [f[0] * kx, f[1] * ky, f[2] * kx, f[3] * ky]
+            pts = [((f[0] + f[2] / 2) * kx, (f[1] + f[3] / 2) * ky) if f else None for f in picks]
             if all(p is None for p in pts):
                 self.range_mode[ri] = "none"
                 for i in idx: tgt[i] = np.array([self.SW / 2, self.SH / 2])
@@ -566,11 +569,11 @@ class Reel:
             if len(arr) >= 5:                                   # median-of-5: remove single-frame detector jumps
                 pad = np.pad(arr, ((2, 2), (0, 0)), mode="edge")
                 arr = np.stack([np.median(pad[j:j + 5], 0) for j in range(len(arr))])
-            spread = (np.percentile(arr, 95, 0) - np.percentile(arr, 5, 0)) / np.array([self.SW, self.SH])
+            spread = (np.percentile(arr, 95, 0) - np.percentile(arr, 5, 0)) / np.array([self.CW0, self.CH0])
             short = (min(b, self.dur) - a) < 3.0 and spread[0] < .30          # short shots: a move can't settle -> hold
             # Is a fixed (tripod) framing enough? Put the crop on the median face and check that the face centre
             # stays inside the good area (12 % side margins, between 12 % and 62 % of the height) for 95 % of the shot.
-            z = self.zoom((a + min(b, self.dur)) / 2); cw, ch = self.SW / z, self.SH / z; med = np.median(arr, 0)
+            z = self.zoom((a + min(b, self.dur)) / 2); cw, ch = self.CW0 / z, self.CH0 / z; med = np.median(arr, 0)
             dx = np.abs(arr[:, 0] - med[0]) / cw; dy = (arr[:, 1] - med[1]) / ch
             fits = (np.percentile(dx, 95) <= .5 - .12 and np.percentile(dy, 95) <= .62 - self.face_anchor
                     and np.percentile(-dy, 95) <= self.face_anchor - .12)
@@ -594,7 +597,7 @@ class Reel:
         pos = vel = None; moving = False; prev_r = None; dt = 1 / FPS; glide = False
         cuts = [0.0] + list(self.scenes) + list(self.cuts) + list(self.jumps)
         is_cut = lambda t: any(abs(t - c) < 1.5 / FPS for c in cuts)
-        dz = self.deadzone * self.SW; vmax = self.max_speed * self.SW; amax = self.max_accel * self.SW
+        dz = self.deadzone * self.CW0; vmax = self.max_speed * self.CW0; amax = self.max_accel * self.CW0
         kk = (2 * math.pi * .55) ** 2; cc = 2 * math.sqrt(kk)          # critically damped spring (~0.55 Hz)
         for n in range(nf):
             t = n / FPS; i0 = int(t * 10); fr = t * 10 - i0
@@ -694,7 +697,7 @@ class Reel:
     def crop(self, t):
         """Anchor-based framing: the focus point is placed at a fixed SCREEN position (face_anchor) and the
         crop is derived from it, so zooming scales around the face instead of sliding it up/down."""
-        z = self.zoom(t); cw, ch = self.SW / z, self.SH / z; s = W / cw
+        z = self.zoom(t); cw, ch = self.CW0 / z, self.CH0 / z; s = W / cw
         n = min(int(round(t * FPS)), len(self.focus_px) - 1)
         fx, fy = self.focus_px[n]
         sy = H * (self.face_anchor if self.has_face[n] else .5)

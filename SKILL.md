@@ -94,8 +94,9 @@ Tell the user in the delivery which bank items were used and their licence notes
 
 When the user wants to see and adjust the edit themselves ("abre no app", "editor", "timeline", "quero mexer
 nas legendas"), use the local app instead of delivering a finished file. The app is the interface; **you stay the
-brain**: you propose the cut, answer the app's chat and change the project. Current scope: cut + captions
-(no zoom, motion, colour, SFX or phrase reordering in the app yet — for those, use the normal flow below).
+brain**: you propose the cut, answer the app's chat and change the project. Current scope: cut, captions, camera
+(`camera`: follow, zoom 1.0–1.25, punch on cuts) and colour (`color`: correct, look) — no motion, SFX or phrase
+reordering in the app yet; for those, use the normal flow below.
 1. Start the server once, in the background: `python app/server.py` → http://127.0.0.1:8765 (local only).
 2. Create the project: `python scripts/app_project.py new <video> --name <name> --prompt "<marca.json termos>"`
    (proxy, transcription, waveform and an automatic pause cut). The user can also create it from the app.

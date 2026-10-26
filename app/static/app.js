@@ -11,12 +11,16 @@ const PRESETS = {
   Cinema: { font: "cond", weight: "Black", upper: true, size: 78, stroke: 0, words: 3, color: "#FFFFFF", accent: "#FFD400" },
 };
 
-let name = null, st = null, words = [], wave = null, fonts = [], projectFonts = [];
+let faces = null, name = null, st = null, words = [], wave = null, fonts = [], projectFonts = [];
 let sel = null, pending = 0, pps = 60, loadedFonts = new Set(), groups = [], kept = [];
 
 async function api(path, opt = {}) {
-  const r = await fetch(path, { ...opt, headers: { ...H, ...(opt.headers || {}) } });
-  const j = await r.json().catch(() => ({}));
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), opt.timeout || 20000);   // a stalled request never hangs the app
+  let r, j;
+  try {
+    r = await fetch(path, { ...opt, signal: ctl.signal, headers: { ...H, ...(opt.headers || {}) } });
+    j = await r.json().catch(() => ({}));
+  } finally { clearTimeout(timer); }
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
 }
@@ -49,7 +53,9 @@ async function openProject(n) {
 }
 
 async function loadMedia() {
-  [words, wave] = await Promise.all([api(`/api/p/${name}/words`), api(`/api/p/${name}/waveform`).catch(() => null)]);
+  const n = name;
+  api(`/api/p/${n}/faces`).then((f) => { if (n === name) faces = f; }).catch(() => {});   // preview-only: never blocks
+  [words, wave] = await Promise.all([api(`/api/p/${n}/words`), api(`/api/p/${n}/waveform`).catch(() => null)]);
   const v = $("#video"); v.src = `/api/p/${name}/preview.mp4`; $("#phempty").hidden = true;
 }
 
@@ -167,6 +173,65 @@ function bindResizers() {
   }
 }
 
+// ------------------------------------------------------------ camera + colour preview (approximate; export is exact)
+const LOOKS = {   // label, CSS approximation of reels_lib.GRADES, vignette, swatch
+  natural: ["Natural", "contrast(1.04) saturate(1.02)", .05, "#8a8f86"],
+  none: ["Sem look", "", 0, "#777"],
+  clean_warm: ["Quente suave", "contrast(.92) saturate(.86) sepia(.12) brightness(1.04)", .10, "#c8b08a"],
+  teal_orange: ["Teal e laranja", "contrast(1.12) saturate(1.08) sepia(.06)", .18, "linear-gradient(135deg,#2c6e74,#e0874a)"],
+  moody: ["Moody", "contrast(1.18) saturate(.8) brightness(.88)", .35, "#3a3640"],
+  vivid_day: ["Dia vivo", "contrast(1.1) saturate(1.18)", .12, "linear-gradient(135deg,#3d9be0,#f2c14e)"],
+};
+function renderLookUI() {
+  const c = st.color, k = st.camera;
+  $("#k-follow").checked = k.follow; $("#k-punch").checked = k.punch; $("#k-correct").checked = c.correct;
+  $("#k-zoom").value = Math.round(k.zoom * 100); $("#o-zoom").textContent = Math.round(k.zoom * 100) + "%";
+  for (const b of $("#looks").children) b.classList.toggle("on", b.dataset.look === c.look);
+  const L = LOOKS[c.look] || LOOKS.none;
+  $("#video").style.filter = L[1]; $("#vig").style.opacity = Math.min(1, L[2] * 2.2);
+}
+function bindLookUI() {
+  $("#looks").replaceChildren(...Object.entries(LOOKS).map(([id, L]) => {
+    const b = document.createElement("button"); b.dataset.look = id;
+    const sw = document.createElement("i"); sw.style.background = L[3]; b.append(sw, document.createTextNode(L[0]));
+    b.onclick = () => { if (!st) return; st.color.look = id; renderLookUI(); save({ color: st.color }); };
+    return b;
+  }));
+  const cam = (k, v) => { if (!st) return; st.camera[k] = v; renderLookUI(); clearTimeout(camTimer); camTimer = setTimeout(() => save({ camera: st.camera }), 400); };
+  let camTimer = null;
+  $("#k-follow").onchange = (e) => cam("follow", e.target.checked);
+  $("#k-punch").onchange = (e) => cam("punch", e.target.checked);
+  $("#k-zoom").oninput = (e) => cam("zoom", +e.target.value / 100);
+  $("#k-correct").onchange = (e) => { if (!st) return; st.color.correct = e.target.checked; save({ color: st.color }); };
+}
+
+function faceAt(t, a, b) {          // mean centre of the biggest face between a and b (normalised 0..1)
+  if (!faces) return null;
+  let sx = 0, sy = 0, n = 0;
+  for (let i = Math.max(0, Math.floor(a * 10)); i <= Math.min(faces.length - 1, Math.ceil(b * 10)); i++) {
+    const g = faces[i]; if (!g) continue;
+    sx += g[0]; sy += g[1]; n++;
+  }
+  return n ? { x: sx / n, y: sy / n } : null;
+}
+
+function camera(t) {
+  const v = $("#video"), k = st.camera, box = $("#phone");
+  if (!v.videoWidth || $("#phone").classList.contains("fit")) { v.style.objectPosition = ""; v.style.transform = ""; return; }
+  const bw = box.clientWidth, bh = box.clientHeight, sc = Math.max(bw / v.videoWidth, bh / v.videoHeight);
+  const Sw = v.videoWidth * sc, Sh = v.videoHeight * sc;
+  const seg = st.segments.find((x) => t >= x.s && t < x.e);
+  // like the engine: a short or steady shot gets a fixed framing (tripod); a long one follows a smoothed face
+  const f = k.follow ? (seg && seg.e - seg.s < 4 ? faceAt(t, seg.s, seg.e) : faceAt(t, t - 0.6, t + 0.6)) : null;
+  const fx = (f ? f.x : 0.5) * Sw, fy = (f ? f.y : 0.5) * Sh;
+  const ox = Math.min(0, Math.max(bw - Sw, bw / 2 - fx)), oy = Math.min(0, Math.max(bh - Sh, bh * (f ? 0.4 : 0.5) - fy));
+  v.style.objectPosition = `${ox}px ${oy}px`;
+  let z = k.zoom;
+  if (k.punch && seg && seg.keep) { const i = kept.indexOf(seg); if (i > 0 && kept[i].s - kept[i - 1].e < 1.5 && i % 2) z *= 1.07; }
+  v.style.transformOrigin = `${Math.min(bw, Math.max(0, ox + fx))}px ${Math.min(bh, Math.max(0, oy + fy))}px`;
+  v.style.transform = z > 1.001 ? `scale(${z})` : "";
+}
+
 function rawToCut(t) {
   for (const g of kept) if (t >= g.s && t < g.e) return g.off + (t - g.s);
   return null;
@@ -255,7 +320,7 @@ function bindCaptionUI() {
   $("#c-upload").onchange = async (e) => {
     const f = e.target.files[0]; if (!f || !name) return;
     try {
-      await api(`/api/p/${name}/font`, { method: "POST", body: f, headers: { "X-Filename": f.name } });
+      await api(`/api/p/${name}/font`, { method: "POST", body: f, headers: { "X-Filename": f.name }, timeout: 120000 });
       await reloadState();
     } catch (err) { alert(err.message); }
     e.target.value = "";
@@ -377,7 +442,7 @@ function update() {
     $("#tc").textContent = tcode(cut ? ct ?? 0 : t);
     $("#tctotal").textContent = tcode(cut ? cutTotal() : st.duration);
     $("#tlcode").textContent = tcode(t);
-    drawCaption();
+    drawCaption(); camera(t);
     if (!$("#bgfill").hidden && v.readyState >= 2) {                  // blurred fill behind vertical footage
       const c = $("#bgfill"), g = c.getContext("2d"), k = Math.max(c.width / v.videoWidth, c.height / v.videoHeight);
       g.drawImage(v, (c.width - v.videoWidth * k) / 2, (c.height - v.videoHeight * k) / 2, v.videoWidth * k, v.videoHeight * k);
@@ -393,18 +458,20 @@ function seekFromEvent(e, el) {
 // ------------------------------------------------------------ wiring
 function tab(n) {
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.classList.toggle("on", b.dataset.tab === n);
-  $("#tab-legendas").hidden = n !== "legendas"; $("#tab-corte").hidden = n !== "corte";
+  for (const t of ["legendas", "camera", "cor", "corte"]) $("#tab-" + t).hidden = n !== t;
 }
 
 function renderAll() {
   if (!st) { $("#phempty").hidden = false; return; }
-  $("#progname").textContent = st.name; renderFormat();
+  st.camera = { follow: true, zoom: 1.0, punch: true, ...(st.camera || {}) };
+  st.color = { correct: true, look: "natural", ...(st.color || {}) };
+  $("#progname").textContent = st.name; renderFormat(); renderLookUI();
   buildGroups(); renderCaptionsUI(); renderChat(); renderDur(); renderTimeline(); lastKey = ""; drawCaption();
   $("#exportbtn").disabled = !st.segments.length;
 }
 
 async function init() {
-  bindCaptionUI(); bindResizers(); applyLayout();
+  bindCaptionUI(); bindLookUI(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
   for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };
@@ -450,8 +517,8 @@ async function init() {
   });
   window.addEventListener("resize", () => { lastKey = ""; drawCaption(); });
   fonts = await api("/api/fonts").catch(() => []);
-  await listProjects();
   setInterval(poll, 1500);
   requestAnimationFrame(tick);
+  await listProjects();
 }
 init();

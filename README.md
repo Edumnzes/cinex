@@ -131,7 +131,8 @@ Abre em http://127.0.0.1:8765 (só no seu computador). Na tela:
 - **Tamanho dos painéis:** arraste as bordas para aumentar ou diminuir cada bloco (duplo clique volta ao padrão).
 - **Aprovar e travar corte** e **Exportar:** o vídeo final vai para `Downloads/<nome>_cinex.mp4` (ou `_cinex_16x9.mp4`).
 
-Nesta primeira fase o app faz corte e legendas. Zoom, motion, cor e efeitos sonoros continuam pelo fluxo normal.
+O app faz corte, legendas, enquadramento (seguir rosto, zoom, zoom nos cortes) e cor (correção automática e
+looks). Motion e efeitos sonoros continuam pelo fluxo normal.
 
 ## Estrutura do repositório
 

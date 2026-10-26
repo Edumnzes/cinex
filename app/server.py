@@ -21,7 +21,7 @@ STATIC = APP / "static"
 PORT = 8765
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)       # no console window flashing on Windows
 MAX_BODY = 25 * 1024 * 1024                     # font uploads
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format"}
+EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 
@@ -44,6 +44,7 @@ def running(name):
 
 class H(BaseHTTPRequestHandler):
     server_version = "Cinex"
+    protocol_version = "HTTP/1.1"     # keep-alive: closing right after the body can cut large responses on Windows
 
     def log_message(self, fmt, *args):            # quiet: only errors
         if args and str(args[1])[0] in "45": sys.stderr.write("%s %s\n" % (self.command, self.path))
@@ -135,6 +136,14 @@ class H(BaseHTTPRequestHandler):
                     return self._send(200, dict(rev=rev, prep=P.read_job(name, "prep"), export=P.read_job(name, "export")))
                 if sub == "words": return self._file(d / "words_raw.json", "application/json")
                 if sub == "waveform": return self._file(d / "waveform.json", "application/json")
+                if sub == "faces":                     # preview only needs the biggest face centre (0..1) per 0.1 s
+                    p = d / "faces_preview.json"
+                    if not p.exists(): return self._err(404, "rostos ainda não analisados")
+                    out = []
+                    for fr in json.loads(p.read_text(encoding="utf-8")):
+                        g = max(fr["f"], key=lambda x: x[3], default=None)
+                        out.append([round((g[0] + g[2] / 2) / 360, 3), round((g[1] + g[3] / 2) / 640, 3)] if g else 0)
+                    return self._send(200, out)
                 if sub == "preview.mp4": return self._file(d / "preview.mp4", "video/mp4")
             return self._err(404, "rota não encontrada")
         except ValueError as e: return self._err(400, str(e))
@@ -162,6 +171,7 @@ class H(BaseHTTPRequestHandler):
             if sub == "state":
                 body = {k: v for k, v in self._json().items() if k in EDITABLE}
                 if body.get("format", "vertical") not in ("vertical", "horizontal"): return self._err(400, "formato inválido")
+                if not all(isinstance(body.get(k, {}), dict) for k in ("camera", "color", "captions")): return self._err(400, "valor inválido")
                 if "segments" in body:
                     for g in body["segments"]:
                         if not (isinstance(g.get("s"), (int, float)) and isinstance(g.get("e"), (int, float)) and isinstance(g.get("keep"), bool)):
