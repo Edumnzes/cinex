@@ -119,14 +119,19 @@ Para ver e ajustar a edição você mesmo, peça ao Claude para abrir o vídeo n
 
 Abre em http://127.0.0.1:8765 (só no seu computador), no **modo guiado**, feito para quem não edita vídeo:
 
-- **Passo a passo à esquerda:** Começar → Corte → Estilo → Elementos → Revisão → Publicar. Cada passo é uma página,
+- **Passo a passo à esquerda:** Começar → Upload → Corte → Estilo → Elementos → Revisão → Publicar. Cada passo é uma página,
   no estilo do Notion, que explica o que está acontecendo e mostra o resultado na prévia.
 - **Chat sempre à direita:** é o jeito principal de mudar o vídeo. Escreva do seu jeito ("tira a parte em que eu
   gaguejo", "coloca o preço na tela") ou toque numa das sugestões de cada página.
 - **Comando de voz:** toque em **Falar**, diga o pedido e toque de novo. A transcrição roda no seu computador
   (Whisper), o áudio não vai para a internet. Comandos curtos navegam direto: "próximo passo", "voltar",
   "ir para estilo", "tocar", "pausar"; o resto vai para o chat.
-- **Começar:** escolha a marca e arraste o vídeo para a página (ou cole o caminho).
+- **Começar:** cadastro dos perfis. Escolha um perfil ou crie um novo: nome, o que faz, para quem, chamada para
+  ação, contato, cores, estilo de legenda, nomes que a transcrição deve acertar e palavras de destaque. Cada vídeo
+  novo já começa com isso.
+- **Upload:** escolha o formato e envie um ou mais vídeos (arrastando, escolhendo ou colando o caminho). Com mais de
+  um, escolha **Um vídeo só** (junta tudo e escolhe as melhores falas) ou **Sequência de vídeos** (cada arquivo vira
+  um vídeo da série, com a mesma marca e formato; a página mostra as partes).
 - **Corte:** clique no texto de uma frase para corrigir o que a transcrição errou (nomes, marcas, números). A
   legenda passa a usar o texto corrigido, no mesmo tempo da fala.
 

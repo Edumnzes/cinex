@@ -12,6 +12,8 @@ One folder per video in ~/reels/<name>/ with:
 
 Claude Code is the brain: it reads the state, answers the chat and edits the cut. CLI:
     python app_project.py new <video> [--name X] [--prompt "brand terms"]   analyse + propose the cut
+    python app_project.py novo <name> <video> [<video> ...] [--marca h] [--formato f]   ONE video from one or more files
+    python app_project.py serie <base> <video> [<video> ...] [--marca h] [--formato f]  a SEQUENCE: one project per file
     python app_project.py list
     python app_project.py show <name>                    segments with text, captions, unread chat
     python app_project.py wait <name> [--timeout 900]    block until the user writes in the app's chat
@@ -47,6 +49,10 @@ COLOR = {"correct": True, "look": "natural"}              # automatic correction
 CAPTIONS = {"enabled": True, "font": "sans", "weight": "Black", "color": "#FFFFFF", "accent": "#FFD400", "size": 62,
             "stroke": 6, "lines": 1, "words": 3, "upper": True, "y": 1300,
             "kfont": "", "kscale": 1.0}                          # emphasis word: own font ("" = same) and size
+CAPTION_PRESETS = {                                          # same as the app's caption cards (marca.json edicao.caption_style)
+    "hormozi": dict(font="sans", weight="Black", upper=True, size=62, stroke=6, words=3),
+    "minimal": dict(font="sans", weight="SemiBold", upper=False, size=50, stroke=0, words=3),
+    "cinematic": dict(font="cond", weight="Black", upper=True, size=78, stroke=0, words=3)}
 
 
 def _ff():
@@ -176,17 +182,49 @@ def waveform(src, out, step=.02):
 
 
 # ------------------------------------------------------------ new project: proxy, transcription, proposed cut
-def new(src, name=None, prompt=None):
+def brand_defaults(marca):
+    """What a brand profile sets on a new project: highlight colour, highlight words, spelling fixes, and the terms
+    the transcription must get right (names, products, places)."""
+    if not marca: return {}, None
+    import brand
+    try: b = brand.load_brand(marca)
+    except Exception: return {}, None
+    out = dict(marca=marca, keywords=[k.upper() for k in b.get("keywords", [])], fix=b.get("fix") or {})
+    cap = dict(CAPTIONS, **CAPTION_PRESETS.get((b.get("edicao") or {}).get("caption_style"), {}))
+    acc = (b.get("cores") or {}).get("destaque")
+    if acc: cap["accent"] = acc
+    out["captions"] = cap
+    terms = ", ".join([b.get("nome") or "", *b.get("transcricao_termos", [])]).strip(", ")
+    return out, terms or None
+
+
+def new(src, name=None, prompt=None, marca=None, formato=None, prep=True, extra=None):
     src = Path(src).expanduser().resolve()
     if not src.is_file(): raise FileNotFoundError(f"vídeo não encontrado: {src}")
     name = name or re.sub(r"[^A-Za-z0-9_.-]", "_", src.stem)[:64]
     d = folder(name); d.mkdir(parents=True, exist_ok=True)
+    bset, terms = brand_defaults(marca); prompt = prompt or terms
     if not (d / "cinex.json").exists():
         _write_json(d / "cinex.json", dict(version=1, rev=0, name=name, src=str(src), duration=round(duration(src), 2),
                                            segments=[], cut_locked=False, captions=dict(CAPTIONS), camera=dict(CAMERA), color=dict(COLOR), motions=[], motion_engine="html", sfx=[], format="vertical", keywords=[], fix={},
                                            chat=[], created=_now(), prompt=prompt or ""))
-    prepare(name, prompt)
+        update(name, lambda s: s.update({**bset, **({"format": formato} if formato in FORMATS else {}), **(extra or {})}))
+    if prep: prepare(name, prompt)
     return name
+
+
+def new_series(base, files, marca=None, formato=None):
+    """A sequence of videos (Stories in parts, episodes): one project per file, same brand and format, prepared one
+    after the other (all appear in the app at once, queued)."""
+    base = re.sub(r"[^A-Za-z0-9_.-]", "_", base)[:56] or "serie"
+    names = [f"{base}_p{i + 1}" for i in range(len(files))]
+    for i, (n, f) in enumerate(zip(names, files)):
+        new(f, n, marca=marca, formato=formato, prep=False, extra=dict(serie=dict(base=base, parte=i + 1, total=len(files), projetos=names)))
+        job(n, "prep", step="Na fila", pct=0, done=False, error=None)
+    for n in names:
+        try: prepare(n, load(n).get("prompt") or None)
+        except Exception: pass                              # the error is in that part's prep.json; go on with the others
+    return names
 
 
 def prepare(name, prompt=None):
@@ -917,8 +955,14 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(); ap.add_argument("cmd"); ap.add_argument("args", nargs="*")
     ap.add_argument("--name"); ap.add_argument("--prompt"); ap.add_argument("--timeout", type=float, default=900)
+    ap.add_argument("--marca"); ap.add_argument("--formato")
     a = ap.parse_args()
-    if a.cmd == "new": n = new(a.args[0], a.name, a.prompt); _show(n)
+    if a.cmd == "new": n = new(a.args[0], a.name, a.prompt, a.marca, a.formato); _show(n)
+    elif a.cmd == "novo":                              # one video from one or more files (talks, events)
+        n = new(a.args[1], a.args[0], marca=a.marca, formato=a.formato)
+        if len(a.args) > 2: add_clips(n, a.args[2:])
+        _show(n)
+    elif a.cmd == "serie": print("série:", ", ".join(new_series(a.args[0], a.args[1:], a.marca, a.formato)))
     elif a.cmd == "prepare": prepare(a.args[0], a.prompt)
     elif a.cmd == "list":
         for p in projects(): print(f"{p['name']:24} {p['duration']:6.1f}s -> {p['kept']:6.1f}s {'travado' if p['locked'] else ''}")

@@ -81,6 +81,11 @@
   (Começar, Corte, Estilo, Elementos, Revisão, Publicar), chat com a IA sempre ao lado como o meio principal de
   mudança, sugestões por página, prévia do vídeo em cada passo e envio do vídeo arrastando para a página. O editor
   com linha do tempo continua em `/editor` (Editor completo).
+- **Começar = cadastro de perfis; nova página Upload.** O primeiro passo agora cria e edita o perfil da marca no
+  app (nome, o que faz, público, chamada, contato, cores, estilo de legenda, nomes certos e destaques). O Upload
+  reúne os formatos e o envio de um ou mais vídeos: **um vídeo só** (junta e escolhe as melhores falas) ou
+  **sequência de vídeos** (um vídeo por arquivo, preparados em fila). O perfil já entra em cada vídeo novo,
+  inclusive na transcrição, que passa a acertar os nomes da marca. Os envios do servidor usam uma rotina só.
 - **Visual Apple + Notion:** a estrutura continua a do Notion (páginas, avisos, listas, seções que abrem); o acabamento
   passa a ser o da Apple: fonte do sistema, barra lateral translúcida com o passo atual em azul (como no Finder),
   cartões e listas agrupadas arredondadas (como nos Ajustes), botões em pílula, caixas de seleção redondas, chat em

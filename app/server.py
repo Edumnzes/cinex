@@ -119,6 +119,17 @@ class H(BaseHTTPRequestHandler):
         if n > 1024 * 1024: raise ValueError("corpo grande demais")
         return json.loads(self.rfile.read(n) or b"{}")
 
+    def _save_body(self, dest):
+        """Stream the request body to dest in 1 MB chunks; False (and nothing left on disk) if the upload broke."""
+        left = int(self.headers.get("Content-Length") or 0)
+        with open(dest, "wb") as f:
+            while left > 0:
+                chunk = self.rfile.read(min(1 << 20, left))
+                if not chunk: break
+                f.write(chunk); left -= len(chunk)
+        if left: Path(dest).unlink(missing_ok=True)
+        return not left
+
     def _file(self, path, ctype=None):
         path = Path(path)
         if not path.is_file(): return self._err(404, "arquivo não encontrado")
@@ -162,7 +173,8 @@ class H(BaseHTTPRequestHandler):
             if parts == ["api", "marcas"]:              # brand profiles in ~/instagram-legendas (shared with legendas-instagram)
                 import brand
                 hs = sorted(p.name for p in brand.ROOT.iterdir() if p.is_dir()) if brand.ROOT.exists() else []
-                return self._send(200, [dict(handle=h, arquivos=brand.status(h)) for h in hs if HANDLE_RE.match(h)])
+                return self._send(200, [dict(handle=h, arquivos=brand.status(h), nome=brand.load_brand(h).get("nome", ""))
+                                        for h in hs if HANDLE_RE.match(h)])
             if parts[:2] == ["api", "marca"] and len(parts) == 3:
                 if not HANDLE_RE.match(parts[2]): return self._err(400, "arroba inválido")
                 return self._send(200, marca_info(parts[2]))
@@ -259,31 +271,38 @@ class H(BaseHTTPRequestHandler):
                 data = self.rfile.read(n)
                 ct = self.headers.get("Content-Type", "")
                 return self._send(200, {"text": voice_to_text(data, ".ogg" if "ogg" in ct else ".mp4" if "mp4" in ct else ".webm")})
-            if parts == ["api", "upload"]:             # new project from a video sent by the browser (guided mode)
+            if parts == ["api", "upload"]:             # a video sent by the browser, kept in ~/reels/_entrada (Upload page)
                 from urllib.parse import unquote
                 fn = Path(unquote(self.headers.get("X-Filename", ""))).name
                 if not re.fullmatch(r"[\w .()-]{1,120}", fn) or Path(fn).suffix.lower() not in P.VIDEO_EXT:
                     return self._err(400, "envie um vídeo (.mov, .mp4, .m4v…)")
-                n = int(self.headers.get("Content-Length") or 0)
-                if not 0 < n <= MAX_MEDIA: return self._err(400, "vídeo grande demais (máx. 8 GB)")
+                if not 0 < int(self.headers.get("Content-Length") or 0) <= MAX_MEDIA: return self._err(400, "vídeo grande demais (máx. 8 GB)")
                 dd = P.ROOT / "_entrada"; dd.mkdir(parents=True, exist_ok=True)
                 dest = dd / fn; k = 2
                 while dest.exists(): dest = dd / f"{Path(fn).stem}-{k}{Path(fn).suffix}"; k += 1
-                left = n
-                with open(dest, "wb") as f:
-                    while left > 0:
-                        chunk = self.rfile.read(min(1 << 20, left))
-                        if not chunk: break
-                        f.write(chunk); left -= len(chunk)
-                if left: dest.unlink(missing_ok=True); return self._err(400, "envio interrompido")
-                name = re.sub(r"[^A-Za-z0-9_.-]", "_", dest.stem)[:64]
-                k = 2
-                while (P.folder(name) / "cinex.json").exists(): name = re.sub(r"[^A-Za-z0-9_.-]", "_", dest.stem)[:60] + f"_{k}"; k += 1
-                P.folder(name).mkdir(parents=True, exist_ok=True)
-                P.job(name, "prep", step="Começando", pct=1, done=False, error=None)
-                subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "new", str(dest), "--name", name],
+                if not self._save_body(dest): return self._err(400, "envio interrompido")
+                return self._send(200, {"path": str(dest)})
+            if parts == ["api", "novo"]:               # start: ONE video from the files, or a SEQUENCE (one per file)
+                b = self._json(); paths = [str(p).strip().strip('"') for p in b.get("paths", []) if str(p).strip()]
+                if not paths or len(paths) > 200: return self._err(400, "envie pelo menos um vídeo")
+                for p in paths:
+                    if not (Path(p).is_file() and Path(p).suffix.lower() in P.VIDEO_EXT): return self._err(400, f"vídeo não encontrado: {p}")
+                modo = b.get("modo", "unico"); formato = b.get("formato", "vertical"); marca = b.get("marca") or None
+                if modo not in ("unico", "sequencia") or formato not in P.FORMATS or (marca and not HANDLE_RE.match(marca)):
+                    return self._err(400, "opção inválida")
+                base = re.sub(r"[^A-Za-z0-9_.-]", "_", str(b.get("nome") or Path(paths[0]).stem))[:56] or "video"
+                taken = lambda n: (P.folder(n) / "cinex.json").exists() or (P.folder(n) / "prep.json").exists() or (P.folder(n + "_p1") / "cinex.json").exists()
+                name, k = base, 2
+                while taken(name): name = f"{base}_{k}"; k += 1
+                opts = (["--marca", marca] if marca else []) + ["--formato", formato]
+                if modo == "sequencia" and len(paths) > 1:
+                    first = f"{name}_p1"; cmd = ["serie", name, *paths]
+                else:
+                    first = name; cmd = ["novo", name, *paths]
+                    P.folder(name).mkdir(parents=True, exist_ok=True); P.job(name, "prep", step="Começando", pct=1, done=False, error=None)
+                subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), *cmd, *opts],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
-                return self._send(200, {"name": name})
+                return self._send(200, {"name": first, "serie": modo == "sequencia" and len(paths) > 1})
             if parts[:2] == ["api", "p"] and len(parts) == 6 and parts[3] == "media" and parts[5] == "remover":
                 if not (P.folder(parts[2]) / "cinex.json").exists(): return self._err(404, "projeto não existe")
                 self._json(); P.remove_media(parts[2], int(parts[4])); return self._send(200, {"ok": True})
@@ -322,13 +341,7 @@ class H(BaseHTTPRequestHandler):
                 if not 0 < n <= 200 * 1024 * 1024: return self._err(400, "arquivo grande demais (máx. 200 MB)")
                 dd = P.folder(name) / "music"; dd.mkdir(exist_ok=True); dest = dd / fn
                 dest.unlink(missing_ok=True)           # never write into a file a short version shares (hard link)
-                with open(dest, "wb") as f:
-                    left = n
-                    while left > 0:
-                        chunk = self.rfile.read(min(1 << 20, left))
-                        if not chunk: break
-                        f.write(chunk); left -= len(chunk)
-                if left: dest.unlink(missing_ok=True); return self._err(400, "envio interrompido")
+                if not self._save_body(dest): return self._err(400, "envio interrompido")
                 return self._send(200, {"path": str(dest)})
             if sub == "media":                         # add a B-roll clip by path (the file stays where it is)
                 src = Path(str(self._json().get("src", "")).strip().strip('"')).expanduser()
@@ -344,13 +357,7 @@ class H(BaseHTTPRequestHandler):
                 dd = P.folder(name) / ("media" if sub == "mediaup" else "clips_up"); dd.mkdir(exist_ok=True)
                 dest = dd / f"up_{fn}"; k = 2
                 while dest.exists(): dest = dd / f"up_{Path(fn).stem}-{k}{Path(fn).suffix}"; k += 1
-                left = n
-                with open(dest, "wb") as f:
-                    while left > 0:
-                        chunk = self.rfile.read(min(1 << 20, left))
-                        if not chunk: break
-                        f.write(chunk); left -= len(chunk)
-                if left: dest.unlink(missing_ok=True); return self._err(400, "envio interrompido")
+                if not self._save_body(dest): return self._err(400, "envio interrompido")
                 if sub == "clipup": return self._send(200, {"path": str(dest)})    # the app then posts all paths to /clips
                 self._media_job(name, dest); return self._send(200, {"ok": True})
             if sub == "state":
@@ -426,6 +433,8 @@ def _marca_post(self, parts):
     import brand
     h, sub = parts[2], parts[3]
     if not HANDLE_RE.match(h): return self._err(400, "arroba inválido")
+    if sub == "salvar":                                # profile form of the guided mode (brand.EDITABLE fields)
+        return self._send(200, brand.save(h, self._json()))
     if sub == "ref":                                   # niche reference by link
         b = self._json(); url = str(b.get("url", "")).strip()
         if not re.match(r"^https?://[^\s]{4,500}$", url): return self._err(400, "cole um link http(s) válido")
@@ -439,13 +448,7 @@ def _marca_post(self, parts):
         d = brand.folder(h) / "referencias"; d.mkdir(parents=True, exist_ok=True)
         dest = d / fn; k = 2
         while dest.exists(): dest = d / f"{Path(fn).stem}-{k}{Path(fn).suffix}"; k += 1
-        left = n
-        with open(dest, "wb") as f:
-            while left > 0:
-                chunk = self.rfile.read(min(1 << 20, left))
-                if not chunk: break
-                f.write(chunk); left -= len(chunk)
-        if left: dest.unlink(missing_ok=True); return self._err(400, "envio interrompido")
+        if not self._save_body(dest): return self._err(400, "envio interrompido")
         from urllib.parse import unquote
         e = brand.add_ref(h, "video", dest.name, unquote(self.headers.get("X-Nota", ""))[:500])
         self._analyse_refs(h)

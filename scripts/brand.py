@@ -73,6 +73,36 @@ def init(handle):
     return p
 
 
+# fields the app's profile form may change: (path in marca.json, kind, max length)
+EDITABLE = {"nome": ("nome", str, 80), "descricao": ("descricao", str, 600), "publico": ("publico", str, 400),
+            "cta": (("cta", "principal"), str, 120), "contato": (("cta", "contato"), str, 160),
+            "destaque": (("cores", "destaque"), "color", 7), "secundaria": (("cores", "secundaria"), "color", 7),
+            "legenda": (("edicao", "caption_style"), ("hormozi", "minimal", "cinematic"), 12),
+            "termos": ("transcricao_termos", list, 40), "keywords": ("keywords", list, 40)}
+
+
+def save(handle, fields):
+    """Create the profile if needed and apply the form fields (validated against EDITABLE)."""
+    import re
+    p = init(handle); data = json.loads(p.read_text(encoding="utf-8"))
+    for k, v in fields.items():
+        if k not in EDITABLE: continue
+        path, kind, n = EDITABLE[k]
+        if kind is str: v = str(v).strip()[:n]
+        elif kind == "color":
+            if not re.fullmatch(r"#[0-9A-Fa-f]{6}", str(v)): raise ValueError(f"cor inválida: {v}")
+            v = str(v).upper()
+        elif kind is list:
+            v = [str(x).strip()[:60] for x in (v if isinstance(v, list) else str(v).split(",")) if str(x).strip()][:n]
+        elif v not in kind: raise ValueError(f"valor inválido para {k}")
+        if isinstance(path, tuple):
+            data.setdefault(path[0], {})[path[1]] = v
+        else: data[path] = v
+    data["updated"] = datetime.date.today().isoformat()
+    p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    return load_brand(handle)
+
+
 REF_EXT = (".mp4", ".mov", ".m4v", ".webm")
 
 

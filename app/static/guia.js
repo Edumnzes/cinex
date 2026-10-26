@@ -19,6 +19,7 @@ const fmt = (t) => `${Math.floor((t || 0) / 60)}:${String(Math.floor((t || 0) % 
 const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 
 let name = null, st = null, prep = null, exp = null, step = "comecar", projects = [], marcas = [], fresh = false;
+let perfilNovo = false, perfilData = null, pend = [], modoUp = "unico", formDirty = false;      // Começar (profiles) and Upload page state
 let sentAt = 0, lastCinex = 0, review = null, typing = false;
 
 // ------------------------------------------------------------ data helpers (same rules as the editor)
@@ -80,6 +81,8 @@ const SYMS = {
   music: '<path d="M9 18V6.2L20 4v11.8"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="15.8" r="2.5"/>',
   phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M11 18.6h2"/>',
   bubble: '<path d="M4 5.5h16v10.5H10l-5 4v-4H4z"/>',
+  person: '<circle cx="12" cy="8" r="3.8"/><path d="M4.5 20.5c.8-4 3.8-6.2 7.5-6.2s6.7 2.2 7.5 6.2"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
   tray: '<path d="M12 3.5v10M7.6 9.4 12 13.8l4.4-4.4"/><path d="M4 14v3.8A2.2 2.2 0 0 0 6.2 20h11.6a2.2 2.2 0 0 0 2.2-2.2V14"/>',
 };
 const CALLOUT = { "💡": "lightbulb", "✅": "check", "🎉": "check", "⚠️": "warn", "🤖": "clock", "⏳": "clock", "🗣️": "bubble",
@@ -93,15 +96,17 @@ function tile(name, color, cls) { const t = sym(name, "tile " + (cls || "")); t.
 
 // ------------------------------------------------------------ steps
 const STEPS = [
-  { id: "comecar", icon: "play", color: "#0a84ff", title: "Começar", lead: "Escolha a marca e envie o vídeo.", pv: false, done: () => !!(st && st.segments.length) },
+  { id: "comecar", icon: "person", color: "#0a84ff", title: "Começar", lead: "O perfil da marca: o Cinex edita no estilo e na voz dela.", pv: false, done: () => !!marcaAtual() },
+  { id: "upload", icon: "tray", color: "#64d2ff", title: "Upload", lead: "Envie os vídeos e escolha o formato.", pv: false, done: () => !!(st && st.segments.length) },
   { id: "corte", icon: "scissors", color: "#ff9f0a", title: "Corte", lead: "A IA tirou pausas, repetições e tropeços. Confira as frases.", pv: true, done: () => !!(st && st.cut_locked) },
-  { id: "estilo", icon: "palette", color: "#ff375f", title: "Estilo", lead: "Onde vai publicar, como a legenda aparece e a cor do vídeo.", pv: true, done: () => !!guia().estilo },
+  { id: "estilo", icon: "palette", color: "#ff375f", title: "Estilo", lead: "Como a legenda aparece e a cor do vídeo.", pv: true, done: () => !!guia().estilo },
   { id: "elementos", icon: "textformat", color: "#bf5af2", title: "Elementos", lead: "Textos na tela, imagens extras e música.", pv: true, done: () => !!guia().elementos },
   { id: "revisao", icon: "magnifier", color: "#5e5ce6", title: "Revisão", lead: "Uma conferência do que ainda parece edição automática.", pv: true, done: () => !!guia().revisao },
   { id: "publicar", icon: "paperplane", color: "#30d158", title: "Publicar", lead: "Gere o vídeo final e prepare a postagem.", pv: true, done: () => !!(exp && exp.out) },
 ];
 const CHIPS = {
-  comecar: ["Quero cadastrar minha marca", "Que tipo de vídeo funciona no meu perfil?"],
+  comecar: ["Analisa meu Instagram e completa o perfil", "Que tipo de vídeo funciona no meu perfil?"],
+  upload: ["Junta os vídeos e escolhe as melhores falas", "Divide em uma série de stories"],
   corte: ["Deixa mais curto, só o essencial", "Começa com a frase mais forte", "Tira repetições e vícios de linguagem", "Por que você cortou essas partes?"],
   estilo: ["Legenda maior", "Destaca os números na legenda", "Deixa com cara de cinema", "Usa as cores da minha marca"],
   elementos: ["Sugere textos na tela para este vídeo", "Coloca o nome de quem fala no começo", "Põe efeitos sonoros só nos pontos-chave", "Qual música viral combina com este vídeo?"],
@@ -109,10 +114,13 @@ const CHIPS = {
   publicar: ["Escreve a legenda do post", "Qual o melhor horário para postar?", "Sugere uma música viral do Instagram"],
 };
 const stepIdx = () => STEPS.findIndex((s) => s.id === step);
-const needsProject = (id) => id !== "comecar";
+const needsProject = (id) => !["comecar", "upload"].includes(id);
+const stepDef = (id) => STEPS.find((x) => x.id === id);
+const marcaAtual = () => (name && st ? st.marca : null) || store.get("cinex.marca") || "";
 
 function go(id) {
-  if (needsProject(id) && !(st && st.segments.length)) id = "comecar";
+  if (id !== step) formDirty = false;
+  if (needsProject(id) && !(st && st.segments.length)) id = "upload";
   step = id; if (name) location.hash = `${name}/${id}`;
   render();
   $(".page").scrollTop = 0;
@@ -148,60 +156,128 @@ function navrow(box, nextLabel, onNext) {
 // ------------------------------------------------------------ pages
 const PAGES = {
   async comecar(box) {
-    const s = STEPS[0]; header(box, s);
-    const novo = fresh || !name;
-    // brand
-    box.append(el("h3", "", "1. De qual marca é o vídeo?"));
-    const cur = novo ? store.get("cinex.marca") || "" : (st && st.marca) || "";
+    header(box, stepDef("comecar"));
+    const cur = marcaAtual();
+    box.append(el("h3", "", "Perfis"));
     const cards = el("div", "cards");
-    const pick = async (h) => { if (novo) store.set("cinex.marca", h); else await save({ marca: h || null }); render(); };
+    const pick = async (h) => { store.set("cinex.marca", h); perfilNovo = false; formDirty = false; if (name && st) await save({ marca: h || null }); perfilData = null; render(); };
     for (const m of [{ handle: "" }, ...marcas]) {
-      const c = el("button", "card" + (cur === m.handle ? " on" : ""));
-      c.append(el("b", "", m.handle ? "@" + m.handle : "Sem marca"),
-               el("small", "", m.handle ? (m.arquivos && m.arquivos["perfil.md"] ? "perfil pronto" : "perfil a completar") : "edição com as regras gerais"));
+      const c = el("button", "card" + (!perfilNovo && cur === m.handle ? " on" : ""));
+      c.append(el("b", "", m.handle ? (m.nome || "@" + m.handle) : "Sem perfil"),
+               el("small", "", m.handle ? "@" + m.handle + (m.arquivos && m.arquivos["perfil.md"] ? " · Instagram analisado" : "") : "regras gerais de edição"));
       c.onclick = () => pick(m.handle); cards.append(c);
     }
+    const nv = el("button", "card" + (perfilNovo ? " on" : "")); nv.append(sym("plus", "addic"), el("b", "", "Novo perfil"), el("small", "", "cadastrar uma marca"));
+    nv.onclick = () => { perfilNovo = true; perfilData = null; formDirty = false; render(); }; cards.append(nv);
     box.append(cards);
-    if (!marcas.length) callout(box, "💡", "Ainda não há marca cadastrada. Peça no chat “quero cadastrar minha marca”: o Cinex analisa seu perfil e passa a editar no seu estilo.");
-    // video
-    box.append(el("h3", "", novo ? "2. Envie o vídeo" : "2. Seu vídeo"));
-    if (novo) {
-      const d = el("div", "drop"); d.append(sym("tray", "de"), el("div", "", "Arraste o vídeo aqui ou clique para escolher"),
-                                          el("div", "muted small", "Vídeo do celular, do jeito que gravou. A IA assiste, transcreve e propõe o corte."));
-      d.onclick = () => $("#gfile").click();
-      d.ondragover = (e) => { e.preventDefault(); d.classList.add("over"); }; d.ondragleave = () => d.classList.remove("over");
-      d.ondrop = (e) => { e.preventDefault(); d.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) upload(f); };
-      box.append(d);
-      const pr = el("form", "pathrow"), inp = el("input"); inp.placeholder = "ou cole o caminho do arquivo (C:\\…\\IMG_1234.MOV)";
-      const b = el("button", "btn", "Abrir"); pr.append(inp, b);
-      pr.onsubmit = async (e) => { e.preventDefault(); const src = inp.value.trim().replace(/^"|"$/g, ""); if (!src) return;
-        try { const r = await api("/api/projects", { method: "POST", body: JSON.stringify({ src }) }); await afterNew(r.name); } catch (err) { alert(err.message); } };
-      const um = el("p", "muted small"); um.id = "upmsg"; box.append(pr, um);
-      if (name) { const c = el("button", "linkbtn", "← voltar para o vídeo aberto"); c.onclick = () => { fresh = false; render(); }; box.append(c); }
-      return;
+    const h = perfilNovo ? "" : cur;
+    if (!perfilNovo && !h) {
+      callout(box, "💡", "Com um perfil, o Cinex já começa cada vídeo com as cores da marca, a chamada para ação certa, as palavras de destaque e os nomes que a transcrição precisa acertar. Crie um em “Novo perfil”.");
+      navrow(box); return;
     }
-    const running = prep && prep.done === false;
-    if (running || (prep && prep.error)) {
-      if (prep.error) callout(box, "⚠️", "Algo deu errado ao preparar: " + prep.error, "err");
-      else {
-        const c = callout(box, "🤖", ""); c.lastChild.append(el("b", "", prep.step || "Preparando"), el("div", "muted small", "A IA está assistindo e transcrevendo o vídeo. Leva alguns minutos; pode deixar a página aberta."));
-        const bar = el("div", "bar"), sp = el("span"); sp.style.width = (prep.pct || 0) + "%"; bar.append(sp); c.lastChild.append(bar);
+    if (!perfilNovo && (!perfilData || perfilData.handle !== h)) perfilData = await api(`/api/marca/${h}`).catch(() => null);
+    const m = (perfilData && perfilData.marca) || {};
+    box.append(el("h3", "", perfilNovo ? "Novo perfil" : "Dados do perfil"));
+    const form = el("form", "rows form");
+    const field = (label, input, hint) => { const r = el("label", "row frow"); const l = el("span", "flabel", label); const w = el("div", "rt");
+      w.append(input); if (hint) w.append(el("div", "muted small", hint)); r.append(l, w); form.append(r); return input; };
+    const inp = (v, ph, max) => { const i = el("input"); i.value = v || ""; i.placeholder = ph || ""; if (max) i.maxLength = max; return i; };
+    const area = (v, ph) => { const i = el("textarea"); i.value = v || ""; i.placeholder = ph || ""; i.rows = 2; return i; };
+    const handle = field("Instagram", inp(h, "@suamarca", 41), perfilNovo ? "O arroba do perfil, sem espaço." : null);
+    if (!perfilNovo) handle.disabled = true;
+    const nome = field("Nome", inp(m.nome, "Nome da empresa ou da pessoa", 80));
+    const desc = field("O que faz", area(m.descricao, "Ex.: instala energia solar em casas e empresas na Bahia"));
+    const pub = field("Para quem", area(m.publico, "Ex.: donos de casa que pagam conta de luz alta"));
+    const cta = field("Chamada", inp((m.cta || {}).principal, "Ex.: Chama no WhatsApp", 120), "O que o vídeo pede no final.");
+    const cont = field("Contato", inp((m.cta || {}).contato, "WhatsApp, site ou link", 160));
+    const cores = el("div", "swatches"), c1 = el("input"), c2 = el("input");
+    c1.type = c2.type = "color"; c1.value = (m.cores || {}).destaque || "#FFD400"; c2.value = (m.cores || {}).secundaria || "#22C55E";
+    cores.append(c1, el("span", "muted small", "destaque"), c2, el("span", "muted small", "secundária"));
+    field("Cores", cores);
+    const leg = el("select"); for (const [v, l] of [["hormozi", "Forte e chamativa"], ["minimal", "Discreta"], ["cinematic", "Cinematográfica"]]) leg.append(new Option(l, v));
+    leg.value = (m.edicao || {}).caption_style || "hormozi"; field("Legenda", leg);
+    const termos = field("Nomes certos", inp((m.transcricao_termos || []).join(", "), "Ex.: Ynvest, Coelba, Fio B"), "Nomes, produtos e lugares que a transcrição deve escrever certo.");
+    const kws = field("Destaques", inp((m.keywords || []).join(", "), "Ex.: economia, 60%"), "Palavras que aparecem na cor de destaque da legenda.");
+    form.oninput = () => { formDirty = true; };            // unsaved edits survive the page refreshing (chat replies)
+    box.append(form);
+    const sv = el("button", "btn primary", perfilNovo ? "Criar perfil" : "Salvar perfil"), msg = el("span", "muted small");
+    const bar = el("div", "editbar"); bar.append(sv, msg); box.append(bar);
+    sv.onclick = async () => {
+      const hh = (handle.value || "").trim().replace(/^@/, "").toLowerCase();
+      if (!/^[a-z0-9._]{1,40}$/.test(hh)) { msg.textContent = "Arroba inválido."; return; }
+      sv.disabled = true; msg.textContent = "Salvando…";
+      try {
+        await api(`/api/marca/${hh}/salvar`, { method: "POST", body: JSON.stringify({ nome: nome.value, descricao: desc.value, publico: pub.value, cta: cta.value, contato: cont.value,
+          destaque: c1.value, secundaria: c2.value, legenda: leg.value, termos: termos.value, keywords: kws.value }) });
+        marcas = await api("/api/marcas").catch(() => marcas); perfilNovo = false; perfilData = null; formDirty = false;
+        store.set("cinex.marca", hh); if (name && st && !st.marca) await save({ marca: hh });
+        msg.textContent = "Salvo."; render();
+      } catch (e) { msg.textContent = e.message; sv.disabled = false; }
+    };
+    if (!perfilNovo && perfilData) {
+      const pa = perfilData.perfil_atualizado;
+      callout(box, pa ? "✅" : "💡", pa ? `Instagram analisado (${pa}). O Cinex usa o que funciona no seu perfil para decidir gancho, ritmo e formato.`
+        : "Para o Cinex entender o que funciona no seu Instagram (quais vídeos dão mais seguidores e compartilhamentos), peça no chat: “analisa meu Instagram”. Você faz o login; ele só lê.", pa ? "ok" : "");
+    }
+    navrow(box);
+  },
+
+  async upload(box) {
+    header(box, stepDef("upload"));
+    const novo = fresh || !name;
+    box.append(el("h3", "", "Formato"));
+    const fsel = novo ? store.get("cinex.formato") || "vertical" : (st && st.format) || "vertical";
+    const fc = el("div", "cards");
+    for (const [k, [w, hh, ar, desc]] of Object.entries(FORMATS)) {
+      const c = el("button", "card" + (fsel === k ? " on" : "")), sh = el("div", "shape");
+      const sc = 36 / Math.max(w, hh); sh.style.width = w * sc + "px"; sh.style.height = hh * sc + "px";
+      c.append(sh, el("b", "", ar), el("small", "", desc));
+      c.onclick = async () => { store.set("cinex.formato", k); if (!novo) await save({ format: k }); render(); }; fc.append(c);
+    }
+    box.append(fc);
+    if (!novo) return uploadStatus(box);
+    box.append(el("h3", "", "Vídeos"));
+    const d = el("div", "drop"); d.append(sym("tray", "de"), el("div", "", "Arraste os vídeos aqui ou clique para escolher"),
+                                        el("div", "muted small", "Um ou vários, do jeito que gravou. A IA assiste, transcreve e propõe o corte."));
+    d.onclick = () => { $("#gfiles").dataset.kind = "novo"; $("#gfiles").click(); };
+    d.ondragover = (e) => { e.preventDefault(); d.classList.add("over"); }; d.ondragleave = () => d.classList.remove("over");
+    d.ondrop = (e) => { e.preventDefault(); d.classList.remove("over"); addPend([...e.dataTransfer.files]); };
+    box.append(d);
+    const pr = el("form", "pathrow"), pin = el("input"); pin.placeholder = "ou cole o caminho de um vídeo (C:\\…\\IMG_1234.MOV)";
+    const pb = el("button", "btn", "Adicionar"); pr.append(pin, pb);
+    pr.onsubmit = (e) => { e.preventDefault(); const v = pin.value.trim().replace(/^"|"$/g, ""); if (v) { pend.push({ path: v, name: v.split(/[\\/]/).pop() }); render(); } };
+    box.append(pr);
+    if (pend.length) {
+      const l = el("div", "rows");
+      pend.forEach((f, i) => {
+        const r = el("div", "row"), up = el("button", "play", "↑"), x = el("button", "play", "✕");
+        up.disabled = i === 0; up.title = "Subir"; up.onclick = () => { [pend[i - 1], pend[i]] = [pend[i], pend[i - 1]]; render(); };
+        x.title = "Tirar"; x.onclick = () => { pend.splice(i, 1); render(); };
+        r.append(sym("film", "ri"), el("span", "rt", `${i + 1}. ${f.name}`), el("span", "rm", f.file ? (f.file.size / 1e6).toFixed(0) + " MB" : "no computador"), up, x); l.append(r);
+      });
+      box.append(l);
+    }
+    if (pend.length > 1) {
+      box.append(el("h3", "", "Como juntar?"));
+      const mc = el("div", "cards two");
+      for (const [k, t, dsc] of [["unico", "Um vídeo só", "Junta tudo e escolhe as melhores falas de cada vídeo. Para palestra, evento, gravação em partes."],
+                                 ["sequencia", "Sequência de vídeos", "Cada arquivo vira um vídeo, com a mesma marca e formato. Para stories em partes ou série."]]) {
+        const c = el("button", "card" + (modoUp === k ? " on" : "")); c.append(el("b", "", t), el("small", "", dsc));
+        c.onclick = () => { modoUp = k; render(); }; mc.append(c);
       }
+      box.append(mc);
     }
-    if (st && st.segments.length) {
-      const stt = el("div", "stats");
-      const add = (v, l) => { const x = el("div", "stat"); x.append(el("b", "", v), el("span", "", l)); stt.append(x); };
-      add(fmt(st.duration), "vídeo gravado"); add(fmt(keptTotal()), "depois do corte"); add(String((st.clips || []).length || 1), (st.clips || []).length > 1 ? "vídeos juntos" : "vídeo");
-      box.append(stt);
-      callout(box, "✅", "Vídeo pronto. A IA já fez um primeiro corte; no próximo passo você confere.", "ok");
-      const more = el("button", "btn", "＋ Juntar mais vídeos (palestra, evento)"); more.onclick = () => $("#gfiles").click();
-      box.append(more);
-      navrow(box);
-    }
+    const mk = marcaAtual();
+    box.append(el("p", "muted small", mk ? `Perfil: @${mk} (cores, chamada e nomes certos já entram no vídeo).` : "Sem perfil: dá para escolher um no passo Começar."));
+    const go_ = el("button", "btn primary big", pend.length > 1 && modoUp === "sequencia" ? `Criar ${pend.length} vídeos` : "Enviar e começar");
+    go_.disabled = !pend.length; go_.onclick = () => startUpload(go_);
+    const msg = el("p", "muted small"); msg.id = "upmsg";
+    box.append(go_, msg);
+    if (name) { const c = el("button", "linkbtn", "← voltar para o vídeo aberto"); c.onclick = () => { fresh = false; render(); }; box.append(c); }
   },
 
   async corte(box) {
-    const s = STEPS[1]; header(box, s);
+    header(box, stepDef("corte"));
     const stt = el("div", "stats");
     const add = (v, l) => { const x = el("div", "stat"); x.append(el("b", "", v), el("span", "", l)); stt.append(x); };
     add(fmt(st.duration), "gravado"); add(fmt(keptTotal()), "editado"); add(String(st.segments.filter((g) => !g.keep).length), "cortes");
@@ -236,16 +312,7 @@ const PAGES = {
   },
 
   async estilo(box) {
-    const s = STEPS[2]; header(box, s);
-    box.append(el("h3", "", "Onde vai publicar?"));
-    const fc = el("div", "cards");
-    for (const [k, [w, h, ar, desc]] of Object.entries(FORMATS)) {
-      const c = el("button", "card" + ((st.format || "vertical") === k ? " on" : "")), sh = el("div", "shape");
-      const sc = 36 / Math.max(w, h); sh.style.width = w * sc + "px"; sh.style.height = h * sc + "px";
-      c.append(sh, el("b", "", ar), el("small", "", desc));
-      c.onclick = async () => { await save({ format: k }); render(); }; fc.append(c);
-    }
-    box.append(fc);
+    header(box, stepDef("estilo"));
     box.append(el("h3", "", "Legenda"));
     const lc = el("div", "cards"), cap = st.captions;
     for (const [k, [label, desc, p]] of Object.entries(PRESETS)) {
@@ -277,7 +344,7 @@ const PAGES = {
   },
 
   async elementos(box) {
-    const s = STEPS[3]; header(box, s);
+    header(box, stepDef("elementos"));
     box.append(el("h3", "", "Textos na tela"));
     const ms = (st.motions || []).slice().sort((a, b) => a.t0 - b.t0);
     if (!ms.length) callout(box, "✨", "Nenhum texto na tela ainda. Peça “sugere textos na tela para este vídeo”: a IA escolhe os pontos que ajudam a entender (números, o problema, o benefício).");
@@ -306,7 +373,7 @@ const PAGES = {
   },
 
   async revisao(box) {
-    const s = STEPS[4]; header(box, s);
+    header(box, stepDef("revisao"));
     callout(box, "🔍", "A revisão mede o ritmo, as legendas, os textos e os sons, e compara com o estilo de referência. Cada ponto vem com o que fazer.");
     const b = el("button", "btn primary", review ? "Revisar de novo" : "Revisar agora");
     b.onclick = async () => { b.disabled = true; b.textContent = "Revisando…"; try { review = await api(`/api/p/${name}/revisao`, { method: "POST", body: "{}" }); await mark("revisao"); } catch (e) { alert(e.message); } render(); };
@@ -327,7 +394,7 @@ const PAGES = {
   },
 
   async publicar(box) {
-    const s = STEPS[5]; header(box, s);
+    header(box, stepDef("publicar"));
     const f = FORMATS[st.format || "vertical"];
     const stt = el("div", "stats");
     const add = (v, l) => { const x = el("div", "stat"); x.append(el("b", "", v), el("span", "", l)); stt.append(x); };
@@ -382,6 +449,62 @@ function editable(txt, segs) {
   return sp;
 }
 
+function uploadStatus(box) {
+  const se = st && st.serie;
+  if (se) {
+    box.append(el("h3", "", `Série: parte ${se.parte} de ${se.total}`));
+    const sw = el("div", "swatches");
+    se.projetos.forEach((n, i) => { const b = el("button", "btn" + (n === name ? " primary" : ""), `Parte ${i + 1}`); b.onclick = () => n !== name && openProject(n); sw.append(b); });
+    box.append(sw);
+  }
+  box.append(el("h3", "", "Seu vídeo"));
+  if (prep && prep.error) callout(box, "⚠️", "Algo deu errado ao preparar: " + prep.error, "err");
+  else if (prep && prep.done === false) {
+    const c = callout(box, "🤖", ""); c.lastChild.append(el("b", "", prep.step || "Preparando"),
+      el("div", "muted small", prep.step === "Na fila" ? "Este vídeo da série começa quando o anterior terminar." : "A IA está assistindo e transcrevendo. Leva alguns minutos; pode deixar a página aberta."));
+    const bar = el("div", "bar"), sp = el("span"); sp.style.width = (prep.pct || 0) + "%"; bar.append(sp); c.lastChild.append(bar);
+  }
+  if (st && st.segments.length) {
+    const stt = el("div", "stats");
+    const add = (v, l) => { const x = el("div", "stat"); x.append(el("b", "", v), el("span", "", l)); stt.append(x); };
+    add(fmt(st.duration), "gravado"); add(fmt(keptTotal()), "depois do corte"); add(String((st.clips || []).length || 1), (st.clips || []).length > 1 ? "vídeos juntos" : "vídeo");
+    box.append(stt);
+    callout(box, "✅", "Vídeo pronto. A IA já fez um primeiro corte; no próximo passo você confere.", "ok");
+    const more = el("button", "btn", "＋ Juntar mais vídeos a este"); more.onclick = () => { $("#gfiles").dataset.kind = "clips"; $("#gfiles").click(); };
+    const nv = el("button", "btn", "Começar outro vídeo"); nv.onclick = () => { fresh = true; pend = []; render(); };
+    const r = el("div", "swatches"); r.append(more, nv); box.append(r);
+    navrow(box);
+  }
+}
+
+function addPend(files) {
+  for (const f of files) if (/\.(mov|mp4|m4v|mkv|webm|avi|mts)$/i.test(f.name)) pend.push({ file: f, name: f.name });
+  render();
+}
+async function startUpload(btn) {
+  btn.disabled = true; const msg = $("#upmsg"), paths = [];
+  try {
+    for (const [i, f] of pend.entries()) {
+      if (f.path) { paths.push(f.path); continue; }
+      msg.textContent = `Enviando ${i + 1} de ${pend.length}: ${f.name} (${(f.file.size / 1e6).toFixed(0)} MB)…`;
+      const r = await api("/api/upload", { method: "POST", body: f.file, timeout: 60 * 60 * 1000,
+                                           headers: { "X-Filename": encodeURIComponent(f.name), "Content-Type": "application/octet-stream" } });
+      paths.push(r.path);
+    }
+    msg.textContent = "Começando…";
+    const r = await api("/api/novo", { method: "POST", body: JSON.stringify({ paths, modo: pend.length > 1 ? modoUp : "unico",
+                                         formato: store.get("cinex.formato") || "vertical", marca: marcaAtual() || null }) });
+    pend = []; fresh = false;
+    await loadProjects(); await waitProject(r.name);
+  } catch (e) { msg.textContent = e.message; btn.disabled = false; }
+}
+async function waitProject(n) {                     // the project file appears a moment after the job starts
+  for (let i = 0; i < 40; i++) {
+    try { const j = await api(`/api/p/${n}`); if (j.state || j.prep) { await loadProjects(); return openProject(n, "upload"); } } catch {}
+    await new Promise((r) => setTimeout(r, 700));
+  }
+}
+
 async function saveCut() {
   st.order = playOrder().map((g) => g.id);
   await save({ segments: st.segments, order: st.order }); render();
@@ -407,7 +530,8 @@ async function render() {
   renderSteps(); renderChips(); renderChat();
   $("#geditor").href = name ? "/editor#" + name : "/editor";
   const s = STEPS.find((x) => x.id === step), box = $("#gpage");
-  if (document.activeElement && box.contains(document.activeElement) && document.activeElement.matches("input, textarea")) return;   // keep what's being typed
+  if (document.activeElement && box.contains(document.activeElement) && document.activeElement.matches("input, textarea, select")) return;   // keep what's being typed
+  if (step === "comecar" && formDirty && box.dataset.step === "comecar") return;   // unsaved profile form
   const out = el("div"); await PAGES[step](out); box.replaceChildren(...out.childNodes);
   if (box.dataset.step !== step) { box.dataset.step = step; box.classList.remove("enter"); void box.offsetWidth; box.classList.add("enter"); }   // page slide-in
   const showPv = s.pv && st && st.segments.length;
@@ -509,22 +633,7 @@ async function openProject(n, wantStep) {
   const j = await api(`/api/p/${n}`); st = j.state; prep = j.prep; exp = j.export;
   $("#gproj").value = n;
   $("#gframe").src = `/editor?embed=1#${n}`;
-  go(wantStep || (st && st.segments.length ? (st.cut_locked ? "estilo" : "corte") : "comecar"));
-}
-async function afterNew(n) {
-  const marca = store.get("cinex.marca");
-  await loadProjects(); name = n; st = null; prep = { step: "Começando", pct: 1, done: false }; exp = null; fresh = false;
-  $("#gproj").value = n; location.hash = `${n}/comecar`; step = "comecar"; render();
-  const t = setInterval(async () => {                       // apply the chosen brand as soon as the project exists
-    try { const j = await api(`/api/p/${n}`); if (j.state) { clearInterval(t); st = j.state; if (marca && !st.marca) await save({ marca }); } } catch {}
-  }, 2000);
-}
-async function upload(f) {
-  const msg = $("#upmsg"); if (msg) msg.textContent = `Enviando ${f.name} (${(f.size / 1e6).toFixed(0)} MB)…`;
-  try {
-    const r = await api("/api/upload", { method: "POST", body: f, timeout: 60 * 60 * 1000, headers: { "X-Filename": encodeURIComponent(f.name), "Content-Type": "application/octet-stream" } });
-    await afterNew(r.name);
-  } catch (e) { if (msg) msg.textContent = e.message; else alert(e.message); }
+  go(wantStep || (st && st.segments.length ? (st.cut_locked ? "estilo" : "corte") : "upload"));
 }
 async function uploadMany(files, kind) {
   const paths = [];
@@ -557,10 +666,11 @@ async function init() {
   $("#gin").oninput = autosize;
   $("#gin").onkeydown = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send($("#gin").value); } };
   $("#gmic").onclick = toggleMic;
-  $("#gnew").onclick = () => { fresh = true; step = "comecar"; render(); };
+  $("#gnew").onclick = () => { fresh = true; pend = []; go("upload"); };
   $("#gproj").onchange = (e) => e.target.value && openProject(e.target.value);
-  $("#gfile").onchange = (e) => { const f = e.target.files[0]; e.target.value = ""; if (f) upload(f); };
+  $("#gfile").onchange = (e) => { const fs = [...e.target.files]; e.target.value = ""; addPend(fs); };
   $("#gfiles").onchange = (e) => { const fs = [...e.target.files], kind = e.target.dataset.kind; e.target.value = ""; delete e.target.dataset.kind;
+    if (kind === "novo") return addPend(fs);
     if (fs.length) uploadMany(fs, kind).catch((err) => { callStatus(""); alert(err.message); }); };
   $("#gaudio").onchange = async (e) => {
     const f = e.target.files[0]; e.target.value = ""; if (!f) return;
