@@ -191,8 +191,10 @@ def projects():
 
 
 # ------------------------------------------------------------ chat + edits (used by Claude through the CLI)
-def say(name, text, who="cinex"):
-    update(name, lambda s: s["chat"].append(dict(who=who, text=text, t=_now(), seen=who != "user")))
+def say(name, text, who="cinex", passo=None):
+    m = dict(who=who, text=text, t=_now(), seen=who != "user")
+    if passo: m["passo"] = passo                     # guided-mode page the user was on when writing
+    update(name, lambda s: s["chat"].append(m))
 
 
 def unread(name):
@@ -821,7 +823,7 @@ if __name__ == "__main__":
             msgs = unread(a.args[0])
             if msgs:
                 mark_seen(a.args[0])
-                for m in msgs: print(f"[{m['t']}] usuário: {m['text']}")
+                for m in msgs: print(f"[{m['t']}] usuário" + (f" (página {m['passo']})" if m.get("passo") else "") + f": {m['text']}")
                 break
             time.sleep(1.5)
         else: print("(sem mensagens novas)")

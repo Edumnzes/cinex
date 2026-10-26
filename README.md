@@ -109,7 +109,7 @@ O Claude vai:
 Cada vídeo ganha uma pasta de trabalho em `~/reels/<nome-do-video>/`. Ela é mantida para que
 ajustes (texto, cor, tempo) sejam rápidos — basta pedir.
 
-### App Cinex (editor visual, em desenvolvimento)
+### App Cinex (modo guiado + editor completo)
 
 Para ver e ajustar a edição você mesmo, peça ao Claude para abrir o vídeo no app, ou rode:
 
@@ -117,7 +117,18 @@ Para ver e ajustar a edição você mesmo, peça ao Claude para abrir o vídeo n
 ~/reelsenv/Scripts/python ~/.claude/skills/cinex/app/server.py --open
 ```
 
-Abre em http://127.0.0.1:8765 (só no seu computador). Na tela:
+Abre em http://127.0.0.1:8765 (só no seu computador), no **modo guiado**, feito para quem não edita vídeo:
+
+- **Passo a passo à esquerda:** Começar → Corte → Estilo → Elementos → Revisão → Publicar. Cada passo é uma página,
+  no estilo do Notion, que explica o que está acontecendo e mostra o resultado na prévia.
+- **Chat sempre à direita:** é o jeito principal de mudar o vídeo. Escreva do seu jeito ("tira a parte em que eu
+  gaguejo", "coloca o preço na tela") ou toque numa das sugestões de cada página.
+- **Comando de voz:** toque em **Falar**, diga o pedido e toque de novo. A transcrição roda no seu computador
+  (Whisper), o áudio não vai para a internet. Comandos curtos navegam direto: "próximo passo", "voltar",
+  "ir para estilo", "tocar", "pausar"; o resto vai para o chat.
+- **Começar:** escolha a marca e arraste o vídeo para a página (ou cole o caminho).
+
+Para ajustes finos, **Editor completo ↗** abre o editor com linha do tempo (http://127.0.0.1:8765/editor):
 - **Linha do tempo:** cada trecho aparece sobre a onda do áudio. Laranja = mantido, listrado = cortado.
   Clique para ver o trecho e dê duplo clique (ou Delete) para manter ou cortar.
 - **Prévia 9:16:** já pula os cortes e mostra as legendas como vão sair.

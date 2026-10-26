@@ -44,7 +44,7 @@ async function listProjects(select) {
 }
 
 async function openProject(n) {
-  name = n; location.hash = n; store.set("cinex.project", n); sel = null; words = []; wave = null;
+  name = n; location.hash = n; $("#guidelink").href = "/#" + n; store.set("cinex.project", n); sel = null; words = []; wave = null;
   const j = await api(`/api/p/${n}`);
   st = j.state; projectFonts = j.project_fonts || [];
   showJobs(j.prep, j.export);
@@ -638,6 +638,8 @@ function renderAll() {
   $("#exportbtn").disabled = !st.segments.length;
 }
 
+const EMBED = new URLSearchParams(location.search).has("embed");     // inside the guided mode: program monitor only
+if (EMBED) document.body.classList.add("embed");
 async function init() {
   bindCaptionUI(); bindLookUI(); bindFx(); bindBroll(); bindClips(); bindMusic(); bindVersions();
   $("#phone").addEventListener("click", (e) => {        // "Escolher o centro": the clicked point becomes the frame centre

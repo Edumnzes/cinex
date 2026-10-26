@@ -77,6 +77,12 @@
   marcado, pessoas excluídas pela máscara, homografia RANSAC e suavização), deformado na perspectiva antes da câmera
   virtual e escondido atrás da pessoa quando ela passa na frente. Sem marcação (ou com fundo desfocado), vira
   elemento comum. O preview não recorta a pessoa; a exportação recorta.
+- **Modo guiado (tela inicial do app)** para quem não sabe editar: passo a passo em páginas no estilo Notion
+  (Começar, Corte, Estilo, Elementos, Revisão, Publicar), chat com a IA sempre ao lado como o meio principal de
+  mudança, sugestões por página, prévia do vídeo em cada passo e envio do vídeo arrastando para a página. O editor
+  com linha do tempo continua em `/editor` (Editor completo).
+- **Comando de voz:** fale o pedido; a transcrição roda no computador (faster-whisper, nada vai para a internet).
+  Comandos curtos navegam: próximo passo, voltar, ir para…, tocar, pausar.
 - **Versões curtas (10 / 15 / 30 s)** do mesmo projeto: escolha das frases por otimização (gancho e CTA fixos,
   prova e densidade de fala), em um projeto novo que compartilha os arquivos sem duplicar espaço.
 - **Seis formatos de exportação:** 9:16, 4:5 (feed), 1:1, 16:9, 4:3 e LED 512×384 (painel de feira, desenhado em

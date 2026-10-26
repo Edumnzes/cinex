@@ -93,7 +93,12 @@ Tell the user in the delivery which bank items were used and their licence notes
 ## D. Cinex app — visual editor (v3, in progress)
 
 When the user wants to see and adjust the edit themselves ("abre no app", "editor", "timeline", "quero mexer
-nas legendas"), use the local app instead of delivering a finished file. The app is the interface; **you stay the
+nas legendas"), use the local app instead of delivering a finished file. http://127.0.0.1:8765 opens the **guided
+mode** (for people who don't edit: step pages Começar → Corte → Estilo → Elementos → Revisão → Publicar, the chat
+always on the side as the main way to change things, voice commands transcribed locally by faster-whisper "small");
+http://127.0.0.1:8765/editor is the full editor (timeline, all tools). Chat messages from the guided mode carry the
+page the user was on (`wait` prints "usuário (página corte): …"): answer in that context, in plain language, no
+editing jargon, and say what changed on screen. Guided-mode progress lives in `guia` ({estilo, elements, revisao}). The app is the interface; **you stay the
 brain**: you propose the cut, answer the app's chat and change the project. Current scope: cut, captions, camera
 (`camera`: follow, zoom 1.0–1.25, punch on cuts), colour (`color`: correct, look), motion (`motions`: [{id, type
 (titulo|topico|nome|citacao|frase|seguir|salvar), t0, t1 in raw seconds, text, text2, sfx}]) and SFX (`sfx`:

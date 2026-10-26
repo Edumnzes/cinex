@@ -2,7 +2,8 @@
 
     python app/server.py [--port 8765] [--open]
 
-Serves the editor at http://127.0.0.1:8765 . Only this computer can reach it (bound to 127.0.0.1), and
+Serves the guided mode at http://127.0.0.1:8765 (step pages + chat with the AI, voice commands) and the full
+editor at http://127.0.0.1:8765/editor . Only this computer can reach it (bound to 127.0.0.1), and
 requests from other websites are refused (Host/Origin checks + a custom header the page must send),
 so a page you visit can't read your projects or start exports.
 All edits go to ~/reels/<name>/cinex.json, the same file Claude Code reads and edits (scripts/app_project.py).
@@ -23,6 +24,24 @@ NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)       # no console window
 MAX_BODY = 25 * 1024 * 1024                     # font uploads
 MAX_REF = 600 * 1024 * 1024                     # niche reference videos (streamed to disk)
 MAX_MEDIA = 8 * 1024 * 1024 * 1024              # B-roll clips sent from the browser (4K phone clips are big)
+MAX_VOICE = 12 * 1024 * 1024                    # one voice command (~1 min of opus)
+_VOICE = {}                                     # faster-whisper model for voice commands, loaded on first use
+_VOICE_LOCK = threading.Lock()
+
+
+def voice_to_text(data, suffix):
+    """Voice command -> text, on this computer (faster-whisper "small", already in the local cache): the audio never
+    leaves the machine."""
+    import tempfile
+    from faster_whisper import WhisperModel
+    with _VOICE_LOCK:
+        if "m" not in _VOICE: _VOICE["m"] = WhisperModel("small", device="cpu", compute_type="int8")
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f: f.write(data); tmp = f.name
+        try:
+            segs, _ = _VOICE["m"].transcribe(tmp, language="pt", vad_filter=True, beam_size=1,
+                                              initial_prompt="Edição de vídeo, legenda, corte, Reels, Instagram.")
+            return " ".join(s.text.strip() for s in segs).strip()
+        finally: os.unlink(tmp)
 HANDLE_RE = re.compile(r"^[a-z0-9._]{1,40}$")
 
 
@@ -41,7 +60,7 @@ def marca_info(h):
     return dict(handle=h, arquivos=st, marca=brand.load_brand(h) if st["marca.json"] else None, perfil_atualizado=head,
                 referencias=refs, estilo_nicho=f"nicho_{h}" if prof.exists() else None, desempenho=rep,
                 analisando=(d / ".analisando").exists())
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca", "motion_engine", "broll", "music"}
+EDITABLE = {"guia", "segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca", "motion_engine", "broll", "music"}
 AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
@@ -131,7 +150,8 @@ class H(BaseHTTPRequestHandler):
         if not self._allowed(False): return self._err(403, "origem não permitida")
         u = urlparse(self.path); parts = [p for p in u.path.split("/") if p]
         try:
-            if not parts: return self._file(STATIC / "index.html", "text/html; charset=utf-8")
+            if not parts: return self._file(STATIC / "guia.html", "text/html; charset=utf-8")       # guided mode
+            if parts == ["editor"]: return self._file(STATIC / "index.html", "text/html; charset=utf-8")  # full editor
             if parts[0] == "static" and len(parts) == 2:
                 f = (STATIC / parts[1]).resolve()
                 if f.parent != STATIC.resolve(): return self._err(404, "não encontrado")
@@ -230,6 +250,37 @@ class H(BaseHTTPRequestHandler):
                 return self._send(200, {"name": name})
             if parts[:2] == ["api", "marca"] and len(parts) >= 4:
                 return self._marca_post(parts)
+            if parts == ["api", "voz"]:                # voice command -> text (local whisper)
+                n = int(self.headers.get("Content-Length") or 0)
+                if not 0 < n <= MAX_VOICE: return self._err(400, "áudio vazio ou longo demais")
+                data = self.rfile.read(n)
+                ct = self.headers.get("Content-Type", "")
+                return self._send(200, {"text": voice_to_text(data, ".ogg" if "ogg" in ct else ".mp4" if "mp4" in ct else ".webm")})
+            if parts == ["api", "upload"]:             # new project from a video sent by the browser (guided mode)
+                from urllib.parse import unquote
+                fn = Path(unquote(self.headers.get("X-Filename", ""))).name
+                if not re.fullmatch(r"[\w .()-]{1,120}", fn) or Path(fn).suffix.lower() not in P.VIDEO_EXT:
+                    return self._err(400, "envie um vídeo (.mov, .mp4, .m4v…)")
+                n = int(self.headers.get("Content-Length") or 0)
+                if not 0 < n <= MAX_MEDIA: return self._err(400, "vídeo grande demais (máx. 8 GB)")
+                dd = P.ROOT / "_entrada"; dd.mkdir(parents=True, exist_ok=True)
+                dest = dd / fn; k = 2
+                while dest.exists(): dest = dd / f"{Path(fn).stem}-{k}{Path(fn).suffix}"; k += 1
+                left = n
+                with open(dest, "wb") as f:
+                    while left > 0:
+                        chunk = self.rfile.read(min(1 << 20, left))
+                        if not chunk: break
+                        f.write(chunk); left -= len(chunk)
+                if left: dest.unlink(missing_ok=True); return self._err(400, "envio interrompido")
+                name = re.sub(r"[^A-Za-z0-9_.-]", "_", dest.stem)[:64]
+                k = 2
+                while (P.folder(name) / "cinex.json").exists(): name = re.sub(r"[^A-Za-z0-9_.-]", "_", dest.stem)[:60] + f"_{k}"; k += 1
+                P.folder(name).mkdir(parents=True, exist_ok=True)
+                P.job(name, "prep", step="Começando", pct=1, done=False, error=None)
+                subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "new", str(dest), "--name", name],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
+                return self._send(200, {"name": name})
             if parts[:2] == ["api", "p"] and len(parts) == 6 and parts[3] == "media" and parts[5] == "remover":
                 if not (P.folder(parts[2]) / "cinex.json").exists(): return self._err(404, "projeto não existe")
                 self._json(); P.remove_media(parts[2], int(parts[4])); return self._send(200, {"ok": True})
@@ -297,7 +348,7 @@ class H(BaseHTTPRequestHandler):
             if sub == "state":
                 body = {k: v for k, v in self._json().items() if k in EDITABLE}
                 if body.get("format", "vertical") not in P.FORMATS: return self._err(400, "formato inválido")
-                if not all(isinstance(body.get(k, {}), dict) for k in ("camera", "color", "captions")): return self._err(400, "valor inválido")
+                if not all(isinstance(body.get(k, {}), dict) for k in ("camera", "color", "captions", "guia")): return self._err(400, "valor inválido")
                 for m in body.get("motions", []):
                     if not (isinstance(m, dict) and m.get("type") in P.MOTIONS and isinstance(m.get("t0"), (int, float))
                             and isinstance(m.get("t1"), (int, float)) and m["t1"] > m["t0"]): return self._err(400, "motion inválido")
@@ -329,9 +380,17 @@ class H(BaseHTTPRequestHandler):
                 self._json(); import revisao
                 return self._send(200, revisao.review(name))
             if sub == "chat":
-                text = str(self._json().get("text", "")).strip()[:4000]
+                b = self._json(); text = str(b.get("text", "")).strip()[:4000]
                 if not text: return self._err(400, "mensagem vazia")
-                P.say(name, text, who="user"); return self._send(200, {"ok": True})
+                passo = str(b.get("passo", ""))[:20] or None    # the guided-mode step the user is on (context for Claude)
+                P.say(name, text, who="user", passo=passo); return self._send(200, {"ok": True})
+            if sub == "mostrar":                       # show the exported file in Explorer / Finder
+                self._json(); out = (P.read_job(name, "export") or {}).get("out")
+                if not out or not Path(out).is_file(): return self._err(404, "nenhum vídeo exportado ainda")
+                if sys.platform == "win32": subprocess.Popen(["explorer", "/select,", out])
+                elif sys.platform == "darwin": subprocess.Popen(["open", "-R", out])
+                else: subprocess.Popen(["xdg-open", str(Path(out).parent)])
+                return self._send(200, {"ok": True})
             if sub == "export":
                 self._json()
                 if running(name): return self._err(409, "exportação já em andamento")
