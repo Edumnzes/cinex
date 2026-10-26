@@ -143,7 +143,7 @@ Every brand learns from its own results. Data sits with the brand profile in `~/
   salvamentos, seguidores, visitas). Record each reel with `desempenho.py set <handle> '{codigo, url, data, views, ...,
   tags: {formato, tema, gancho, estilo, editado_cinex, duracao}}'` — tag from the caption and the cover, and mark
   reels edited by Cinex (match videos.md). `desempenho.py relatorio` ranks each tag against the profile's median
-  (views and retention weigh most); `aplicar` writes winners with ≥ 3 reels into `marca.json`.
+  (followers + profile visits and shares + saves weigh most, then views and retention); `aplicar` writes winners with ≥ 3 reels into `marca.json`.
   Insights on the web: the reel's media id is its shortcode decoded as base-64 (alphabet `A–Z a–z 0–9 - _`); open
   `instagram.com/insights/media/<id>/`, wait ~5 s, read the text (views, % não seguidores, visualizadores, curtidas,
   comentários, salvamentos, compartilhamentos, seguidores). The web does not show average watch time — ask for prints

@@ -85,8 +85,9 @@ def report(h):
         rows = []
         for val, rs in vals.items():
             m = {key: statistics.median([derived(x)[key] for x in rs if key in derived(x)]) for key in base if any(key in derived(x) for x in rs)}
-            # score: each metric relative to the profile's median, views and retention weigh most
-            w = dict(views=.35, retencao=.35, engajamento_1k=.1, compart_salvos_1k=.15, clientes_1k=.15)
+            # score: each metric relative to the profile's median. Followers (+ profile visits) and shares/saves weigh most:
+            # they bring clients; views and retention still count, likes least (owner's rule, 2026-10-26)
+            w = dict(clientes_1k=.35, compart_salvos_1k=.30, views=.15, retencao=.15, engajamento_1k=.05)
             sc = sum(w[key] * (m[key] / base[key] if base.get(key) else 1) for key in m) / sum(w[key] for key in m) if m else 0
             rows.append(dict(valor=val, n=len(rs), score=round(sc, 2), **{key: round(x, 3 if key == "retencao" else 1) for key, x in m.items()}))
         ranking[k] = sorted(rows, key=lambda x: -x["score"])
@@ -101,7 +102,7 @@ def write_md(h, rep):
     L = [f"# Desempenho — @{rep['handle']}", "",
          f"_Atualizado em {rep['atualizado']} · {rep['reels']} publicações com números · mediana do perfil: "
          + ", ".join(f"{k} {v:.2f}" if k == "retencao" else f"{k} {v:.1f}" for k, v in rep["mediana"].items()) + "_", "",
-         "Score = média ponderada em relação à mediana do perfil (1,00 = igual; views e retenção pesam mais).", ""]
+         "Score = média ponderada em relação à mediana do perfil (1,00 = igual; seguidores e compartilhamentos pesam mais; depois views e retenção).", ""]
     for k, rows in rep["ranking"].items():
         L += [f"## Por {k}", "", "| Valor | n | Score | Views | Retenção | Engaj./1k | Compart.+salv./1k | Clientes/1k |", "|---|---|---|---|---|---|---|---|"]
         for r in rows:
