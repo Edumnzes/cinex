@@ -4,7 +4,8 @@ Usage: python cut.py <source> <keep.json> <out.mp4> [--size 1080x1920] [--crf 18
 keep.json: [[start, end], ...] in SOURCE seconds, in order. Several clips (app projects with more than one video):
 [[start, end, "path/to/clip.mov"], ...] — <source> is then ignored; consecutive segments of the same clip are
 rendered together and the parts joined. A 4th element sets options: {"speed": 0.35} = slow motion
-(interpolated to 30 fps, silent), {"mudo": true} = keep the picture, drop the sound.
+(interpolated to 30 fps, silent), {"mudo": true} = keep the picture, drop the sound, {"crop": [x, y, w, h]} =
+a window of the source (fractions) — reframes to take something out of the shot, sharp because it's cut from 4K.
 Render twice: 1080x1920 crf 18 for review, 1440x2560 crf 14 as the base for render
 (zooms up to ~1.35x stay sharp). ffmpeg auto-applies phone rotation metadata.
 --fit crop (default) fills the frame; blur shows the whole picture over a blurred copy of itself
@@ -37,15 +38,17 @@ def render(src, segs, out, fit, w, h):
         sp = float(o.get("speed", 1)); d = (e - s) / sp
         # slow motion: stretch time, then motion-interpolate back to 30 fps (smooth, not duplicated frames)
         slow = f",setpts=PTS/{sp},minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:vsbmc=1" if sp < 1 else ""
+        cx, cy, cw, ch = o.get("crop") or (0, 0, 1, 1)           # reframe: a window of the source, before scaling
+        crop = f",crop=iw*{cw}:ih*{ch}:iw*{cx}:ih*{cy}" if cw < 1 or ch < 1 else ""
         cover = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h}"
         if fit == "blur":
-            fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,split[b{i}][f{i}];[b{i}]{cover},boxblur=30:2,eq=brightness=-0.12{tm}[bg{i}];"
+            fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS{crop},split[b{i}][f{i}];[b{i}]{cover},boxblur=30:2,eq=brightness=-0.12{tm}[bg{i}];"
                       f"[f{i}]scale={w}:{h}:force_original_aspect_ratio=decrease{tm}[fg{i}];"
                       f"[bg{i}][fg{i}]overlay=(W-w)/2:(H-h)/2,setsar=1{slow}[v{i}]")
         elif fit == "keep":
-            fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,scale={w}:{h}:force_original_aspect_ratio=increase:force_divisible_by=2{tm},setsar=1{slow}[v{i}]")
+            fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS{crop},scale={w}:{h}:force_original_aspect_ratio=increase:force_divisible_by=2{tm},setsar=1{slow}[v{i}]")
         else:
-            fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,{cover}{tm},setsar=1{slow}[v{i}]")
+            fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS{crop},{cover}{tm},setsar=1{slow}[v{i}]")
         if o.get("mudo") or sp < 1: fl.append(f"[1:a]atrim=0:{d:.3f},asetpts=PTS-STARTPTS[a{i}]")      # silent stretch
         else: fl.append(f"[{au}]atrim={s}:{e},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03[a{i}]")
         cat += f"[v{i}][a{i}]"

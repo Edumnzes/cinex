@@ -12,7 +12,7 @@ const PRESETS = {
 };
 
 let faces = null, name = null, st = null, words = [], wave = null, fonts = [], projectFonts = [];
-let mediaDur = 0, sel = null, pending = 0, pps = 60, loadedFonts = new Set(), groups = [], kept = [];
+let pickCenter = null, mediaDur = 0, sel = null, pending = 0, pps = 60, loadedFonts = new Set(), groups = [], kept = [];
 
 async function api(path, opt = {}) {
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), opt.timeout || 20000);   // a stalled request never hangs the app
@@ -225,6 +225,14 @@ function camera(t) {
   const bw = box.clientWidth, bh = box.clientHeight, sc = Math.max(bw / v.videoWidth, bh / v.videoHeight);
   const Sw = v.videoWidth * sc, Sh = v.videoHeight * sc;
   const seg = st.segments.find((x) => t >= x.s && t < x.e);
+  const q = seg && seg.keep && seg.quadro;
+  if (q) {                                     // manual reframe of this stretch: fixed window, no face follow (export crops the 4K)
+    const z = q.z * k.zoom, fx = q.cx * Sw, fy = q.cy * Sh;
+    const ox = Math.min(0, Math.max(bw - Sw, bw / 2 - fx)), oy = Math.min(0, Math.max(bh - Sh, bh / 2 - fy));
+    v.style.objectPosition = `${ox}px ${oy}px`;
+    v.style.transformOrigin = `${Math.min(bw, Math.max(0, ox + fx))}px ${Math.min(bh, Math.max(0, oy + fy))}px`;
+    v.style.transform = `scale(${z})`; return;
+  }
   // like the engine: a short or steady shot gets a fixed framing (tripod); a long one follows a smoothed face
   const f = k.follow ? (seg && seg.e - seg.s < 4 ? faceAt(t, seg.s, seg.e) : faceAt(t, t - 0.6, t + 0.6)) : null;
   const fx = (f ? f.x : 0.5) * Sw, fy = (f ? f.y : 0.5) * Sh;
@@ -368,7 +376,8 @@ function renderTimeline() {
     const b = document.createElement("div");
     b.className = `blk ${g.keep ? "keep" : "cut"}${sel === g.id ? " sel" : ""}`;
     b.style.left = g.s * pps + "px"; b.style.width = Math.max(2, (g.e - g.s) * pps - 2) + "px";
-    const tag = g.keep ? (segSpeed(g) < 1 ? `◷ ${String(segSpeed(g)).replace(".", ",")}x · ` : "") + (g.mudo ? "mudo · " : "") : "";
+    const tag = g.keep ? (segSpeed(g) < 1 ? `◷ ${String(segSpeed(g)).replace(".", ",")}x · ` : "") + (g.mudo ? "mudo · " : "")
+      + (g.retrato ? "retrato · " : "") + (g.quadro ? "⌖ · " : "") : "";
     b.textContent = (g.keep && reo && pn.get(g.id) ? pn.get(g.id) + " · " : "") + tag + (g.keep ? g.text || "…" : g.reason || "cortado"); b.title = `#${g.id} ${g.s.toFixed(2)}–${g.e.toFixed(2)} s\n${g.text || ""}`;
     b.onclick = () => select(g.id, true);
     b.ondblclick = () => toggle(g.id);
@@ -445,7 +454,29 @@ function renderInfo() {
   };
   const note = document.createElement("p"); note.className = "muted small";
   note.textContent = "Câmera lenta sai interpolada (sem pulos) e sem som. Use em demonstração, ação ou detalhe; fala em câmera lenta não funciona.";
-  box.append(sp, r2, pk, note);
+  // clean the shot: portrait (blur all but the front person) and reframe (zoom + centre to cut something out)
+  const r3 = document.createElement("div"); r3.className = "prop"; const l3 = document.createElement("label"); l3.textContent = "Fundo";
+  const pr = document.createElement("label"); pr.className = "check small";
+  const pc = document.createElement("input"); pc.type = "checkbox"; pc.checked = !!g.retrato; pc.disabled = st.cut_locked;
+  pc.onchange = () => { if (pc.checked) g.retrato = true; else delete g.retrato; afterCutChange(); };
+  pr.append(pc, document.createTextNode(" desfocar (fica só a pessoa da frente; aparece na exportação)")); r3.append(l3, pr);
+  const r4 = document.createElement("div"); r4.className = "prop"; const l4 = document.createElement("label"); l4.textContent = "Enquadrar";
+  const zr = document.createElement("input"); zr.type = "range"; zr.min = "100"; zr.max = "250"; zr.step = "5"; zr.disabled = st.cut_locked;
+  zr.value = Math.round((g.quadro ? g.quadro.z : 1) * 100);
+  const zo = document.createElement("output"); zo.textContent = zr.value + "%";
+  zr.oninput = () => { zo.textContent = zr.value + "%"; const z = +zr.value / 100;
+    if (z <= 1.001) delete g.quadro; else g.quadro = { cx: .5, cy: .5, ...(g.quadro || {}), z }; };
+  zr.onchange = () => afterCutChange();
+  r4.append(l4, zr, zo);
+  const r5 = document.createElement("div"); r5.className = "row2b";
+  const cbn = document.createElement("button"); cbn.className = "secondary"; cbn.textContent = "Escolher o centro na prévia"; cbn.disabled = st.cut_locked;
+  cbn.onclick = () => { pickCenter = g; $("#video").pause(); $("#video").currentTime = g.s + .01; planeHint("Clique na prévia no ponto que deve ficar no centro do quadro."); };
+  const rst = document.createElement("button"); rst.className = "secondary"; rst.textContent = "Sem enquadramento"; rst.disabled = st.cut_locked || !g.quadro;
+  rst.onclick = () => { delete g.quadro; afterCutChange(); };
+  r5.append(cbn, rst);
+  const n2 = document.createElement("p"); n2.className = "muted small";
+  n2.textContent = "Para tirar do quadro uma sacola, um cabo ou alguém no fundo: aproxime e escolha o centro. O corte sai do vídeo original (4K), sem perder nitidez.";
+  box.append(sp, r2, pk, note, r3, r4, r5, n2);
 }
 
 function renderDur() {
@@ -597,7 +628,15 @@ function renderAll() {
 }
 
 async function init() {
-  bindCaptionUI(); bindLookUI(); bindFx(); bindBroll(); bindClips(); bindMusic(); bindReview(); bindMarca(); bindPlane(); bindResizers(); applyLayout();
+  bindCaptionUI(); bindLookUI(); bindFx(); bindBroll(); bindClips(); bindMusic();
+  $("#phone").addEventListener("click", (e) => {        // "Escolher o centro": the clicked point becomes the frame centre
+    if (!pickCenter) return; e.stopPropagation(); e.preventDefault();
+    const g = pickCenter; pickCenter = null; planeHint("");
+    const sv = g.quadro; delete g.quadro; camera($("#video").currentTime);      // measure on the un-reframed picture
+    const c = camState(), r = $("#phone").getBoundingClientRect(), [x, y] = boxToRaw(e.clientX - r.left, e.clientY - r.top, c);
+    g.quadro = { z: sv ? sv.z : 1.5, cx: +Math.min(1, Math.max(0, x)).toFixed(4), cy: +Math.min(1, Math.max(0, y)).toFixed(4) };
+    afterCutChange();
+  }, true); bindReview(); bindMarca(); bindPlane(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
   for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };

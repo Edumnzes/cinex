@@ -308,7 +308,10 @@ class H(BaseHTTPRequestHandler):
                 if "segments" in body:
                     for g in body["segments"]:
                         if not (isinstance(g.get("s"), (int, float)) and isinstance(g.get("e"), (int, float)) and isinstance(g.get("keep"), bool)
-                                and g.get("speed", 1) in (1, .5, .35, .25) and isinstance(g.get("mudo", False), bool)):
+                                and g.get("speed", 1) in (1, .5, .35, .25) and isinstance(g.get("mudo", False), bool)
+                                and isinstance(g.get("retrato", False), bool)
+                                and (g.get("quadro") is None or (isinstance(g["quadro"], dict) and 1 <= g["quadro"].get("z", 0) <= 3
+                                     and all(isinstance(g["quadro"].get(k), (int, float)) and 0 <= g["quadro"][k] <= 1 for k in ("cx", "cy"))))):
                             return self._err(400, "segmento inválido")
                 if "music" in body:                    # licensed track only (viral songs go in Instagram's editor)
                     mu = body["music"]

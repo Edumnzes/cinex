@@ -145,6 +145,11 @@ frases de qualquer clipe. A transcrição leva alguns minutos por clipe.
 ação** acha o momento de mais movimento e brilho do trecho (uma chama, um salto) e deixa 2 s em 0,35x. A câmera lenta
 sai interpolada (sem quadros repetidos) e sem som.
 
+**Limpar a imagem:** no mesmo trecho, **Fundo › desfocar** deixa só a pessoa da frente nítida (quem passa atrás
+fica desfocado; aparece no vídeo exportado). **Enquadrar** aproxima até 250% e **Escolher o centro na prévia** define
+o ponto que fica no meio — para tirar do quadro uma sacola, um cabo ou alguém no fundo. O recorte sai do vídeo
+original (4K), sem perder nitidez.
+
 **Trilha licenciada (opcional):** na aba **Sons**, em Música, escolha um arquivo que você licenciou (Artlist,
 Epidemic…). Ele abaixa sozinho quando alguém fala e volta nos trechos sem fala. Música viral continua indo pelo
 editor do Instagram.

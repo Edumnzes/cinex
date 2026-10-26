@@ -399,7 +399,7 @@ class Reel:
                  join_next=(), join_prev=(), cap_y=CAP_Y, face_anchor=.40, camera="auto", deadzone=.05, max_speed=.22,
                  max_accel=.6, lock_spread=(.14, .09), z_max=1.25, scene_bump=0.0,
                  caption_style="hormozi", accent=YEL, look="none", flashes=(), sfx=(), sfx_dir=None,
-                 jumpcuts="auto", cuts=(), jump_zoom=1.07, min_face=40, hide_captions=(), broll=(),
+                 jumpcuts="auto", cuts=(), jump_zoom=1.07, min_face=40, hide_captions=(), broll=(), portrait=(),
                  caption_anim="group", correct=True, overlays=(), planes=()):
         # cuts: EVERY keep.json join in the cut timeline. jumpcuts="auto": the engine decides per cut whether a
         # zoom step is needed (visible jump on the same framing) or not (framing already changes, close-up,
@@ -414,6 +414,7 @@ class Reel:
         self.auto_jumps = isinstance(jumpcuts, str)
         self.cuts = sorted(set(cuts) | (set() if self.auto_jumps else set(jumpcuts)))
         self.jumps = [] if self.auto_jumps else sorted(jumpcuts); self.jump_zoom = jump_zoom; self.min_face = min_face
+        self.portrait = list(portrait)        # [(t0, t1)] background blurred, only the front person sharp (_portrait)
         self.hide_caps = list(hide_captions)   # [(t0, t1)] windows where a big title already says the line
         self.broll = []
         for b in broll:
@@ -987,9 +988,32 @@ class Reel:
             m = self._matte.alpha(frame, t); out = out * (1 - m) + frame.astype(np.float32) * m
         return out.astype(np.uint8)
 
+    def _portrait(self, img, t):
+        """Portrait effect: keep the FRONT person sharp (the matte blob under the tracked face, else the biggest) and
+        blur + slightly dim everything else — people passing behind, a messy background."""
+        if not any(a <= t < b for a, b in self.portrait): return img
+        if self._matte is None: self._matte = _Matte()
+        a = self._matte.alpha(img, t)[..., 0]
+        n, lab, stats, _ = cv2.connectedComponentsWithStats((a > .5).astype(np.uint8), 8)
+        if n > 1:
+            fb = self.face_box(t); keep = None
+            if fb:
+                cx, cy = int((fb[0] + fb[2]) / 2), int(min(H - 1, fb[3])); keep = lab[min(H - 1, max(0, cy)), min(W - 1, max(0, cx))] or None
+            keep = keep or 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
+            m = cv2.GaussianBlur(cv2.dilate((lab == keep).astype(np.float32), np.ones((15, 15), np.uint8)), (0, 0), 6)
+            a = a * m
+        # blur the background WITHOUT the person (normalised convolution), or the person smears into a bright halo
+        small = cv2.resize(img, (W // 4, H // 4), interpolation=cv2.INTER_AREA).astype(np.float32)
+        bgm = 1 - cv2.resize(a, (W // 4, H // 4), interpolation=cv2.INTER_AREA)[..., None]
+        num = cv2.GaussianBlur(small * bgm, (0, 0), 7); den = cv2.GaussianBlur(bgm, (0, 0), 7)[..., None] + 1e-3
+        bg = cv2.resize(num / den, (W, H), interpolation=cv2.INTER_LINEAR) * .9
+        a = a[..., None]
+        return (img * a + bg * (1 - a)).astype(np.uint8)
+
     def compose(self, frame, t, debug=False):
         frame = self._planes(frame, t)
-        img = self.bg_fx(self._broll_full(grade(self.color_correct(self.camera(frame, t), t), self.look), t), t)
+        img = self._portrait(grade(self.color_correct(self.camera(frame, t), t), self.look), t)
+        img = self.bg_fx(self._broll_full(img, t), t)
         if any(o.get("atras") and o["t0"] <= t < o["t1"] for o in self.overlays):   # text BEHIND the person
             if self._matte is None: self._matte = _Matte()
             back = Image.new("RGBA", (W, H)); self._overlays(back, t, behind=True)

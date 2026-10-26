@@ -389,7 +389,13 @@ def slow_peak(name, seg_id, length=2.0, sp=.35):
 
 def cut_list(st, kept):
     """Kept segments in play order -> keep.json for cut.py: [[s, e]] (one video) or [[s, e, source]] (clips)."""
-    def opts(g): return [dict(speed=speed(g), mudo=silent(g))] if silent(g) else []
+    def opts(g):
+        o = dict(speed=speed(g), mudo=True) if silent(g) else {}
+        q = g.get("quadro")                              # reframe: zoom z around (cx, cy) of the SOURCE (cut from 4K: sharp)
+        if q and float(q.get("z", 1)) > 1.001:
+            z = float(q["z"]); w = 1 / z
+            o["crop"] = [round(min(1 - w, max(0, q["cx"] - w / 2)), 4), round(min(1 - w, max(0, q["cy"] - w / 2)), 4), round(w, 4), round(w, 4)]
+        return [o] if o else []
     if not st.get("clips"): return [[g["s"], g["e"], st["src"], *opts(g)] for g in kept]
     out = []
     for g in kept:                                       # a segment never spans two clips (each clip is cut on its own)
@@ -451,6 +457,15 @@ def add_broll(name, mid, t0, t1, ss=0.0, mode="full"):
         st["broll"].append(dict(id=max((b["id"] for b in st["broll"]), default=0) + 1, media=mid, t0=round(t0, 2), t1=round(t1, 2),
                                 ss=round(ss, 2), mode=mode, zoom=True))
     return update(name, fn)
+
+
+def portrait_windows(kept):
+    """Kept segments with the portrait effect -> [(t0, t1)] on the cut timeline."""
+    out, off = [], 0.0
+    for g in kept:
+        if g.get("retrato"): out.append((round(off, 3), round(off + seg_len(g), 3)))
+        off += seg_len(g)
+    return out
 
 
 def broll_windows(st, kept, FH):
@@ -639,7 +654,7 @@ def export(name):
         for s in st.get("sfx", []):
             if any(g["s"] <= s["t"] < g["e"] for g in kept): sfx.append((raw_to_cut(s["t"], kept), s["cat"], float(s.get("gain", -12))))
         reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, z, z, R.eio)], motions=fns, overlays=ovs, planes=planes, sfx=sorted(sfx), hide_captions=hide,
-                      broll=broll_windows(st, kept, FH),
+                      broll=broll_windows(st, kept, FH), portrait=portrait_windows(kept),
                       ranges=[(0, dur + 1, "big" if cam["follow"] else None)],
                       keywords=st.get("keywords", []), fix=st.get("fix", {}), caption_style="app", accent=rgba(c["accent"]),
                       look=col["look"] if col["look"] in R.GRADES else "none", jumpcuts="auto" if cam["punch"] else [], cuts=cuts,

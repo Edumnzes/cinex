@@ -77,6 +77,8 @@
   marcado, pessoas excluídas pela máscara, homografia RANSAC e suavização), deformado na perspectiva antes da câmera
   virtual e escondido atrás da pessoa quando ela passa na frente. Sem marcação (ou com fundo desfocado), vira
   elemento comum. O preview não recorta a pessoa; a exportação recorta.
+- **Limpar a imagem por trecho.** Efeito retrato (fundo desfocado, só a pessoa da frente nítida, sem halo) e
+  enquadramento manual (zoom até 2,5x com centro escolhido na prévia), recortado do 4K no `cut.py` (`crop`).
 - **Câmera lenta e trechos sem som.** Velocidade por trecho (0,5x, 0,35x, 0,25x, interpolada, sem som e sem
   legenda) e opção "sem som" (só imagem). **Câmera lenta no pico de ação**: acha o momento de mais movimento e
   brilho e separa 2 s em 0,35x (`app_project.py lenta`). A timeline, as legendas, o motion e o B-roll contam com a
