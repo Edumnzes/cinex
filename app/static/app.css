@@ -120,6 +120,16 @@ body.resizing video { pointer-events: none; }
 .sfxrow { display: grid; grid-template-columns: 32px 1fr auto auto; align-items: center; gap: 6px; font-size: 13px; }
 .sfxrow .secondary { padding: 3px 8px; font-size: 12px; }
 .warn { color: #e8b04b; }
+.rank { margin: 8px 0; } .rank b { display: block; font-size: 12px; font-weight: 500; color: var(--muted); margin-bottom: 4px; }
+.rankrow { position: relative; display: flex; justify-content: space-between; gap: 6px; padding: 3px 6px; font-size: 12px; border-radius: 4px; overflow: hidden; }
+.rankrow i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent-soft); z-index: 0; }
+.rankrow.up i { background: rgba(79, 167, 133, .22); } .rankrow.down i { background: rgba(224, 93, 93, .16); }
+.rankrow span, .rankrow small { position: relative; z-index: 1; } .rankrow small { color: var(--muted); white-space: nowrap; }
+.reflist { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+.refrow { display: grid; grid-template-columns: 20px 1fr 24px; gap: 6px; align-items: center; padding: 5px 6px; border-radius: var(--r); background: var(--panel2); font-size: 13px; }
+.refrow .reftxt { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); text-decoration: none; }
+.refrow small { display: block; }
+.center { display: block; text-align: center; padding: 7px; border: 1px solid var(--line2); border-radius: var(--r); margin: 6px 0; }
 .kv { display: grid; grid-template-columns: 64px 1fr; gap: 6px; font-size: 12px; margin: 2px 0; }
 .refsheets { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; }
 .refsheets img { width: 100%; border-radius: 4px; display: block; }

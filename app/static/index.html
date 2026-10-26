@@ -28,6 +28,7 @@
   <section class="panel inspector">
     <div class="rz x r" data-var="--c-insp" data-sign="1" data-min="240" data-max="560" title="Arraste para redimensionar · duplo clique: padrão"></div>
     <nav class="ptabs">
+      <button data-tab="marca">Marca</button>
       <button data-tab="legendas" class="on">Legendas</button>
       <button data-tab="corte">Corte</button>
       <button data-tab="camera">Câmera</button>
@@ -37,6 +38,25 @@
       <button data-tab="revisao">Revisão</button>
     </nav>
     <div class="pbody">
+      <div id="tab-marca" hidden>
+        <div class="group-title">Marca do projeto</div>
+        <div class="prop"><label>Perfil</label><select id="marcasel"></select></div>
+        <div id="marcainfo" class="selinfo muted"></div>
+        <div id="marcabody">
+          <button id="marcaonb" class="secondary wide"></button>
+          <div class="group-title">O que funciona no Instagram</div>
+          <div id="desemp" class="muted small"></div>
+          <button id="marcadesemp" class="secondary wide">Atualizar com os últimos vídeos e Insights</button>
+          <div class="group-title">Referências do nicho</div>
+          <div id="reflist" class="reflist"></div>
+          <div class="prop"><input id="reflink" placeholder="Link do vídeo de referência"><button id="refaddlink" class="secondary">+</button></div>
+          <div class="prop"><input id="refnota" placeholder="O que você gosta nele (opcional)"></div>
+          <label class="secondary wide filebtn center">Enviar vídeo de referência<input type="file" id="refvideo" accept=".mp4,.mov,.m4v,.webm" hidden></label>
+          <p id="refstatus" class="muted small"></p>
+          <button id="refask" class="secondary wide">Pedir ao Cinex para analisar as referências</button>
+        </div>
+      </div>
+
       <div id="tab-legendas">
         <div class="group-title">Estilo</div>
         <div class="presets" id="presets"></div>
@@ -194,6 +214,7 @@
 <script src="/static/fx.js"></script>
 <script src="/static/order.js"></script>
 <script src="/static/review.js"></script>
+<script src="/static/marca.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

@@ -6,12 +6,15 @@ One folder per Instagram handle:  ~/instagram-legendas/<handle>/
     marca.json    machine-readable defaults for project.py     (cinex)
     historico.md  captions delivered                           (legendas-instagram)
     videos.md     reels delivered                              (cinex)
+    referencias.json + referencias/   niche references: links and video files (cinex app)
+    desempenho.json / desempenho.md   performance per reel and per style (desempenho.py)
 
 Usage (CLI):
     python brand.py list                    # handles that already have a profile
     python brand.py show <handle>           # which files exist + marca.json
     python brand.py init <handle>           # create marca.json from the template (keeps existing)
     python brand.py log <handle> "<line>"   # append a delivered reel to videos.md
+    python brand.py refs <handle>           # niche references (links and videos) of this brand
 In project.py:
     from brand import load_brand
     B = load_brand("suamarca")              # dict with every key of the template filled in
@@ -70,6 +73,37 @@ def init(handle):
     return p
 
 
+REF_EXT = (".mp4", ".mov", ".m4v", ".webm")
+
+
+def refs(handle):
+    """Niche references of this brand: [{id, tipo: link|video, url|arquivo, nota, adicionado, analisado}].
+    Video files live in <brand>/referencias/; they are analysed together into the style profile nicho_<handle>."""
+    p = folder(handle) / "referencias.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else []
+
+
+def _save_refs(handle, items):
+    d = folder(handle); d.mkdir(parents=True, exist_ok=True)
+    (d / "referencias.json").write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def add_ref(handle, tipo, valor, nota=""):
+    items = refs(handle); nid = max((r["id"] for r in items), default=0) + 1
+    e = dict(id=nid, tipo=tipo, nota=nota, adicionado=datetime.date.today().isoformat(), analisado=False)
+    e["url" if tipo == "link" else "arquivo"] = valor
+    items.append(e); _save_refs(handle, items); return e
+
+
+def remove_ref(handle, rid):
+    items = refs(handle); keep = [r for r in items if r["id"] != rid]
+    for r in items:
+        if r["id"] == rid and r["tipo"] == "video":
+            f = folder(handle) / "referencias" / r["arquivo"]
+            if f.exists(): f.rename(f.with_name("_removido_" + f.name))   # kept on disk, out of the analysis
+    _save_refs(handle, keep)
+
+
 def log(handle, line):
     p = folder(handle) / "videos.md"
     if not p.exists(): p.write_text("# Reels entregues\n\n", encoding="utf-8")
@@ -91,6 +125,8 @@ if __name__ == "__main__":
         print(json.dumps(load_brand(h), ensure_ascii=False, indent=2))
     elif cmd == "init":
         print(init(args[0]))
+    elif cmd == "refs":
+        for r in refs(args[0]): print(r)
     elif cmd == "log":
         print(log(args[0], " ".join(args[1:])))
     else:

@@ -21,7 +21,26 @@ STATIC = APP / "static"
 PORT = 8765
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)       # no console window flashing on Windows
 MAX_BODY = 25 * 1024 * 1024                     # font uploads
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo"}
+MAX_REF = 600 * 1024 * 1024                     # niche reference videos (streamed to disk)
+HANDLE_RE = re.compile(r"^[a-z0-9._]{1,40}$")
+
+
+def marca_info(h):
+    """Everything the Marca tab shows: onboarding files, marca.json, niche references, performance report."""
+    import brand, desempenho, estilo
+    d = brand.folder(h); st = brand.status(h)
+    prof = estilo.ROOT / f"nicho_{h}" / "perfil.json"
+    analysed = set()
+    if prof.exists():
+        analysed = {v["arquivo"] for v in json.loads(prof.read_text(encoding="utf-8"))["medidas"]["videos"]}
+    refs = [dict(r, analisado=r.get("analisado") or (r["tipo"] == "video" and r.get("arquivo") in analysed)) for r in brand.refs(h)]
+    rep = desempenho.report(h) if (d / "desempenho.json").exists() else None
+    perfil = (d / "perfil.md").read_text(encoding="utf-8") if st["perfil.md"] else ""
+    head = next((ln.strip("_ ") for ln in perfil.splitlines() if ln.startswith("_Atualizado")), "")
+    return dict(handle=h, arquivos=st, marca=brand.load_brand(h) if st["marca.json"] else None, perfil_atualizado=head,
+                referencias=refs, estilo_nicho=f"nicho_{h}" if prof.exists() else None, desempenho=rep,
+                analisando=(d / ".analisando").exists())
+EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 
@@ -116,6 +135,13 @@ class H(BaseHTTPRequestHandler):
             if parts == ["api", "projects"]: return self._send(200, P.projects())
             if parts == ["api", "fonts"]:
                 return self._send(200, [dict(id=f["id"], label=f["label"], weights=f["weights"]) for f in fonts().values()])
+            if parts == ["api", "marcas"]:              # brand profiles in ~/instagram-legendas (shared with legendas-instagram)
+                import brand
+                hs = sorted(p.name for p in brand.ROOT.iterdir() if p.is_dir()) if brand.ROOT.exists() else []
+                return self._send(200, [dict(handle=h, arquivos=brand.status(h)) for h in hs if HANDLE_RE.match(h)])
+            if parts[:2] == ["api", "marca"] and len(parts) == 3:
+                if not HANDLE_RE.match(parts[2]): return self._err(400, "arroba inválido")
+                return self._send(200, marca_info(parts[2]))
             if parts == ["api", "estilos"]:             # style profiles of ~/reels-banco/estilos (estilo.py)
                 import estilo
                 out = []
@@ -191,6 +217,8 @@ class H(BaseHTTPRequestHandler):
                 subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "new", str(src), "--name", name],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
                 return self._send(200, {"name": name})
+            if parts[:2] == ["api", "marca"] and len(parts) >= 4:
+                return self._marca_post(parts)
             if parts[:2] != ["api", "p"] or len(parts) != 4: return self._err(404, "rota não encontrada")
             name, sub = parts[2], parts[3]
             if not (P.folder(name) / "cinex.json").exists(): return self._err(404, "projeto não existe")
@@ -238,6 +266,56 @@ class H(BaseHTTPRequestHandler):
             return self._err(404, "rota não encontrada")
         except (ValueError, KeyError, json.JSONDecodeError) as e: return self._err(400, str(e))
         except TimeoutError as e: return self._err(503, str(e))
+
+
+def _marca_post(self, parts):
+    import brand
+    h, sub = parts[2], parts[3]
+    if not HANDLE_RE.match(h): return self._err(400, "arroba inválido")
+    if sub == "ref":                                   # niche reference by link
+        b = self._json(); url = str(b.get("url", "")).strip()
+        if not re.match(r"^https?://[^\s]{4,500}$", url): return self._err(400, "cole um link http(s) válido")
+        return self._send(200, brand.add_ref(h, "link", url, str(b.get("nota", ""))[:500]))
+    if sub == "refvideo":                              # niche reference video, streamed to <brand>/referencias/
+        fn = Path(self.headers.get("X-Filename", "")).name
+        if not re.fullmatch(r"[\w .()-]{1,120}", fn) or Path(fn).suffix.lower() not in brand.REF_EXT:
+            return self._err(400, "envie um vídeo .mp4, .mov, .m4v ou .webm")
+        n = int(self.headers.get("Content-Length") or 0)
+        if not 0 < n <= MAX_REF: return self._err(400, "vídeo grande demais (máx. 600 MB)")
+        d = brand.folder(h) / "referencias"; d.mkdir(parents=True, exist_ok=True)
+        dest = d / fn; k = 2
+        while dest.exists(): dest = d / f"{Path(fn).stem}-{k}{Path(fn).suffix}"; k += 1
+        left = n
+        with open(dest, "wb") as f:
+            while left > 0:
+                chunk = self.rfile.read(min(1 << 20, left))
+                if not chunk: break
+                f.write(chunk); left -= len(chunk)
+        if left: dest.unlink(missing_ok=True); return self._err(400, "envio interrompido")
+        from urllib.parse import unquote
+        e = brand.add_ref(h, "video", dest.name, unquote(self.headers.get("X-Nota", ""))[:500])
+        self._analyse_refs(h)
+        return self._send(200, e)
+    if len(parts) == 6 and sub == "refs" and parts[5] == "remover":
+        brand.remove_ref(h, int(parts[4])); return self._send(200, {"ok": True})
+    if sub == "analisar":                              # re-measure all niche videos into estilos/nicho_<handle>
+        self._analyse_refs(h); return self._send(200, {"ok": True})
+    return self._err(404, "rota não encontrada")
+
+
+def _analyse_refs(self, h):
+    import brand
+    vids = [str(brand.folder(h) / "referencias" / r["arquivo"]) for r in brand.refs(h) if r["tipo"] == "video"]
+    if not vids: return
+    flag = brand.folder(h) / ".analisando"; flag.write_text("1")
+    code = ("import subprocess, sys, pathlib; r = subprocess.run([sys.executable, sys.argv[1], 'analisar', *sys.argv[4:], '--nome', sys.argv[2]]);"
+            " pathlib.Path(sys.argv[3]).unlink(missing_ok=True)")
+    subprocess.Popen([sys.executable, "-c", code, str(SCRIPTS / "estilo.py"), f"nicho_{h}", str(flag), *vids],
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
+
+
+H._marca_post = _marca_post
+H._analyse_refs = _analyse_refs
 
 
 def main():

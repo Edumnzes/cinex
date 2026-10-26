@@ -59,6 +59,10 @@
   até a cor ser medida; 4 perfis observados nas referências do Instagram ficam no banco do usuário.
 - **Protótipo de motion em HTML com HyperFrames** (`motion_html/`): renderizado com transparência e composto pelo
   motor; abre caminho para tipografia de designer, máscaras e 3D no motion.
+- **Marca no app** (aba Marca): status do onboarding, ranking do que funciona no Instagram da marca
+  (`scripts/desempenho.py`: views, retenção, engajamento, compartilhamentos e clientes por formato, tema, gancho,
+  estilo e duração, comparados à mediana do perfil) e **referências do nicho por marca** (links ou vídeos enviados,
+  medidos automaticamente no perfil de estilo `nicho_<arroba>`).
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

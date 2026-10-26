@@ -134,6 +134,21 @@ The goal is editing that doesn't look automatic. Two tools, both visible in the 
    `--quadros` (uses the last exported final.mp4, if any), look at `revisao_quadros.jpg` for what numbers miss (text
    over a face, cheap-looking motion, flat moments) and answer with `app_project.py say`, concrete and prioritised.
 
+## F. Brand performance and niche references (app tab "Marca")
+
+Every brand learns from its own results. Data sits with the brand profile in `~/instagram-legendas/<handle>/`.
+- **Performance** (`scripts/desempenho.py`): after onboarding and then every week or two (or when the user asks
+  "atualize o desempenho"), read the brand's Reels grid (views) and each reel's caption/likes/comments (public), and —
+  logged in as the brand, read-only — "Ver insights" (tempo médio, duração, % não seguidores, compartilhamentos,
+  salvamentos, seguidores, visitas). Record each reel with `desempenho.py set <handle> '{codigo, url, data, views, ...,
+  tags: {formato, tema, gancho, estilo, editado_cinex, duracao}}'` — tag from the caption and the cover, and mark
+  reels edited by Cinex (match videos.md). `desempenho.py relatorio` ranks each tag against the profile's median
+  (views and retention weigh most); `aplicar` writes winners with ≥ 3 reels into `marca.json`. Use the ranking when
+  choosing format, hook and length; say when a conclusion rests on 1–2 reels. Never type credentials.
+- **Niche references**: the user adds links or uploads videos per brand in the app (`brand.py refs <handle>`).
+  Uploaded videos are measured automatically into the style profile `nicho_<handle>`; read its sheets and fill the
+  visual rules (section E). Links: open read-only in the browser, sample frames, and describe what to copy.
+
 ## 0. Environment (once per machine, ~2 min)
 
 ```

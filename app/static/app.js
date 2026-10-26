@@ -49,7 +49,7 @@ async function openProject(n) {
   st = j.state; projectFonts = j.project_fonts || [];
   showJobs(j.prep, j.export);
   if (st && st.segments.length) await loadMedia();
-  renderAll(); loadReview(); $("#estilosel").value = (st && st.estilo) || ""; renderEstilo();
+  renderAll(); loadReview(); $("#estilosel").value = (st && st.estilo) || ""; renderEstilo(); loadMarcas();
 }
 
 async function loadMedia() {
@@ -467,7 +467,7 @@ function seekFromEvent(e, el) {
 // ------------------------------------------------------------ wiring
 function tab(n) {
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.classList.toggle("on", b.dataset.tab === n);
-  for (const t of ["legendas", "camera", "cor", "motion", "sons", "revisao", "corte"]) $("#tab-" + t).hidden = n !== t;
+  for (const t of ["marca", "legendas", "camera", "cor", "motion", "sons", "revisao", "corte"]) $("#tab-" + t).hidden = n !== t;
 }
 
 function renderAll() {
@@ -482,7 +482,7 @@ function renderAll() {
 }
 
 async function init() {
-  bindCaptionUI(); bindLookUI(); bindFx(); bindReview(); bindResizers(); applyLayout();
+  bindCaptionUI(); bindLookUI(); bindFx(); bindReview(); bindMarca(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
   for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };
