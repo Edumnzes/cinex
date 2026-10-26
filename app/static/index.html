@@ -148,6 +148,11 @@
         <div class="group-title">Corte</div>
         <p class="muted small">Duplo clique num clipe (ou Delete) alterna entre manter e cortar.</p>
         <button id="lockbtn" class="secondary wide"></button>
+        <div class="group-title">Clipes de fala</div>
+        <div id="cliplist" class="medialist"></div>
+        <form id="clipform" class="prop"><input id="clippath" placeholder="Caminho de um vídeo ou de uma pasta" autocomplete="off"><button class="secondary" title="Adicionar no fim da sequência">+</button></form>
+        <label class="secondary wide filebtn center">Enviar clipes do computador<input type="file" id="clipup" accept="video/*,.mov,.mp4,.m4v" multiple hidden></label>
+        <p id="clipstatus" class="muted small">Para palestras e eventos: cada clipe é transcrito e cortado, e entra no fim da sequência. Depois é só reordenar as frases.</p>
         <div class="group-title">Ordem das frases</div>
         <p class="muted small">Arraste para reordenar, ou use ↑ ↓. ⇤ abre o vídeo com aquela frase (cold open). O CTA só depois do benefício.</p>
         <div id="orderlist" class="orderlist"></div>

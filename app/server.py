@@ -231,18 +231,30 @@ class H(BaseHTTPRequestHandler):
             if parts[:2] != ["api", "p"] or len(parts) != 4: return self._err(404, "rota não encontrada")
             name, sub = parts[2], parts[3]
             if not (P.folder(name) / "cinex.json").exists(): return self._err(404, "projeto não existe")
+            if sub == "clips":                         # speech clips appended to the timeline (files and/or folders)
+                b = self._json(); paths = [str(p).strip().strip('"') for p in b.get("paths", []) if str(p).strip()]
+                if not paths or len(paths) > 200: return self._err(400, "informe o caminho de um vídeo ou de uma pasta")
+                for p in paths:
+                    q = Path(p).expanduser()
+                    if not (q.is_dir() or (q.is_file() and q.suffix.lower() in P.VIDEO_EXT)): return self._err(400, f"não encontrado: {p}")
+                prep = P.read_job(name, "prep")
+                if prep and not prep.get("done", True): return self._err(409, "o projeto ainda está sendo preparado")
+                P.job(name, "prep", step="Começando", pct=1, done=False, error=None)
+                subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "clips", name, *paths],
+                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
+                return self._send(200, {"ok": True})
             if sub == "media":                         # add a B-roll clip by path (the file stays where it is)
                 src = Path(str(self._json().get("src", "")).strip().strip('"')).expanduser()
                 if not src.is_file() or src.suffix.lower() not in P.VIDEO_EXT: return self._err(400, f"vídeo não encontrado: {src}")
                 self._media_job(name, src); return self._send(200, {"ok": True})
-            if sub == "mediaup":                       # B-roll clip sent from the browser, streamed into <project>/media/
+            if sub in ("mediaup", "clipup"):            # clip sent from the browser: B-roll -> media/, speech -> clips_up/
                 from urllib.parse import unquote
                 fn = Path(unquote(self.headers.get("X-Filename", ""))).name
                 if not re.fullmatch(r"[\w .()-]{1,120}", fn) or Path(fn).suffix.lower() not in P.VIDEO_EXT:
                     return self._err(400, "envie um vídeo (.mov, .mp4, .m4v…)")
                 n = int(self.headers.get("Content-Length") or 0)
                 if not 0 < n <= MAX_MEDIA: return self._err(400, "vídeo grande demais (máx. 8 GB)")
-                dd = P.folder(name) / "media"; dd.mkdir(exist_ok=True)
+                dd = P.folder(name) / ("media" if sub == "mediaup" else "clips_up"); dd.mkdir(exist_ok=True)
                 dest = dd / f"up_{fn}"; k = 2
                 while dest.exists(): dest = dd / f"up_{Path(fn).stem}-{k}{Path(fn).suffix}"; k += 1
                 left = n
@@ -252,6 +264,7 @@ class H(BaseHTTPRequestHandler):
                         if not chunk: break
                         f.write(chunk); left -= len(chunk)
                 if left: dest.unlink(missing_ok=True); return self._err(400, "envio interrompido")
+                if sub == "clipup": return self._send(200, {"path": str(dest)})    # the app then posts all paths to /clips
                 self._media_job(name, dest); return self._send(200, {"ok": True})
             if sub == "state":
                 body = {k: v for k, v in self._json().items() if k in EDITABLE}

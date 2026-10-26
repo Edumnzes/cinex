@@ -12,7 +12,7 @@ const PRESETS = {
 };
 
 let faces = null, name = null, st = null, words = [], wave = null, fonts = [], projectFonts = [];
-let sel = null, pending = 0, pps = 60, loadedFonts = new Set(), groups = [], kept = [];
+let mediaDur = 0, sel = null, pending = 0, pps = 60, loadedFonts = new Set(), groups = [], kept = [];
 
 async function api(path, opt = {}) {
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), opt.timeout || 20000);   // a stalled request never hangs the app
@@ -53,17 +53,18 @@ async function openProject(n) {
 }
 
 async function loadMedia() {
-  const n = name;
+  const n = name; mediaDur = st.duration;
   api(`/api/p/${n}/faces`).then((f) => { if (n === name) faces = f; }).catch(() => {});   // preview-only: never blocks
   [words, wave] = await Promise.all([api(`/api/p/${n}/words`), api(`/api/p/${n}/waveform`).catch(() => null)]);
-  const v = $("#video"); v.src = `/api/p/${name}/preview.mp4`; $("#phempty").hidden = true;
+  const v = $("#video"), t = v.currentTime; v.src = `/api/p/${name}/preview.mp4?d=${st.duration}`; $("#phempty").hidden = true;   // new clips = new proxy
+  if (t) v.currentTime = t;
 }
 
 async function reloadState() {
   const j = await api(`/api/p/${name}`);
   const had = st && st.segments.length;
   st = j.state; projectFonts = j.project_fonts || [];
-  if (!had && st && st.segments.length) await loadMedia();
+  if ((!had && st && st.segments.length) || (st && had && st.duration !== mediaDur)) await loadMedia();   // clips added
   renderAll();
 }
 
@@ -347,6 +348,10 @@ function renderTimeline() {
   const step = [1, 2, 5, 10, 15, 30, 60].find((s) => s * pps >= 90) || 120;
   const ticks = [];
   for (let t = 0; t <= dur; t += step) { const s = document.createElement("span"); s.style.left = t * pps + "px"; s.textContent = tcode(t); ticks.push(s); }
+  for (const c of st.clips && st.clips.length > 1 ? st.clips : []) {        // speech clip boundaries
+    const m = document.createElement("i"); m.className = "clipmark"; m.style.left = c.off * pps + "px"; m.title = `${c.name} · ${fmt(c.dur)}`;
+    m.textContent = c.name; ticks.push(m);
+  }
   $("#ruler").replaceChildren(...ticks);
   $("#caplane").replaceChildren(...(st.captions.enabled ? groups : []).map((g) => {
     const b = document.createElement("div"); b.className = "blk capb";
@@ -366,7 +371,7 @@ function renderTimeline() {
     b.ondblclick = () => toggle(g.id);
     return b;
   }));
-  drawWave(); renderInfo(); renderFx(); renderBroll(); renderOrder();
+  drawWave(); renderInfo(); renderFx(); renderBroll(); renderOrder(); renderClips();
 }
 
 function drawWave() {
@@ -418,6 +423,39 @@ function renderInfo() {
 function renderDur() {
   const k = st.segments.filter((g) => g.keep).reduce((a, g) => a + g.e - g.s, 0);
   $("#durinfo").textContent = `${fmt(st.duration)} → ${fmt(k)} · ${st.segments.filter((g) => !g.keep).length} cortes`;
+}
+
+// ------------------------------------------------------------ speech clips (talks, events: several videos on one timeline)
+function renderClips() {
+  const cl = st.clips && st.clips.length ? st.clips : [{ id: 1, name: (st.src || "").split(/[\\/]/).pop(), off: 0, dur: st.duration }];
+  $("#cliplist").replaceChildren(...cl.map((c, i) => {
+    const r = document.createElement("div"); r.className = "cliprow";
+    r.innerHTML = `<span class="muted small">${i + 1}</span><span></span><span class="muted small">${fmt(c.off)} · ${fmt(c.dur)}</span>`;
+    r.children[1].textContent = c.name; r.title = "Ir para o início do clipe";
+    r.onclick = () => { $("#video").currentTime = c.off + .01; };
+    return r;
+  }));
+}
+async function addClips(paths) {
+  try { await api(`/api/p/${name}/clips`, { method: "POST", body: JSON.stringify({ paths }) });
+        $("#clipstatus").textContent = "Adicionando… a prévia é refeita no fim (a transcrição leva alguns minutos por clipe)."; poll(); }
+  catch (err) { $("#clipstatus").textContent = err.message; }
+}
+function bindClips() {
+  $("#clipform").onsubmit = (e) => { e.preventDefault(); const p = $("#clippath").value.trim(); if (!p || !name) return; $("#clippath").value = ""; addClips([p]); };
+  $("#clipup").onchange = async (e) => {
+    const fs = [...e.target.files]; e.target.value = ""; if (!fs.length || !name) return;
+    const paths = [];
+    try {
+      for (const [i, f] of fs.entries()) {
+        $("#clipstatus").textContent = `Enviando ${i + 1}/${fs.length}: ${f.name} (${(f.size / 1e6).toFixed(0)} MB)…`;
+        const r = await api(`/api/p/${name}/clipup`, { method: "POST", body: f, timeout: 30 * 60 * 1000,
+                                                       headers: { "X-Filename": encodeURIComponent(f.name), "Content-Type": "application/octet-stream" } });
+        paths.push(r.path);
+      }
+      addClips(paths);
+    } catch (err) { $("#clipstatus").textContent = err.message; }
+  };
 }
 
 // ------------------------------------------------------------ chat
@@ -482,7 +520,7 @@ function renderAll() {
 }
 
 async function init() {
-  bindCaptionUI(); bindLookUI(); bindFx(); bindBroll(); bindReview(); bindMarca(); bindPlane(); bindResizers(); applyLayout();
+  bindCaptionUI(); bindLookUI(); bindFx(); bindBroll(); bindClips(); bindReview(); bindMarca(); bindPlane(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
   for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };

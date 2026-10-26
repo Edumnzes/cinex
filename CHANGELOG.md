@@ -77,6 +77,9 @@
   marcado, pessoas excluídas pela máscara, homografia RANSAC e suavização), deformado na perspectiva antes da câmera
   virtual e escondido atrás da pessoa quando ela passa na frente. Sem marcação (ou com fundo desfocado), vira
   elemento comum. O preview não recorta a pessoa; a exportação recorta.
+- **Fala de vários clipes.** Um projeto pode juntar vários vídeos numa sequência só (aba Corte › Clipes de fala, ou
+  `app_project.py clips`): cada clipe é transcrito e cortado, e as frases de qualquer clipe podem ser reordenadas.
+  `cut.py` aceita trechos de vários vídeos (`[início, fim, arquivo]`). Clipe sem áudio entra inteiro.
 - **B-roll no app (trilha V2).** Aba B-roll para adicionar clipes ao projeto (caminho ou envio pelo navegador;
   prévia leve e faixa de quadros, HDR convertido) e cobrir a fala com eles: arrastar, esticar, escolher a entrada
   no clipe, tela cheia ou cartão, aproximação lenta. A prévia toca o clipe sincronizado com o corte; a exportação

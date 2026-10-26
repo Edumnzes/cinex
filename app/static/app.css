@@ -261,3 +261,10 @@ body.lay-mobile #progname { display: none; }
 .bstrip { position: relative; height: 40px; margin: 4px 0 8px; border-radius: 4px; background: #000 left center / 100% 100% no-repeat; cursor: pointer; }
 .bstrip .bwin { position: absolute; top: -2px; bottom: -2px; border: 2px solid var(--accent); border-radius: 4px; background: rgba(255,255,255,.14); pointer-events: none; }
 .blk.bblk.off { opacity: .45; border-style: dashed; }
+
+/* ---------- speech clips (Corte tab + ruler marks) */
+.cliprow { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; align-items: center; padding: 5px 6px; border-radius: var(--r); background: var(--panel2); font-size: 13px; cursor: pointer; }
+.cliprow span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cliprow:hover { background: var(--accent-soft); }
+.ruler .clipmark { position: absolute; top: 0; bottom: 0; border-left: 2px solid #5b84c9; padding: 15px 0 0 3px; font-size: 10px; font-style: normal;
+  color: #9fbbe8; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis; pointer-events: auto; z-index: 1; }

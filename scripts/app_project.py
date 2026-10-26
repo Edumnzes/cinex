@@ -3,6 +3,8 @@
 One folder per video in ~/reels/<name>/ with:
     cinex.json     segments (keep / cut + reason), caption settings, chat, rev   <- the shared state
     preview.mp4    light H.264 proxy the browser can play (phones record HEVC .MOV)
+    clips/<id>/    speech clips of a multi-clip project (talk, event): normalised proxy, words, waveform, faces;
+                   st["clips"] = [{id, name, src, off, dur}] laid end to end = ONE timeline in "raw" seconds
     media/         B-roll clips: <id>.mp4 proxy + <id>.jpg filmstrip (+ uploaded files); st["media"] / st["broll"]
     words_raw.json transcription of the source (transcribe.py)
     waveform.json  audio peaks for the timeline
@@ -17,6 +19,7 @@ Claude Code is the brain: it reads the state, answers the chat and edits the cut
     python app_project.py seg <name> <id|s-e> keep|cut ["reason"]   change one segment (or a time range)
     python app_project.py lock <name> on|off             approve / reopen the cut
     python app_project.py order <name> <id> <id> ...      play order of kept segments (reorder phrases)
+    python app_project.py clips <name> <video|folder> ...  add speech clips: transcribed, cut, appended to the timeline
     python app_project.py media <name> <video>           add a clip to the project's media (B-roll): proxy + filmstrip
     python app_project.py broll <name> <media_id> <t0> <t1> [ss] [full|card]   B-roll over the speech (raw seconds)
     python app_project.py export <name>                  cut + captions + loudness -> Downloads
@@ -99,9 +102,9 @@ def words_in(words, s, e):
     return [w for w in words if s <= (w["s"] + w["e"]) / 2 < e]
 
 
-def segments_from_keep(keep, dur, words):
-    """Contiguous segments covering 0..dur: the kept stretches plus the pauses between them."""
-    segs, cur = [], 0.0
+def segments_from_keep(keep, dur, words, start=0.0):
+    """Contiguous segments covering start..dur: the kept stretches plus the pauses between them."""
+    segs, cur = [], start
     for s, e in sorted(keep):                        # the app plays in recorded order (no reordering yet)
         if s - cur > .05: segs.append(dict(s=round(cur, 2), e=round(s, 2), keep=False))
         segs.append(dict(s=round(max(s, cur), 2), e=round(e, 2), keep=True, reason=""))
@@ -132,7 +135,7 @@ def new(src, name=None, prompt=None):
     if not (d / "cinex.json").exists():
         _write_json(d / "cinex.json", dict(version=1, rev=0, name=name, src=str(src), duration=round(duration(src), 2),
                                            segments=[], cut_locked=False, captions=dict(CAPTIONS), camera=dict(CAMERA), color=dict(COLOR), motions=[], motion_engine="html", sfx=[], format="vertical", keywords=[], fix={},
-                                           chat=[], created=_now()))
+                                           chat=[], created=_now(), prompt=prompt or ""))
     prepare(name, prompt)
     return name
 
@@ -217,6 +220,151 @@ def set_seg(name, ref, keep, reason=None):
             g["keep"] = keep
             if reason is not None: g["reason"] = reason
     return update(name, fn)
+
+
+# ------------------------------------------------------------ speech clips: several videos on one timeline
+# Each clip gets a proxy normalised to the project canvas (same size, 30 fps, 48 kHz stereo) so the proxies join
+# without re-encoding into preview.mp4; words / waveform / faces are joined with the clip's offset. Segments, motions,
+# B-roll and SFX keep working in "raw" seconds of that joined timeline; the export maps every kept segment back to
+# (clip, local time) with cut_list() and cut.py's multi-source mode.
+def clips_of(st):
+    return st.get("clips") or [dict(id=1, name=Path(st["src"]).name, src=st["src"], off=0.0, dur=st["duration"])]
+
+
+def _has_audio(src):
+    return "Audio:" in subprocess.run([_ff(), "-hide_banner", "-i", str(src)], capture_output=True, text=True,
+                                      encoding="utf-8", errors="replace").stderr
+
+
+def _clip_proxy(src, out, canvas):
+    cw, ch = canvas
+    vf = HDR.vf(src, f"scale={cw}:{ch}:force_original_aspect_ratio=decrease:force_divisible_by=2",
+                f"pad={cw}:{ch}:(ow-iw)/2:(oh-ih)/2", "setsar=1", "fps=30")
+    audio = [] if _has_audio(src) else ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo", "-shortest"]   # silent clip
+    subprocess.run([_ff(), "-loglevel", "error", "-y", "-i", str(src), *audio, "-vf", vf, "-ar", "48000", "-ac", "2",
+                    "-c:v", "libx264", "-preset", "veryfast", "-crf", "26", "-profile:v", "high", "-pix_fmt", "yuv420p",
+                    "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart", str(out)], check=True, capture_output=True)
+    return duration(out)
+
+
+def _replace(tmp, dst):
+    """os.replace with retries: on Windows the server may be streaming the old file to the browser."""
+    for _ in range(100):
+        try: os.replace(tmp, dst); return
+        except PermissionError: time.sleep(.2)
+    raise PermissionError(f"não consegui substituir {dst.name} (arquivo em uso)")
+
+
+def _rebuild(name):
+    """Join the clips' proxies, words, waveform and faces into the project files the app reads."""
+    d = folder(name); cl = load(name)["clips"]
+    lst = d / "clips" / "list.txt"
+    lst.write_text("".join(f"file '{(d / 'clips' / str(c['id']) / 'preview.mp4').as_posix()}'\n" for c in cl), encoding="utf-8")
+    subprocess.run([_ff(), "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy",
+                    "-movflags", "+faststart", str(d / "preview.new.mp4")], check=True, capture_output=True)
+    words, peaks, faces, step = [], [], [], .02
+    for c in cl:
+        cd = d / "clips" / str(c["id"])
+        words += [dict(w, s=round(w["s"] + c["off"], 3), e=round(w["e"] + c["off"], 3))
+                  for w in json.loads((cd / "words.json").read_text(encoding="utf-8"))]
+        pk = json.loads((cd / "waveform.json").read_text(encoding="utf-8"))["peaks"]; n = round(c["dur"] / step)
+        peaks += (pk + [0] * n)[:n]                      # exact length per clip keeps the next clip aligned
+        fs = json.loads((cd / "faces.json").read_text(encoding="utf-8")); n = round(c["dur"] * 10)
+        faces += [dict(t=round(c["off"] + i / 10, 1), f=(fs[i]["f"] if i < len(fs) else [])) for i in range(n)]
+    _write_json(d / "words_raw.new.json", words); _replace(d / "words_raw.new.json", d / "words_raw.json")
+    _write_json(d / "waveform.json", {"step": step, "peaks": peaks})
+    (d / "faces_preview.json").write_text(json.dumps(faces), encoding="utf-8")
+    _replace(d / "preview.new.mp4", d / "preview.mp4")
+
+
+def _upgrade(name):
+    """First extra clip on a single-video project: clip 1 = the original video, re-proxied to the canvas."""
+    d = folder(name); st = load(name)
+    if st.get("clips"): return
+    e = subprocess.run([_ff(), "-hide_banner", "-i", str(d / "preview.mp4")], capture_output=True, text=True,
+                       encoding="utf-8", errors="replace").stderr
+    canvas = tuple(int(v) // 2 * 2 for v in re.search(r"Video:.*?(\d{2,5})x(\d{2,5})", e).groups())
+    c1 = d / "clips" / "1"; c1.mkdir(parents=True, exist_ok=True)
+    job(name, "prep", step=f"Preparando {Path(st['src']).name}", pct=3, done=False, error=None)
+    dur = _clip_proxy(st["src"], c1 / "preview.mp4", canvas)
+    shutil.copy2(d / "words_raw.json", c1 / "words.json"); shutil.copy2(d / "waveform.json", c1 / "waveform.json")
+    subprocess.run([PY, str(HERE / "faces.py"), str(c1 / "preview.mp4"), str(c1 / "faces.json")], check=True, capture_output=True)
+    update(name, lambda s: s.update(canvas=list(canvas), duration=round(dur, 3),
+                                    clips=[dict(id=1, name=Path(s["src"]).name, src=s["src"], off=0.0, dur=round(dur, 3), sdur=s["duration"])]))
+
+
+def add_clips(name, paths):
+    """Append speech clips (files, or folders = their videos in name order) to the timeline: proxy, waveform, faces,
+    transcription and the automatic pause cut for each, then one rebuild of the joined files."""
+    files = []
+    for p in paths:
+        p = Path(p).expanduser().resolve()
+        if p.is_dir(): files += sorted(f for f in p.iterdir() if f.suffix.lower() in VIDEO_EXT)
+        elif p.is_file() and p.suffix.lower() in VIDEO_EXT: files.append(p)
+        else: raise FileNotFoundError(f"vídeo não encontrado: {p}")
+    if not files: raise FileNotFoundError("nenhum vídeo encontrado")
+    d = folder(name); added = 0
+    try:
+        _upgrade(name)
+        for i, src in enumerate(files):
+            st = load(name); cid = max(c["id"] for c in st["clips"]) + 1
+            cd = d / "clips" / str(cid); cd.mkdir(parents=True, exist_ok=True)
+            tag = f"Clipe {i + 1}/{len(files)} ({src.name})"
+            pct = lambda k: 5 + int(90 * (i + k) / len(files))
+            job(name, "prep", step=f"{tag}: prévia", pct=pct(0), done=False, error=None)
+            dur = _clip_proxy(src, cd / "preview.mp4", tuple(st["canvas"]))
+            job(name, "prep", step=f"{tag}: áudio e rostos", pct=pct(.15))
+            waveform(src, cd / "waveform.json")
+            subprocess.run([PY, str(HERE / "faces.py"), str(cd / "preview.mp4"), str(cd / "faces.json")], check=True, capture_output=True)
+            if _has_audio(src):
+                job(name, "prep", step=f"{tag}: transcrevendo", pct=pct(.3))
+                prompt = st.get("prompt") or ""
+                _run(tag, [PY, str(HERE / "transcribe.py"), str(src), str(cd / "words.json")] + (["--prompt", prompt] if prompt else []))
+                job(name, "prep", step=f"{tag}: propondo o corte", pct=pct(.85))
+                _write_json(cd / "phrases.json", [[0, dur]])
+                _run(tag, [PY, str(HERE / "plan_cut.py"), str(src), str(cd / "phrases.json"), str(cd / "keep.json")])
+            else:                                        # no audio (pure image): nothing to transcribe, keep it whole
+                _write_json(cd / "words.json", []); _write_json(cd / "keep.json", [[0, dur]])
+            off = sum(c["dur"] for c in st["clips"])
+            words = [dict(w, s=w["s"] + off, e=w["e"] + off) for w in json.loads((cd / "words.json").read_text(encoding="utf-8"))]
+            keep = [[max(0, a) + off, min(b, dur) + off] for a, b in json.loads((cd / "keep.json").read_text())]
+            segs = segments_from_keep(keep, off + dur, words, start=off)
+            def fn(s, cid=cid, src=src, off=off, dur=dur, segs=segs):
+                nxt = max((g["id"] for g in s["segments"]), default=0) + 1
+                for k, g in enumerate(segs): g["id"] = nxt + k
+                s["segments"] += segs
+                s["clips"].append(dict(id=cid, name=src.name, src=str(src), off=round(off, 3), dur=round(dur, 3)))
+                s["duration"] = round(off + dur, 3)
+            update(name, fn); added += 1
+        job(name, "prep", step="Juntando os clipes", pct=97)
+        _rebuild(name)
+        update(name, lambda s: None)                    # bump rev: the app reloads the joined preview
+        job(name, "prep", step="Pronto", pct=100, done=True, error=None)
+    except Exception as e:
+        if added:                                        # the clips that made it are in the state: keep the preview in step
+            try: _rebuild(name); update(name, lambda s: None)
+            except Exception: pass
+        job(name, "prep", step="Erro", done=True, error=str(e)[-400:]); raise
+
+
+def _run(tag, cmd):
+    """Run a helper script; on failure raise with its last error line (not the whole traceback)."""
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if r.returncode:
+        last = [ln for ln in (r.stderr or r.stdout).strip().splitlines() if ln.strip()][-1:] or ["erro desconhecido"]
+        raise RuntimeError(f"{tag}: {Path(cmd[1]).name} falhou — {last[0][-300:]}")
+
+
+def cut_list(st, kept):
+    """Kept segments in play order -> keep.json for cut.py: [[s, e]] (one video) or [[s, e, source]] (clips)."""
+    if not st.get("clips"): return [[g["s"], g["e"]] for g in kept]
+    out = []
+    for g in kept:                                       # a segment never spans two clips (each clip is cut on its own)
+        c = next((c for c in st["clips"] if c["off"] - .01 <= g["s"] < c["off"] + c["dur"]), st["clips"][-1])
+        a, b = max(0.0, g["s"] - c["off"]), g["e"] - c["off"]
+        if c.get("sdur"): b = min(b, c["sdur"])
+        if b - a > .02: out.append([round(a, 3), round(b, 3), c["src"]])
+    return out
 
 
 # ------------------------------------------------------------ media (B-roll clips) + B-roll windows
@@ -365,7 +513,7 @@ def export(name):
         kept = play_order(st)                            # play order (phrases may be reordered)
         if not kept: raise ValueError("nenhum trecho mantido no corte")
         job(name, "export", step="Cortando", pct=3, done=False, error=None, out=None)
-        _write_json(d / "keep.json", [[g["s"], g["e"]] for g in kept])
+        _write_json(d / "keep.json", cut_list(st, kept))
         cam = {**CAMERA, **st.get("camera", {})}; col = {**COLOR, **st.get("color", {})}
         vert_src = source_is_vertical(d)
         if fmt == "horizontal" and vert_src: fit, base = "blur", (FW, FH)              # whole picture on a blurred fill
@@ -517,6 +665,7 @@ if __name__ == "__main__":
         update(a.args[0], lambda s: s.update(order=[int(x) for x in a.args[1:]])); _show(a.args[0])
     elif a.cmd == "export": export(a.args[0])
     elif a.cmd == "media": print("mídia", add_media(a.args[0], a.args[1]))
+    elif a.cmd == "clips": add_clips(a.args[0], a.args[1:]); _show(a.args[0])
     elif a.cmd == "broll":
         x = a.args; add_broll(x[0], int(x[1]), float(x[2]), float(x[3]), float(x[4]) if len(x) > 4 else 0.0, x[5] if len(x) > 5 else "full"); _show(x[0])
     else: print(__doc__)

@@ -1,7 +1,9 @@
 """Cut a video down to a list of kept segments (jump cuts) with click-free audio.
 
 Usage: python cut.py <source> <keep.json> <out.mp4> [--size 1080x1920] [--crf 18] [--fit crop|blur|keep]
-keep.json: [[start, end], ...] in SOURCE seconds, in order.
+keep.json: [[start, end], ...] in SOURCE seconds, in order. Several clips (app projects with more than one video):
+[[start, end, "path/to/clip.mov"], ...] — <source> is then ignored; consecutive segments of the same clip are
+rendered together and the parts joined.
 Render twice: 1080x1920 crf 18 for review, 1440x2560 crf 14 as the base for render
 (zooms up to ~1.35x stay sharp). ffmpeg auto-applies phone rotation metadata.
 --fit crop (default) fills the frame; blur shows the whole picture over a blurred copy of itself
@@ -9,37 +11,70 @@ Render twice: 1080x1920 crf 18 for review, 1440x2560 crf 14 as the base for rend
 engine's virtual camera can choose the framing (e.g. follow a face across a horizontal shot).
 HDR sources (iPhone HLG, PQ) are tone mapped to Rec.709 automatically (hdr.py).
 """
-import argparse, json, subprocess
+import argparse, json, os, re, subprocess, tempfile
 import imageio_ffmpeg
 from hdr import tonemap
 
+FF = imageio_ffmpeg.get_ffmpeg_exe()
 ap = argparse.ArgumentParser()
 ap.add_argument("src"); ap.add_argument("keep"); ap.add_argument("out")
 ap.add_argument("--size", default="1080x1920"); ap.add_argument("--crf", default="18")
 ap.add_argument("--fit", choices=("crop", "blur", "keep"), default="crop")
 a = ap.parse_args()
 w, h = a.size.split("x")
-K = json.load(open(a.keep))
-tm = tonemap(a.src)                      # HLG/PQ phone footage → SDR (after scaling: cheaper)
-tm = "," + tm if tm else ""
-fl, cat = [], ""
-for i, (s, e) in enumerate(K):
-    d = e - s
-    cover = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h}"
-    if a.fit == "blur":
-        fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,split[b{i}][f{i}];[b{i}]{cover},boxblur=30:2,eq=brightness=-0.12{tm}[bg{i}];"
-                  f"[f{i}]scale={w}:{h}:force_original_aspect_ratio=decrease{tm}[fg{i}];"
-                  f"[bg{i}][fg{i}]overlay=(W-w)/2:(H-h)/2,setsar=1[v{i}]")
-    elif a.fit == "keep":
-        fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,scale={w}:{h}:force_original_aspect_ratio=increase:force_divisible_by=2{tm},setsar=1[v{i}]")
-    else:
-        fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,{cover}{tm},setsar=1[v{i}]")
-    fl.append(f"[0:a]atrim={s}:{e},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03[a{i}]")
-    cat += f"[v{i}][a{i}]"
-fl.append(f"{cat}concat=n={len(K)}:v=1:a=1[v][a]")
-subprocess.run([imageio_ffmpeg.get_ffmpeg_exe(), "-hide_banner", "-loglevel", "error", "-y", "-i", a.src,
-                "-filter_complex", ";".join(fl), "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium",
-                "-crf", a.crf, "-r", "30", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", a.out], check=True)
+K = json.load(open(a.keep, encoding="utf-8"))
+K = [k if len(k) == 3 else [k[0], k[1], a.src] for k in K]       # [s, e] (one video) or [s, e, source] (several clips)
+
+
+def render(src, segs, out, fit, w, h):
+    tm = tonemap(src)                        # HLG/PQ phone footage → SDR (after scaling: cheaper)
+    tm = "," + tm if tm else ""
+    probe = subprocess.run([FF, "-hide_banner", "-i", src], capture_output=True, text=True, encoding="utf-8", errors="replace").stderr
+    au = "0:a" if "Audio:" in probe else "1:a"                      # silent clip: take silence from anullsrc
+    fl, cat = [], ""
+    for i, (s, e) in enumerate(segs):
+        d = e - s
+        cover = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h}"
+        if fit == "blur":
+            fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,split[b{i}][f{i}];[b{i}]{cover},boxblur=30:2,eq=brightness=-0.12{tm}[bg{i}];"
+                      f"[f{i}]scale={w}:{h}:force_original_aspect_ratio=decrease{tm}[fg{i}];"
+                      f"[bg{i}][fg{i}]overlay=(W-w)/2:(H-h)/2,setsar=1[v{i}]")
+        elif fit == "keep":
+            fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,scale={w}:{h}:force_original_aspect_ratio=increase:force_divisible_by=2{tm},setsar=1[v{i}]")
+        else:
+            fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,{cover}{tm},setsar=1[v{i}]")
+        fl.append(f"[{au}]atrim={s}:{e},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03[a{i}]")
+        cat += f"[v{i}][a{i}]"
+    fl.append(f"{cat}concat=n={len(segs)}:v=1:a=1[v][a]")
+    subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-i", src, "-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo",
+                    "-filter_complex", ";".join(fl), "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "medium",
+                    "-crf", a.crf, "-r", "30", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2",
+                    "-movflags", "+faststart", out], check=True)
+
+
+runs = []                                     # consecutive segments of the same source render together
+for s_, e_, src in K:
+    if runs and runs[-1][0] == src: runs[-1][1].append((s_, e_))
+    else: runs.append((src, [(s_, e_)]))
+if len(runs) == 1:
+    render(runs[0][0], runs[0][1], a.out, a.fit, w, h)
+else:                                         # several clips: render each run, then join them (same codec settings)
+    tmp = tempfile.mkdtemp(prefix="cinex_cut_"); parts = []
+    for i, (src, segs) in enumerate(runs):
+        p = os.path.join(tmp, f"p{i:04d}.mp4")
+        if i == 0 or a.fit != "keep": render(src, segs, p, a.fit, w, h)
+        else: render(src, segs, p, "crop", w0, h0)    # "keep" size depends on the source: match the first run exactly
+        if i == 0:
+            e = subprocess.run([FF, "-hide_banner", "-i", p], capture_output=True, text=True, encoding="utf-8", errors="replace").stderr
+            w0, h0 = re.search(r"Video:.*?(\d{2,5})x(\d{2,5})", e).groups()
+        parts.append(p)
+    lst = os.path.join(tmp, "list.txt")
+    with open(lst, "w", encoding="utf-8") as f: f.writelines(f"file '{p.replace(os.sep, '/')}'\n" for p in parts)
+    subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", lst, "-c", "copy",
+                    "-movflags", "+faststart", a.out], check=True)
+    for p in parts + [lst]: os.remove(p)
+    os.rmdir(tmp)
+K = [(s_, e_) for s_, e_, _ in K]
 print("total", round(sum(e - s for s, e in K), 2), "s")
 # cuts.json: start of every segment in the CUT timeline (frame-accurate: each segment is rounded to whole
 # frames by ffmpeg at 30 fps). Projects load it for `cuts=` so zoom decisions happen exactly on real cuts.
