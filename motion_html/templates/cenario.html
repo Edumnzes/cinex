@@ -1,0 +1,19 @@
+<!-- cenario: 3D text stuck to a surface of the scene (wall, screen, floor). Rendered flat (1600x480) and warped onto the
+     tracked surface by the engine (reels_lib planes). Extruded letters + light edge; letters fall into place. -->
+<!--CSS-->
+#wrap { position: absolute; inset: 0; display: grid; place-items: center; perspective: 900px; }
+#word { font: 900 200px / 1 "Sans"; letter-spacing: -.03em; text-transform: uppercase; color: var(--accent); white-space: nowrap;
+        transform-style: preserve-3d;
+        /* extrusion: stacked offsets in a darker tone, then a soft contact shadow */
+        text-shadow: 1px 1px 0 rgba(0,0,0,.35), 2px 2px 0 rgba(0,0,0,.35), 3px 3px 0 rgba(0,0,0,.35), 4px 4px 0 rgba(0,0,0,.35),
+                     5px 5px 0 rgba(0,0,0,.35), 6px 6px 0 rgba(0,0,0,.35), 7px 7px 0 rgba(0,0,0,.35), 8px 8px 0 rgba(0,0,0,.35),
+                     12px 18px 28px rgba(0,0,0,.45); }
+#word span { display: inline-block; transform-origin: 50% 100%; }
+<!--BODY-->
+<div id="wrap" class="clip" data-start="0" data-duration="$DUR" data-track-index="0"><span id="word">$CHARS</span></div>
+<!--JS-->
+// fit to 94% of the sprite width
+const w = document.getElementById("word"), target = document.body.clientWidth * .94;
+w.style.fontSize = Math.min(200 * target / w.getBoundingClientRect().width, document.body.clientHeight * .78) + "px";
+tl.fromTo("#word span", { rotationX: -95, opacity: 0, y: -30 }, { rotationX: 0, opacity: 1, y: 0, duration: .7, ease: "back.out(1.5)", stagger: .06 }, 0);
+tl.to("#word", { opacity: 0, duration: .3, ease: "power2.in" }, OUT);

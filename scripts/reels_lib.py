@@ -398,7 +398,7 @@ class Reel:
                  max_accel=.6, lock_spread=(.14, .09), z_max=1.25, scene_bump=0.0,
                  caption_style="hormozi", accent=YEL, look="none", flashes=(), sfx=(), sfx_dir=None,
                  jumpcuts="auto", cuts=(), jump_zoom=1.07, min_face=40, hide_captions=(), broll=(),
-                 caption_anim="group", correct=True, overlays=()):
+                 caption_anim="group", correct=True, overlays=(), planes=()):
         # cuts: EVERY keep.json join in the cut timeline. jumpcuts="auto": the engine decides per cut whether a
         # zoom step is needed (visible jump on the same framing) or not (framing already changes, close-up,
         # B-roll, graphic entering, too soon) — see `python project.py cuts`. A list forces those cuts.
@@ -448,6 +448,11 @@ class Reel:
                 self.overlays.append(o)
         self.flashes, self.sfx = list(flashes), list(sfx)
         self._matte = None                       # created on first use by an overlay with atras=True
+        # planes: text stuck to the scene — dict(src=alpha .mov, t0, t1, quads={frame: [[x,y]*4] in SOURCE px}, atras=True)
+        # (plane_track.track). Warped onto the source frame BEFORE the virtual camera, so zoom/reframe move it with the scene.
+        self.planes = []
+        for pl in planes:
+            pl = dict(pl); pl["clip"] = _Overlay(pl["src"], "video", _probe_size(pl["src"])[0]); self.planes.append(pl)
         self.sfx_dir = Path(sfx_dir) if sfx_dir else Path.home() / "reels-sfx"
         self.src = src
         probe = subprocess.run([FFM, "-hide_banner", "-i", src], capture_output=True, text=True).stderr
@@ -952,7 +957,32 @@ class Reel:
             a = o.get("a", 1.0) * min(1, (t - o["t0"]) / .08, (o["t1"] - t) / .08)   # 2-3 frame soft edges
             paste(ov, im, o.get("cx", W / 2), cy, 1.0, a)
 
+    def _planes(self, frame, t):
+        """Warp each active plane's sprite onto its tracked quad (perspective), on the source frame; the person goes
+        back on top (matte) so they pass in front of the text."""
+        act = [pl for pl in self.planes if pl["t0"] <= t < pl["t1"]]
+        if not act: return frame
+        out = frame.astype(np.float32); n = int(round(t * FPS)); hit = False
+        for pl in act:
+            q = pl["quads"].get(n) or pl["quads"].get(str(n))
+            sp = pl["clip"].frame(t - pl["t0"])
+            if q is None or sp is None: continue
+            q = np.float32(q); sw, sh = sp.size
+            x0, y0 = np.floor(q.min(0)).astype(int); x1, y1 = np.ceil(q.max(0)).astype(int)
+            x0, y0 = max(0, x0), max(0, y0); x1, y1 = min(self.SW, x1), min(self.SH, y1)
+            if x1 - x0 < 4 or y1 - y0 < 4: continue
+            M = cv2.getPerspectiveTransform(np.float32([[0, 0], [sw, 0], [sw, sh], [0, sh]]), q - np.float32([x0, y0]))
+            wp = cv2.warpPerspective(np.asarray(sp), M, (x1 - x0, y1 - y0), flags=cv2.INTER_LINEAR).astype(np.float32)
+            a = wp[..., 3:4] / 255 * min(1, (t - pl["t0"]) / .08, (pl["t1"] - t) / .08)
+            out[y0:y1, x0:x1] = out[y0:y1, x0:x1] * (1 - a) + wp[..., :3] * a; hit = True
+        if not hit: return frame
+        if any(pl.get("atras", True) for pl in act):
+            if self._matte is None: self._matte = _Matte()
+            m = self._matte.alpha(frame, t); out = out * (1 - m) + frame.astype(np.float32) * m
+        return out.astype(np.uint8)
+
     def compose(self, frame, t, debug=False):
+        frame = self._planes(frame, t)
         img = self.bg_fx(self._broll_full(grade(self.color_correct(self.camera(frame, t), t), self.look), t), t)
         if any(o.get("atras") and o["t0"] <= t < o["t1"] for o in self.overlays):   # text BEHIND the person
             if self._matte is None: self._matte = _Matte()

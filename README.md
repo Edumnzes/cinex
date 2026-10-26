@@ -335,8 +335,9 @@ Detalhes em [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
 
 ## Limitações
 
-- Texto atrás da pessoa, texto "preso" no cenário em 3D e máscara do sujeito exigem Premiere,
-  After Effects ou CapCut.
+- Texto atrás da pessoa e texto 3D no cenário funcionam só no motor HTML e com o vídeo recortado (sem fundo
+  desfocado); o rastreamento precisa de textura no fundo perto da superfície e não segue superfícies que somem
+  da tela. Recortes de máscara mais complexos (objetos, rotoscopia) ainda exigem Premiere, After Effects ou CapCut.
 - A câmera virtual só simula ângulos (zoom/enquadramento); ângulos reais exigem outra gravação.
 - LUTs `.cube` e templates `.mogrt/.aep` não são aplicados pelo motor.
 

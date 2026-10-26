@@ -20,7 +20,8 @@ Copie o HTML para um projeto HyperFrames (com a pasta `fonts/` ao lado) e rode:
 ## Modelos usados na exportação (`templates/`)
 `_base.html` (fontes, GSAP local, tela transparente do tamanho do elemento) + um arquivo por tipo, com as seções
 `<!--CSS-->`, `<!--BODY-->`, `<!--JS-->` e marcadores `$TEXT`, `$TEXT2`, `$WORDS`, `$N`, `$DUR`, `$OUT`, `$ACCENT`:
-titulo, topico, nome, citacao, frase e cta (seguir/salvar). `scripts/motion_html.py` preenche, renderiza em MOV com
+titulo, topico, nome, citacao, frase, cta (seguir/salvar), gigante (palavra na largura toda, atrás da pessoa) e
+cenario (letras em relevo num sprite plano de 1600×480 que o motor deforma na superfície rastreada). `scripts/motion_html.py` preenche, renderiza em MOV com
 alfa (~10 s por elemento) e guarda em cache por conteúdo (`~/reels/<projeto>/motion_cache/`). Na exportação do app,
 cada elemento vira uma sobreposição posicionada pelo motor longe do rosto; se o HyperFrames não estiver instalado ou
 um elemento falhar, ele usa o motion clássico (`formats.py`). No app: aba Motion › Motor › HTML / Clássico.

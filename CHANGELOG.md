@@ -71,6 +71,12 @@
   com elemento atrás) e monta as camadas vídeo → elemento atrás → pessoa → elementos da frente → legenda, com
   suavização entre quadros. Novo elemento **Palavra gigante** (modelo HTML que ocupa a largura e fica na altura da
   cabeça) e a opção **Atrás da pessoa** para qualquer elemento do motor HTML.
+- **Texto 3D no cenário.** Novo elemento **Texto no cenário (3D)**: no app, marque a superfície (parede, tela, chão)
+  com 4 cliques no preview e veja o texto em perspectiva. Na exportação, o texto é renderizado com letras em relevo
+  (modelo `cenario`), rastreado na superfície (`scripts/plane_track.py`: pontos SIFT do fundo comparados ao quadro
+  marcado, pessoas excluídas pela máscara, homografia RANSAC e suavização), deformado na perspectiva antes da câmera
+  virtual e escondido atrás da pessoa quando ela passa na frente. Sem marcação (ou com fundo desfocado), vira
+  elemento comum. O preview não recorta a pessoa; a exportação recorta.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

@@ -246,7 +246,7 @@ def raw_to_cut(t, segs, end=False):
 MOTIONS = {
     "titulo": "Título / capítulo", "topico": "Tópico numerado", "nome": "Nome de quem fala", "citacao": "Citação",
     "frase": "Frase grande", "seguir": "Chamada: seguir", "salvar": "Chamada: salvar",
-    "gigante": "Palavra gigante (atrás da pessoa)",
+    "gigante": "Palavra gigante (atrás da pessoa)", "cenario": "Texto no cenário (3D)",
 }
 
 
@@ -259,6 +259,7 @@ def motion_fn(F, m, c0, c1, accent, n, total):
     if k == "citacao": return lambda ov, t: F.quote_card(ov, t, c0, c1, tx, t2, accent)
     if k == "frase": return lambda ov, t: F.big_phrase(ov, t, c0, c1, tx, [w for w in t2.replace(",", " ").split() if w], accent)
     if k == "gigante": return lambda ov, t: F.big_phrase(ov, t, c0, c1, tx.upper(), tx.split(), accent)   # classic: no matte
+    if k == "cenario": return lambda ov, t: F.big_phrase(ov, t, c0, c1, tx.upper(), tx.split(), accent)   # classic: not tracked
     if k == "seguir": return lambda ov, t: F.cta_follow(ov, t, c0, c1, tx or "Siga para mais", accent)
     if k == "salvar": return lambda ov, t: F.cta_save(ov, t, c0, c1, tx or "Salve para não esquecer", accent)
     raise ValueError(f"motion desconhecido: {k}")
@@ -338,7 +339,7 @@ def export(name):
         import formats as F                              # after R.W/R.H: it copies the frame size on import
         acc = rgba(c["accent"]); ms = sorted(st.get("motions", []), key=lambda m: m["t0"]); fns, hide, sfx = [], [], []
         tops = [m for m in ms if m["type"] == "topico"]
-        ovs = []                                         # motion rendered from HTML (motion_html.py), composited as overlays
+        ovs, planes = [], []                             # HTML motion (motion_html.py): overlays, and planes stuck to the scene
         use_html = st.get("motion_engine", "html") == "html" and ms
         if use_html:
             import motion_html as MH
@@ -351,7 +352,20 @@ def export(name):
                 else: continue                            # entirely inside a removed stretch
             n = tops.index(m) + 1 if m in tops else 0
             done = False
-            if use_html:
+            if use_html and m["type"] == "cenario":         # 3D text on a tracked surface (plane_track.py)
+                if not m.get("quad") or fit == "blur":
+                    say(name, "Texto no cenário sem superfície marcada (ou vídeo em pé no 16:9): usei o motion clássico."); 
+                else:
+                    job(name, "export", step=f"Rastreando a superfície ({m.get('text', '')})", pct=20)
+                    try:
+                        import plane_track as PT
+                        mov, _ = MH.render(m, FW, FH, c["accent"], c1 - c0, cache=d / "motion_cache")
+                        tm = raw_to_cut(m.get("tmark", m["t0"]), kept) if any(g["s"] <= m.get("tmark", -1) < g["e"] for g in kept) else c0
+                        qs = PT.track(d / "cut.mp4", min(max(tm, c0), c1), c0, c1, m["quad"])
+                        planes.append(dict(src=str(mov), t0=c0, t1=c1, quads=qs, atras=bool(m.get("atras", True)))); done = True
+                    except Exception as e:
+                        say(name, f"Texto no cenário falhou, usei o clássico: {str(e)[:160]}")
+            if use_html and not done and m["type"] != "cenario":
                 job(name, "export", step=f"Motion {len(ovs) + len(fns) + 1}/{len(ms)} (HTML)", pct=20)
                 try:
                     mov, _ = MH.render(m, FW, FH, c["accent"], c1 - c0, n, len(tops), cache=d / "motion_cache")
@@ -365,7 +379,7 @@ def export(name):
             if m.get("sfx"): sfx.append((c0, m["sfx"], -12))
         for s in st.get("sfx", []):
             if any(g["s"] <= s["t"] < g["e"] for g in kept): sfx.append((raw_to_cut(s["t"], kept), s["cat"], float(s.get("gain", -12))))
-        reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, z, z, R.eio)], motions=fns, overlays=ovs, sfx=sorted(sfx), hide_captions=hide,
+        reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, z, z, R.eio)], motions=fns, overlays=ovs, planes=planes, sfx=sorted(sfx), hide_captions=hide,
                       ranges=[(0, dur + 1, "big" if cam["follow"] else None)],
                       keywords=st.get("keywords", []), fix=st.get("fix", {}), caption_style="app", accent=rgba(c["accent"]),
                       look=col["look"] if col["look"] in R.GRADES else "none", jumpcuts="auto" if cam["punch"] else [], cuts=cuts,

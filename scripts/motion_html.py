@@ -22,8 +22,8 @@ CLI = HF / "node_modules" / "hyperframes" / "bin" / "hyperframes.mjs"
 GSAP = next(iter(sorted((HF / "node_modules" / "hyperframes" / "dist" / "vendor" / "npm").glob("gsap@*/dist/gsap.min.js"))), None) \
     if (HF / "node_modules").exists() else None
 WINGET = Path(os.environ.get("LOCALAPPDATA", "")) / "Microsoft" / "WinGet" / "Links"
-SIZES = {"gigante": 560, "titulo": 200, "topico": 340, "nome": 280, "citacao": 600, "frase": 640, "seguir": 240, "salvar": 240}
-PREFER = {"gigante": 640, "titulo": 330, "topico": 480, "nome": 1110, "citacao": 520, "frase": 820, "seguir": 420, "salvar": 420}   # 9:16 scale
+SIZES = {"cenario": 480, "gigante": 560, "titulo": 200, "topico": 340, "nome": 280, "citacao": 600, "frase": 640, "seguir": 240, "salvar": 240}
+PREFER = {"cenario": 640, "gigante": 640, "titulo": 330, "topico": 480, "nome": 1110, "citacao": 520, "frase": 820, "seguir": 420, "salvar": 420}   # 9:16 scale
 ICONS = {
     "seguir": '<svg viewBox="0 0 24 24" fill="none" stroke="#0b0b0b" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
     "salvar": '<svg viewBox="0 0 24 24" fill="none" stroke="#0b0b0b" stroke-width="2.6" stroke-linejoin="round"><path d="M6 3h12v18l-6-4-6 4z"/></svg>',
@@ -60,6 +60,7 @@ def _words(text, hl=()):
 def build(m, FW, FH, accent, dur, n=0, total=0):
     """HTML of one element (also used by tests / previews)."""
     kind = m["type"]; s = min(FW, FH) / 1080; H = int(round(SIZES[kind] * s / 2) * 2)
+    if kind == "cenario": FW, H, s = 1600, 480, 1.0      # flat sprite, warped onto the tracked surface by the engine
     text, text2 = m.get("text", "") or "", m.get("text2", "") or ""
     if kind == "seguir": text = text or "Siga para mais"
     if kind == "salvar": text = text or "Salve para não esquecer"

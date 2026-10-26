@@ -12,6 +12,7 @@ const MT = {   // type: [label, default seconds, default text, default text2, y 
   seguir: ["Siga", 3, "Siga para mais", "", 420],
   salvar: ["Salve", 3, "Salve para não esquecer", "", 420],
   gigante: ["Palavra gigante", 2.5, "75%", "", 640],
+  cenario: ["Texto no cenário (3D)", 3, "Fio B", "", 640],
 };
 const SFX_GAIN = -12;
 let fxCats = {}, selM = null, selS = null, fxLastT = 0, fxKey = "";
@@ -55,7 +56,12 @@ function renderMotionEditor() {
   if (m.type === "nome") field("Cargo", txt("text2", "opcional"));
   if (m.type === "citacao") field("Autor", txt("text2", "opcional"));
   if (m.type === "frase") field("Destacar", txt("text2", "palavras na cor de destaque"));
-  { const cb = el("input"); cb.type = "checkbox"; cb.checked = m.atras ?? m.type === "gigante";
+  if (m.type === "cenario") {
+    const b = el("button", "secondary", m.quad ? "Marcar de novo" : "Marcar superfície (4 cliques)"); b.onclick = () => startMarking(m);
+    const st_ = el("span", "muted small", m.quad ? ` marcada em ${tcode(m.tmark || m.t0)}` : " não marcada");
+    const w = el("div"); w.append(b, st_); field("Superfície", w);
+  }
+  { const cb = el("input"); cb.type = "checkbox"; cb.checked = m.atras ?? (m.type === "gigante" || m.type === "cenario");
     cb.onchange = () => { m.atras = cb.checked; renderFx(); fxSave(); };
     const lab = el("label", "check small"); lab.append(cb, document.createTextNode(" recorta a pessoa por cima (aparece na exportação, motor HTML)"));
     field("Atrás da pessoa", lab); }
@@ -164,7 +170,8 @@ function fxHidesCaptions(t) { return (st.motions || []).some((m) => (m.type === 
 function fxFrame(t, playing) {
   if (!st) return;
   const box = $("#phone"), [FW, FH] = frameSize(), k = box.clientWidth / FW, acc = st.captions.accent;
-  const act = (st.motions || []).filter((m) => t >= m.t0 && t < m.t1);
+  const all = (st.motions || []).filter((m) => t >= m.t0 && t < m.t1), act = all.filter((m) => m.type !== "cenario");
+  drawPlanes(t, all.filter((m) => m.type === "cenario")); if (marking) drawMarks();
   const key = act.map((m) => m.id + m.text + m.text2 + m.type).join("|") + box.clientWidth + acc;
   if (key !== fxKey) {
     fxKey = key;

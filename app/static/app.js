@@ -482,7 +482,7 @@ function renderAll() {
 }
 
 async function init() {
-  bindCaptionUI(); bindLookUI(); bindFx(); bindReview(); bindMarca(); bindResizers(); applyLayout();
+  bindCaptionUI(); bindLookUI(); bindFx(); bindReview(); bindMarca(); bindPlane(); bindResizers(); applyLayout();
   for (const b of document.querySelectorAll(".ptabs button[data-tab]")) b.onclick = () => tab(b.dataset.tab);
   for (const b of $("#fmtseg").children) b.onclick = () => { if (!st) return; st.format = b.dataset.f; renderFormat(); save({ format: st.format }); };
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };

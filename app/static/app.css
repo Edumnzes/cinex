@@ -172,6 +172,12 @@ body.resizing video { pointer-events: none; }
 .mg-citacao small { display: inline-block; margin-top: .5em; font-family: "cx-sans", system-ui; font-style: normal; font-size: .42em; padding: .4em 1em; border-radius: 999px; background: rgba(11,17,32,.91); color: var(--acc); }
 .mg-frase { width: 81.5%; white-space: normal; font-weight: 900; paint-order: stroke fill; -webkit-text-stroke: .18em #000; }
 .mg-frase .hl { color: var(--acc); }
+.planes, .planemarks { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.planetxt { position: absolute; left: 0; top: 0; transform-origin: 0 0; display: grid; place-items: center; font: 900 160px/1 "cx-sans", system-ui;
+  letter-spacing: -.03em; white-space: nowrap; text-shadow: 3px 3px 0 rgba(0,0,0,.35), 6px 6px 0 rgba(0,0,0,.35), 10px 16px 24px rgba(0,0,0,.4); }
+.planemarks i { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px #fff; }
+.phone.marking { cursor: crosshair; } .phone.marking video { cursor: crosshair; }
+.planehint { position: absolute; left: 8px; right: 8px; bottom: 8px; padding: 6px 8px; border-radius: 6px; background: rgba(0,0,0,.75); color: #fff; font-size: 12px; text-align: center; }
 .mg-gigante { font-weight: 900; text-transform: uppercase; letter-spacing: -.04em; color: var(--acc); line-height: .9; }
 .ph-empty { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
 .cap { position: absolute; left: 7.4%; right: 7.4%; transform: translateY(-50%); text-align: center; pointer-events: none; line-height: 1.15; }
