@@ -81,6 +81,11 @@
   (Começar, Corte, Estilo, Elementos, Revisão, Publicar), chat com a IA sempre ao lado como o meio principal de
   mudança, sugestões por página, prévia do vídeo em cada passo e envio do vídeo arrastando para a página. O editor
   com linha do tempo continua em `/editor` (Editor completo).
+- **Visual Apple + Notion:** a estrutura continua a do Notion (páginas, avisos, listas, seções que abrem); o acabamento
+  passa a ser o da Apple: fonte do sistema, barra lateral translúcida com o passo atual em azul (como no Finder),
+  cartões e listas agrupadas arredondadas (como nos Ajustes), botões em pílula, caixas de seleção redondas, chat em
+  balões (como no iMessage) e transições suaves entre páginas. O editor completo ganhou o mesmo acabamento.
+  O chat agora só é redesenhado quando chega mensagem nova (antes era refeito a cada 1,5 s).
 - **Revisão geral (correções):**
   - Palavras sumiam da legenda: o Whisper estica o tempo da palavra por cima da pausa seguinte, e a pausa
     cortada levava a palavra junto (só na legenda; o áudio estava certo). Agora o tempo de cada palavra é ajustado

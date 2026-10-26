@@ -1,25 +1,29 @@
-/* Cinex — Premiere-style workspace (panels, tracks, timecode) with Notion's calm palette and type. */
+/* Cinex — full editor: Premiere-style workspace (panels, tracks, timecode), Notion's calm structure, Apple's finish
+   (system type, macOS dark greys and blue, rounded panels, pill buttons, translucent top bar). */
 :root {
-  --bg: #191919; --panel: #202020; --panel2: #252525; --hover: #2c2c2c; --line: #2f2f2f; --line2: #3a3a3a;
-  --text: rgba(255, 255, 255, .86); --muted: rgba(255, 255, 255, .46); --faint: rgba(255, 255, 255, .28);
-  --accent: #2383e2; --accent-h: #3a91e6; --accent-soft: rgba(35, 131, 226, .16);
+  --bg: #000000; --panel: #1c1c1e; --panel2: #2c2c2e; --hover: rgba(255, 255, 255, .07); --line: rgba(255, 255, 255, .08); --line2: rgba(255, 255, 255, .15);
+  --text: #f5f5f7; --muted: #98989d; --faint: #636366;
+  --accent: #0a84ff; --accent-h: #409cff; --accent-soft: rgba(10, 132, 255, .2);
   --clip: #3d3a63; --clip-b: #6c65c7; --clip-t: #d9d6ff;          /* video clips (Premiere violet) */
   --cap: #2b4b3f; --cap-b: #4fa785;                                 /* caption clips */
   --wave: #4fa785; --wave-off: #3f3f3f;                             /* audio (Premiere green) */
-  --head: 72px; --r: 6px;
+  --head: 72px; --r: 8px; --ease: cubic-bezier(.25, .1, .25, 1);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
-  font: 14px/1.5 ui-sans-serif, -apple-system, "Segoe UI Variable Text", "Segoe UI", Helvetica, Arial, sans-serif; }
+  font: 14px/1.47 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Inter, Helvetica, Arial, sans-serif;
+  letter-spacing: -.01em; -webkit-font-smoothing: antialiased; }
 button, input, select { font: inherit; color: inherit; }
-button { cursor: pointer; border: 0; border-radius: var(--r); background: transparent; padding: 5px 10px; transition: background .12s; }
+button { cursor: pointer; border: 0; border-radius: var(--r); background: transparent; padding: 5px 10px; transition: background .2s var(--ease), transform .12s var(--ease); }
+button:active:not(:disabled) { transform: scale(.97); }
 button:hover:not(:disabled) { background: var(--hover); }
 button:disabled { opacity: .4; cursor: default; }
-button.primary { background: var(--accent); color: #fff; font-weight: 500; }
+button.primary { background: var(--accent); color: #fff; font-weight: 600; border-radius: 980px; padding: 6px 16px; }
 button.primary:hover:not(:disabled) { background: var(--accent-h); }
-button.secondary { border: 1px solid var(--line2); }
+button.secondary { background: rgba(118, 118, 128, .24); border-radius: 980px; }
+button.secondary:hover:not(:disabled) { background: rgba(118, 118, 128, .34); }
 button.wide { width: 100%; padding: 8px; }
 input, select { background: transparent; border: 1px solid transparent; border-radius: var(--r); padding: 4px 6px; min-width: 0; }
 input:hover, select:hover { background: var(--hover); }
@@ -39,9 +43,10 @@ input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .timecode.muted { color: var(--muted); }
 
 /* ---------- top bar (Notion breadcrumb) */
-.top { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 12px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 12px; background: rgba(28, 28, 30, .72); border-bottom: 1px solid var(--line);
+  -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); }
 .crumbs { display: flex; align-items: center; gap: 6px; }
-.logo { width: 20px; height: 20px; border-radius: 5px; background: linear-gradient(135deg, #6c65c7, #2383e2); }
+.logo { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(145deg, #0a84ff, #5e5ce6 60%, #bf5af2); }
 .crumb { font-weight: 500; }
 .sep { color: var(--faint); }
 .crumb-select { font-weight: 500; max-width: 260px; }
@@ -53,14 +58,14 @@ input[type=color]::-webkit-color-swatch { border: 0; border-radius: 50%; }
 .banner.err { background: rgba(224, 62, 62, .14); color: #f0a3a3; }
 
 /* ---------- workspace (Premiere panel layout) */
-.workspace { display: grid; gap: 4px; padding: 4px; height: calc(100% - 46px);
+.workspace { display: grid; gap: 6px; padding: 6px; height: calc(100% - 46px);
   grid-template-columns: var(--c-insp, 300px) minmax(0, 1fr) var(--c-chat, 290px); grid-template-rows: minmax(0, 1fr) var(--r-tl, 300px);
   grid-template-areas: "insp mon chat" "tl tl tl"; }
 /* Mobile layout: the 9:16 monitor stands full height on the left; the tools share the rest. */
 body.lay-mobile .workspace {
   grid-template-columns: var(--c-mon, calc((100vh - 170px) * 9 / 16 + 24px)) var(--c-insp, 300px) minmax(0, 1fr);
   grid-template-areas: "mon insp chat" "mon tl tl"; }
-.panel { position: relative; background: var(--panel); border-radius: 8px; min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+.panel { position: relative; background: var(--panel); border-radius: 12px; min-height: 0; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 /* resize handles on panel edges (drag; double-click = default size) */
 .rz { position: absolute; z-index: 6; background: transparent; transition: background .12s; }
 .rz:hover, .rz.drag { background: var(--accent); }
@@ -196,7 +201,7 @@ body.resizing video { pointer-events: none; }
 /* ---------- comments (Notion) */
 .msgs { flex: 1; overflow: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 14px; min-height: 0; }
 .msg { display: grid; grid-template-columns: 24px 1fr; gap: 0 8px; font-size: 13px; }
-.msg .av { grid-row: span 2; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #fff; background: linear-gradient(135deg, #6c65c7, #2383e2); }
+.msg .av { grid-row: span 2; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; color: #fff; background: linear-gradient(145deg, #0a84ff, #5e5ce6 60%, #bf5af2); }
 .msg.user .av { background: #5a5a5a; }
 .msg .who { font-weight: 500; font-size: 13px; } .msg .who small { color: var(--faint); font-weight: 400; margin-left: 6px; }
 .msg .txt { white-space: pre-wrap; color: var(--text); }

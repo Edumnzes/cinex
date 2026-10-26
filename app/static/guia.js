@@ -382,19 +382,25 @@ async function render() {
   const s = STEPS.find((x) => x.id === step), box = $("#gpage");
   if (document.activeElement && box.contains(document.activeElement) && document.activeElement.matches("input, textarea")) return;   // keep what's being typed
   const out = el("div"); await PAGES[step](out); box.replaceChildren(...out.childNodes);
+  if (box.dataset.step !== step) { box.dataset.step = step; box.classList.remove("enter"); void box.offsetWidth; box.classList.add("enter"); }   // page slide-in
   const showPv = s.pv && st && st.segments.length;
   $("#gpv").hidden = !showPv; if (showPv) sizePreview();
 }
 
 // ------------------------------------------------------------ chat
+let chatKey = "", chatShown = 0;
 function renderChat() {
   const box = $("#gmsgs"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   const chat = (st && st.chat) || [];
+  const key = (name || "") + "|" + chat.length + "|" + ((chat.at(-1) || {}).t || "");
+  if (key !== chatKey) {                                  // rebuild only when a message arrived (polling runs every 1.5 s)
+  const fresh = key.split("|")[0] === chatKey.split("|")[0] ? chatShown : chat.length;   // animate only the new ones
+  chatKey = key; chatShown = chat.length;
   if (!name) {
     box.replaceChildren(el("div", "empty", "Oi! Eu sou o Cinex. Envie seu vídeo ao lado e eu cuido da edição. Depois é só me dizer o que quer mudar, escrevendo ou falando."));
   } else {
-    const msgs = chat.map((m) => {
-      const u = m.who === "user", d = el("div", "msg" + (u ? " user" : ""));
+    const msgs = chat.map((m, i) => {
+      const u = m.who === "user", d = el("div", "msg" + (u ? " user" : "") + (i >= fresh ? " new" : ""));
       const who = el("div", "who", u ? "Você" : "Cinex"); who.append(el("small", "", (m.t || "").slice(11, 16)));
       const body = el("div"); body.append(who, el("div", "txt", m.text));
       d.append(el("div", "av", u ? "V" : "C"), body); return d;
@@ -402,6 +408,7 @@ function renderChat() {
     box.replaceChildren(...(msgs.length ? msgs : [el("div", "empty", "Peça qualquer ajuste aqui, do seu jeito: “tira a parte em que eu gaguejo”, “legenda maior”, “coloca o preço na tela”.")]));
   }
   if (atEnd) box.scrollTop = box.scrollHeight;
+  }
   // waiting for the AI
   const last = chat.at(-1), wait = name && last && last.who === "user";
   const stt = $("#gstatus");
