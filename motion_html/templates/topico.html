@@ -1,0 +1,22 @@
+<!-- topico: numbered point — serif italic number, bold text, progress hairline. H=330 -->
+<!--CSS-->
+#card { position: absolute; left: 7%; right: 7%; top: 50%; transform: translateY(-50%); display: flex; align-items: center;
+        gap: calc(34px * var(--s)); padding: calc(34px * var(--s)) calc(44px * var(--s)); border-radius: calc(30px * var(--s));
+        background: var(--plate); border: 1px solid var(--line); overflow: hidden; }
+#num { font-size: calc(130px * var(--s)); line-height: .9; color: var(--accent); min-width: 1.1ch; text-align: center; }
+#txt { font: 800 calc(52px * var(--s)) / 1.16 "Sans"; letter-spacing: -.01em; }
+#txt .mask { margin-right: 0; }
+#bar { position: absolute; left: 0; bottom: 0; height: calc(6px * var(--s)); width: 100%; background: var(--line); }
+#bar i { display: block; height: 100%; width: 0; background: var(--accent); }
+<!--BODY-->
+<div id="card" class="clip" data-start="0" data-duration="$DUR" data-track-index="0">
+  <span class="mask"><span id="num" class="serif">$N</span></span>
+  <div id="txt">$WORDS</div>
+  <div id="bar"><i></i></div>
+</div>
+<!--JS-->
+tl.fromTo("#card", { clipPath: "inset(0 100% 0 0 round 30px)", x: -20 }, { clipPath: "inset(0 0% 0 0 round 30px)", x: 0, duration: .6, ease: "power3.out" }, 0);
+tl.fromTo("#num", { yPercent: 100 }, { yPercent: 0, duration: .7, ease: "back.out(1.6)" }, .2);
+tl.fromTo("#txt .mask > span", { yPercent: 110 }, { yPercent: 0, duration: .5, ease: "power3.out", stagger: .045 }, .3);
+tl.fromTo("#bar i", { width: "$FROM%" }, { width: "$TO%", duration: .8, ease: "power2.inOut" }, .5);
+tl.to("#card", { x: -30, opacity: 0, duration: .32, ease: "power2.in" }, OUT);

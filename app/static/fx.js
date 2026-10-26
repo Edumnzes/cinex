@@ -16,7 +16,7 @@ const SFX_GAIN = -12;
 let fxCats = {}, selM = null, selS = null, fxLastT = 0, fxKey = "";
 const fxAudio = {};
 
-function fxDefaults() { st.motions = st.motions || []; st.sfx = st.sfx || []; }
+function fxDefaults() { st.motions = st.motions || []; st.sfx = st.sfx || []; st.motion_engine = st.motion_engine || "html"; }
 const nextId = (list) => list.reduce((m, x) => Math.max(m, x.id || 0), 0) + 1;
 const fxSave = () => save({ motions: st.motions, sfx: st.sfx });
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -33,6 +33,7 @@ function bindFx() {
     return b;
   }));
   api("/api/sfx").then((c) => { fxCats = c; renderSfxCats(); }).catch(() => {});
+  for (const b of $("#mengine").children) b.onclick = () => { if (!st) return; st.motion_engine = b.dataset.e; renderFx(); save({ motion_engine: st.motion_engine }); };
 }
 
 function renderMotionEditor() {
@@ -130,6 +131,7 @@ function renderFx() {
          () => { selS = s.id; selM = null; tab("sons"); $("#video").currentTime = Math.max(0, s.t - .5); });
     return b;
   }));
+  for (const b of $("#mengine").children) b.classList.toggle("on", b.dataset.e === st.motion_engine);
   renderMotionEditor(); renderSfxEditor(); renderSfxWarn(); fxKey = "";
 }
 

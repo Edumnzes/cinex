@@ -1,0 +1,14 @@
+<!-- frase: one big phrase, words rise out of masks; highlighted words in the accent with an underline sweep. H=640 -->
+<!--CSS-->
+#wrap { position: absolute; left: 7%; right: 7%; top: 50%; transform: translateY(-50%); text-align: center;
+        font: 900 calc(92px * var(--s)) / 1.08 "Sans"; letter-spacing: -.02em; text-shadow: 0 12px 36px rgba(0,0,0,.45); }
+#wrap .mask { margin: 0; }
+.hl { color: var(--accent); position: relative; }
+.hl::after { content: ""; position: absolute; left: 0; right: 0; bottom: .02em; height: .08em; border-radius: .04em; background: var(--accent);
+             transform: scaleX(var(--u, 0)); transform-origin: 0 50%; }
+<!--BODY-->
+<div id="wrap" class="clip" data-start="0" data-duration="$DUR" data-track-index="0">$WORDS</div>
+<!--JS-->
+tl.fromTo("#wrap .mask > span", { yPercent: 115, rotationX: -40 }, { yPercent: 0, rotationX: 0, duration: .6, ease: "back.out(1.4)", stagger: .07 }, 0);
+tl.fromTo(".hl", { "--u": 0 }, { "--u": 1, duration: .45, ease: "power2.out", stagger: .1 }, "-=.1");
+tl.to("#wrap", { opacity: 0, scale: .96, duration: .35, ease: "power2.in" }, OUT);

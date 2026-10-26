@@ -40,7 +40,7 @@ def marca_info(h):
     return dict(handle=h, arquivos=st, marca=brand.load_brand(h) if st["marca.json"] else None, perfil_atualizado=head,
                 referencias=refs, estilo_nicho=f"nicho_{h}" if prof.exists() else None, desempenho=rep,
                 analisando=(d / ".analisando").exists())
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca"}
+EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca", "motion_engine"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 

@@ -98,7 +98,7 @@ brain**: you propose the cut, answer the app's chat and change the project. Curr
 (`camera`: follow, zoom 1.0–1.25, punch on cuts), colour (`color`: correct, look), motion (`motions`: [{id, type
 (titulo|topico|nome|citacao|frase|seguir|salvar), t0, t1 in raw seconds, text, text2, sfx}]) and SFX (`sfx`:
 [{id, t, cat, gain}], categories of ~/reels-banco/sfx; manual: ~2 per 10 s, key events only)
-and phrase order (`order`: kept segment ids in play order; `app_project.py order <name> <id> ...`; missing ids
+motion engine (`motion_engine`: "html" = HyperFrames templates in motion_html/templates, "classico" = formats.py) and phrase order (`order`: kept segment ids in play order; `app_project.py order <name> <id> ...`; missing ids
 follow their source predecessor). The app has a live preview: export only when
 the user asks for the file.
 1. Start the server once, in the background: `python app/server.py` → http://127.0.0.1:8765 (local only).

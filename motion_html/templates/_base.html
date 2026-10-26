@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=$W, height=$H" />
+    <script src="gsap.min.js"></script>
+    <style>
+      @font-face { font-family: "Serif"; src: url("fonts/SerifItalic.ttf"); font-style: italic; font-weight: 700; }
+      @font-face { font-family: "Sans"; src: url("fonts/Montserrat.ttf"); font-weight: 100 900; }
+      :root { --accent: $ACCENT; --ink: #ffffff; --plate: rgba(10, 12, 16, .84); --line: rgba(255, 255, 255, .14);
+              --s: $SCALE; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: ${W}px; height: ${H}px; overflow: hidden; background: transparent; }
+      #root { position: relative; width: 100%; height: 100%; perspective: 1400px; font-family: "Sans"; color: var(--ink); }
+      .serif { font-family: "Serif"; font-style: italic; font-weight: 700; }
+      .mask { display: inline-block; overflow: hidden; vertical-align: bottom; padding-bottom: .08em; }
+      .mask > span { display: inline-block; }
+$CSS
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="$DUR" data-width="$W" data-height="$H">
+$BODY
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const OUT = $OUT;            // exit starts here (seconds)
+$JS
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

@@ -127,7 +127,7 @@ def new(src, name=None, prompt=None):
     d = folder(name); d.mkdir(parents=True, exist_ok=True)
     if not (d / "cinex.json").exists():
         _write_json(d / "cinex.json", dict(version=1, rev=0, name=name, src=str(src), duration=round(duration(src), 2),
-                                           segments=[], cut_locked=False, captions=dict(CAPTIONS), camera=dict(CAMERA), color=dict(COLOR), motions=[], sfx=[], format="vertical", keywords=[], fix={},
+                                           segments=[], cut_locked=False, captions=dict(CAPTIONS), camera=dict(CAMERA), color=dict(COLOR), motions=[], motion_engine="html", sfx=[], format="vertical", keywords=[], fix={},
                                            chat=[], created=_now()))
     prepare(name, prompt)
     return name
@@ -336,18 +336,33 @@ def export(name):
         import formats as F                              # after R.W/R.H: it copies the frame size on import
         acc = rgba(c["accent"]); ms = sorted(st.get("motions", []), key=lambda m: m["t0"]); fns, hide, sfx = [], [], []
         tops = [m for m in ms if m["type"] == "topico"]
+        ovs = []                                         # motion rendered from HTML (motion_html.py), composited as overlays
+        use_html = st.get("motion_engine", "html") == "html" and ms
+        if use_html:
+            import motion_html as MH
+            use_html = MH.available()
+            if not use_html: say(name, "Motion em HTML indisponível (HyperFrames não instalado): usei o motion clássico.")
         for m in ms:
             c0, c1 = raw_to_cut(m["t0"], kept), raw_to_cut(m["t1"], kept, end=True)
             if c1 - c0 < .3:                              # ends in another (reordered) phrase: keep its own length
                 if any(g["s"] <= m["t0"] < g["e"] for g in kept): c1 = c0 + (m["t1"] - m["t0"])
                 else: continue                            # entirely inside a removed stretch
             n = tops.index(m) + 1 if m in tops else 0
-            fns.append(motion_fn(F, m, c0, c1, acc, n, len(tops)))
+            done = False
+            if use_html:
+                job(name, "export", step=f"Motion {len(ovs) + len(fns) + 1}/{len(ms)} (HTML)", pct=20)
+                try:
+                    mov, _ = MH.render(m, FW, FH, c["accent"], c1 - c0, n, len(tops), cache=d / "motion_cache")
+                    ovs.append(dict(src=str(mov), t0=c0, t1=c1, cx=FW / 2, w=FW, prefer=MH.PREFER[m["type"]] * FH / 1920))
+                    done = True
+                except Exception as e:                     # one bad element never blocks the export
+                    say(name, f"Motion {m['type']} em HTML falhou, usei o clássico: {str(e)[:160]}")
+            if not done: fns.append(motion_fn(F, m, c0, c1, acc, n, len(tops)))
             if m["type"] in ("citacao", "frase"): hide.append((c0, c1))   # the line is already on screen
             if m.get("sfx"): sfx.append((c0, m["sfx"], -12))
         for s in st.get("sfx", []):
             if any(g["s"] <= s["t"] < g["e"] for g in kept): sfx.append((raw_to_cut(s["t"], kept), s["cat"], float(s.get("gain", -12))))
-        reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, z, z, R.eio)], motions=fns, sfx=sorted(sfx), hide_captions=hide,
+        reel = R.Reel("cut.mp4", "words.json", "faces.json", [(0, dur + 1, z, z, R.eio)], motions=fns, overlays=ovs, sfx=sorted(sfx), hide_captions=hide,
                       ranges=[(0, dur + 1, "big" if cam["follow"] else None)],
                       keywords=st.get("keywords", []), fix=st.get("fix", {}), caption_style="app", accent=rgba(c["accent"]),
                       look=col["look"] if col["look"] in R.GRADES else "none", jumpcuts="auto" if cam["punch"] else [], cuts=cuts,

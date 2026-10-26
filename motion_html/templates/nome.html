@@ -1,0 +1,20 @@
+<!-- nome: lower third — accent bar grows, plate wipes in, name + role slide from the left. H=230 -->
+<!--CSS-->
+#plate { position: absolute; left: 8%; top: 50%; transform: translateY(-50%); display: flex; align-items: stretch; gap: calc(22px * var(--s));
+         padding: calc(28px * var(--s)) calc(48px * var(--s)) calc(28px * var(--s)) calc(30px * var(--s)); border-radius: calc(20px * var(--s));
+         background: var(--plate); border: 1px solid var(--line); white-space: nowrap; }
+#plate .mask { display: block; }
+#bar { width: calc(8px * var(--s)); border-radius: 4px; background: var(--accent); transform-origin: 50% 100%; }
+#name { font: 800 calc(66px * var(--s)) / 1.05 "Sans"; letter-spacing: -.01em; }
+#role { font: 600 calc(36px * var(--s)) / 1.2 "Sans"; color: #b9c0cc; margin-top: calc(6px * var(--s)); }
+<!--BODY-->
+<div id="plate" class="clip" data-start="0" data-duration="$DUR" data-track-index="0">
+  <i id="bar"></i>
+  <div><div class="mask"><span id="name">$TEXT</span></div><div class="mask"><span id="role">$TEXT2</span></div></div>
+</div>
+<!--JS-->
+tl.fromTo("#plate", { clipPath: "inset(0 100% 0 0 round 20px)" }, { clipPath: "inset(0 0% 0 0 round 20px)", duration: .55, ease: "power3.out" }, .05);
+tl.fromTo("#bar", { scaleY: 0 }, { scaleY: 1, duration: .45, ease: "power2.out" }, 0);
+tl.fromTo("#name", { yPercent: 105 }, { yPercent: 0, duration: .5, ease: "power3.out" }, .25);
+tl.fromTo("#role", { yPercent: 105 }, { yPercent: 0, duration: .5, ease: "power3.out" }, .38);
+tl.to("#plate", { x: -40, opacity: 0, duration: .3, ease: "power2.in" }, OUT);

@@ -1,0 +1,20 @@
+<!-- cta (seguir / salvar): accent pill with an icon, spring pop, a light sweep, gentle breathing. H=210 -->
+<!--CSS-->
+#pill { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: flex; align-items: center; gap: calc(18px * var(--s));
+        padding: calc(28px * var(--s)) calc(56px * var(--s)) calc(28px * var(--s)) calc(34px * var(--s)); border-radius: 999px;
+        background: var(--accent); color: #0b0b0b; white-space: nowrap; overflow: hidden; box-shadow: 0 14px 40px rgba(0,0,0,.35); }
+#icon { width: calc(64px * var(--s)); height: calc(64px * var(--s)); border-radius: 50%; background: rgba(0,0,0,.12); display: grid; place-items: center; }
+#icon svg { width: 58%; height: 58%; }
+#txt { font: 800 calc(52px * var(--s)) / 1 "Sans"; letter-spacing: -.01em; }
+#shine { position: absolute; top: 0; bottom: 0; width: 35%; left: -40%;
+         background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent); }
+<!--BODY-->
+<div id="pill" class="clip" data-start="0" data-duration="$DUR" data-track-index="0">
+  <span id="icon">$ICON</span><b id="txt">$TEXT</b><i id="shine"></i>
+</div>
+<!--JS-->
+tl.fromTo("#pill", { scale: .55, opacity: 0 }, { scale: 1, opacity: 1, duration: .6, ease: "back.out(2.2)" }, 0);
+tl.fromTo("#icon", { rotation: -90, scale: 0 }, { rotation: 0, scale: 1, duration: .5, ease: "back.out(2.5)" }, .2);
+tl.fromTo("#shine", { left: "-40%" }, { left: "120%", duration: .7, ease: "power2.inOut" }, .55);
+tl.to("#pill", { scale: 1.035, duration: .5, ease: "sine.inOut", yoyo: true, repeat: Math.max(0, Math.floor((OUT - 1.3) / .5)) }, 1.3);
+tl.to("#pill", { scale: .8, opacity: 0, duration: .3, ease: "power2.in" }, OUT);

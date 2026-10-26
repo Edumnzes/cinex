@@ -1,0 +1,19 @@
+<!-- citacao: the strongest line as a serif-italic quote, words resolve from blur; author pill. H=560 -->
+<!--CSS-->
+#wrap { position: absolute; left: 8%; right: 8%; top: 50%; transform: translateY(-50%); text-align: center; }
+#mark { font-size: calc(220px * var(--s)); line-height: 1; color: var(--accent); display: block; height: calc(120px * var(--s)); }
+#quote { font-size: calc(70px * var(--s)); line-height: 1.12; text-shadow: 0 10px 34px rgba(0,0,0,.5); }
+#quote span { display: inline-block; }
+#author { display: inline-block; margin-top: calc(34px * var(--s)); padding: calc(12px * var(--s)) calc(28px * var(--s)); border-radius: 999px;
+          background: var(--plate); border: 1px solid var(--line); color: var(--accent); font: 700 calc(28px * var(--s)) / 1 "Sans"; }
+<!--BODY-->
+<div id="wrap" class="clip" data-start="0" data-duration="$DUR" data-track-index="0">
+  <span id="mark" class="serif">“</span>
+  <div id="quote" class="serif">$WORDS_PLAIN</div>
+  $AUTHOR
+</div>
+<!--JS-->
+tl.fromTo("#mark", { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: .5, ease: "power3.out" }, 0);
+tl.fromTo("#quote span", { opacity: 0, filter: "blur(10px)", y: 14 }, { opacity: 1, filter: "blur(0px)", y: 0, duration: .5, ease: "power2.out", stagger: .06 }, .15);
+tl.fromTo("#author", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .4, ease: "power2.out" }, "-=.15");
+tl.to("#wrap", { opacity: 0, y: -20, duration: .35, ease: "power2.in" }, OUT);
