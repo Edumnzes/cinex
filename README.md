@@ -127,6 +127,8 @@ Abre em http://127.0.0.1:8765 (só no seu computador), no **modo guiado**, feito
   (Whisper), o áudio não vai para a internet. Comandos curtos navegam direto: "próximo passo", "voltar",
   "ir para estilo", "tocar", "pausar"; o resto vai para o chat.
 - **Começar:** escolha a marca e arraste o vídeo para a página (ou cole o caminho).
+- **Corte:** clique no texto de uma frase para corrigir o que a transcrição errou (nomes, marcas, números). A
+  legenda passa a usar o texto corrigido, no mesmo tempo da fala.
 
 Para ajustes finos, **Editor completo ↗** abre o editor com linha do tempo (http://127.0.0.1:8765/editor):
 - **Linha do tempo:** cada trecho aparece sobre a onda do áudio. Laranja = mantido, listrado = cortado.

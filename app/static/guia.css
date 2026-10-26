@@ -157,3 +157,11 @@ details.toggle > summary:hover { background: var(--hover); }
   .ptitle { font-size: 26px; }
   .chat { border-left: 0; border-top: 1px solid var(--line); }
 }
+
+/* manual text correction (Corte page) */
+.rt.edit { cursor: text; border-radius: 4px; padding: 0 3px; margin: 0 -3px; }
+.rt.edit:hover { background: var(--accent-soft); }
+.editbox textarea { width: 100%; border: 1px solid var(--accent); border-radius: var(--r); padding: 6px 8px; background: var(--card);
+  box-shadow: 0 0 0 3px var(--accent-soft); outline: none; resize: vertical; }
+.editbar { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+.editbar .btn { padding: 4px 12px; font-size: 13px; }

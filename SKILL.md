@@ -98,7 +98,7 @@ mode** (for people who don't edit: step pages Começar → Corte → Estilo → 
 always on the side as the main way to change things, voice commands transcribed locally by faster-whisper "small");
 http://127.0.0.1:8765/editor is the full editor (timeline, all tools). Chat messages from the guided mode carry the
 page the user was on (`wait` prints "usuário (página corte): …"): answer in that context, in plain language, no
-editing jargon, and say what changed on screen. Guided-mode progress lives in `guia` ({estilo, elementos, revisao}). The app is the interface; **you stay the
+editing jargon, and say what changed on screen. Manual text corrections (the user clicks a phrase on the Corte page, or `app_project.py texto <name> <s> <e> "..."`) go to `textos` ([{s, e, text}], applied in order over words_raw.json, new words re-aligned onto the old timings) and feed the captions and the export; prefer them over `fix` for a one-off mistake. Guided-mode progress lives in `guia` ({estilo, elementos, revisao}). The app is the interface; **you stay the
 brain**: you propose the cut, answer the app's chat and change the project. Current scope: cut, captions, camera
 (`camera`: follow, zoom 1.0–1.25, punch on cuts), colour (`color`: correct, look), motion (`motions`: [{id, type
 (titulo|topico|nome|citacao|frase|seguir|salvar), t0, t1 in raw seconds, text, text2, sfx}]) and SFX (`sfx`:

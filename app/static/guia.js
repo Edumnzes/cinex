@@ -187,9 +187,9 @@ const PAGES = {
     for (const p of phrases()) {
       const r = el("div", "row"), cb = el("input"); cb.type = "checkbox"; cb.checked = true; cb.disabled = locked;
       cb.onchange = async () => { for (const g of p) { g.keep = false; g.reason = "tirado no modo guiado"; } await saveCut(); };
-      const txt = p.map((g) => g.text).join(" ").trim() || "(sem fala)";
+      const txt = p.map((g) => g.text).join(" ").trim();
       const pl = el("button", "play", "▶"); pl.title = "Ver este trecho"; pl.onclick = () => preview(p[0].s);
-      r.append(cb, el("span", "rt", txt), el("span", "rm", (p.reduce((a, g) => a + segLen(g), 0)).toFixed(1) + " s"), pl); list.append(r);
+      r.append(cb, editable(txt, p), el("span", "rm", (p.reduce((a, g) => a + segLen(g), 0)).toFixed(1) + " s"), pl); list.append(r);
     }
     box.append(list);
     const cut = st.segments.filter((g) => !g.keep && (g.text || "").trim());
@@ -333,6 +333,27 @@ const PAGES = {
     navrow(box);
   },
 };
+
+// a phrase's text: click to correct what the transcription got wrong (captions follow; timings are re-aligned)
+function editable(txt, segs) {
+  const sp = el("span", "rt edit", txt || "(sem fala)"); sp.title = "Clique para corrigir o texto";
+  sp.onclick = () => {
+    const box = el("div", "rt editbox"), ta = el("textarea"); ta.value = txt; ta.rows = Math.max(2, Math.ceil(txt.length / 60));
+    const ok = el("button", "btn primary", "Salvar"), no = el("button", "btn", "Cancelar"), bar = el("div", "editbar");
+    bar.append(ok, no, el("span", "muted small", "A legenda passa a usar este texto."));
+    box.append(ta, bar); sp.replaceWith(box); ta.focus();
+    const close = () => { box.replaceWith(sp); };
+    no.onclick = (e) => { e.preventDefault(); close(); render(); };
+    ta.onkeydown = (e) => { if (e.key === "Escape") { close(); render(); } if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ok.click(); } };
+    ok.onclick = async (e) => {
+      e.preventDefault(); ok.disabled = true;
+      const s = Math.min(...segs.map((g) => g.s)), en = Math.max(...segs.map((g) => g.e));
+      try { await api(`/api/p/${name}/texto`, { method: "POST", body: JSON.stringify({ s, e: en, text: ta.value }) }); close(); await refresh(); }
+      catch (err) { alert(err.message); ok.disabled = false; }
+    };
+  };
+  return sp;
+}
 
 async function saveCut() {
   st.order = playOrder().map((g) => g.id);

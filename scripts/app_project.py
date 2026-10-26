@@ -21,6 +21,7 @@ Claude Code is the brain: it reads the state, answers the chat and edits the cut
     python app_project.py order <name> <id> <id> ...      play order of kept segments (reorder phrases)
     python app_project.py clips <name> <video|folder> ...  add speech clips: transcribed, cut, appended to the timeline
     python app_project.py versao <name> <seconds>          shorter version (10/15/30 s): best phrases -> new project <name>_<s>s
+    python app_project.py texto <name> <s> <e> "texto corrigido"   fix the transcription of a stretch (raw seconds)
     python app_project.py lenta <name> <seg_id> [2.0] [0.35]   slow motion on the action peak of a kept segment
     python app_project.py media <name> <video>           add a clip to the project's media (B-roll): proxy + filmstrip
     python app_project.py broll <name> <media_id> <t0> <t1> [ss] [full|card]   B-roll over the speech (raw seconds)
@@ -415,6 +416,57 @@ def cut_list(st, kept):
     return out
 
 
+# ------------------------------------------------------------ manual text corrections (transcription mistakes)
+# Kept apart from words_raw.json (st["textos"] = [{s, e, text}], applied in order) so joining more clips — which
+# rebuilds words_raw.json — never loses them. Each edit re-aligns the new words onto the old words' timings.
+def _tok(w): return re.sub(r"[^\w%]", "", w.lower())
+
+
+def apply_text_edit(words, s, e, text):
+    import difflib
+    idx = [i for i, w in enumerate(words) if s <= (w["s"] + w["e"]) / 2 < e]
+    new = text.split()
+    if not idx:                                        # no words there yet: spread the text over the stretch
+        if not new: return words
+        d = (e - s) / len(new)
+        add = [dict(w=t, s=round(s + k * d, 3), e=round(s + (k + 1) * d, 3), p=1.0) for k, t in enumerate(new)]
+        return sorted(words + add, key=lambda w: w["s"])
+    old = [words[i] for i in idx]; out = []
+    for tag, i1, i2, j1, j2 in difflib.SequenceMatcher(None, [_tok(w["w"]) for w in old], [_tok(t) for t in new], autojunk=False).get_opcodes():
+        if tag == "equal":
+            for k in range(i2 - i1): out.append(dict(old[i1 + k], w=new[j1 + k]))     # keeps the time, takes the new spelling
+        elif tag == "delete": continue
+        else:
+            toks = new[j1:j2]
+            if i2 - i1 >= len(toks):                                                    # as many or fewer words: one each, in order
+                out += [dict(old[i1 + k], w=t, p=1.0) for k, t in enumerate(toks)]; continue
+            if i2 > i1: t0, t1 = old[i1]["s"], old[i2 - 1]["e"]                      # more words: they share the old time
+            elif out: prev = out.pop(); toks = [prev["w"]] + toks; t0, t1 = prev["s"], prev["e"]   # inserted: split the word before
+            else: t0 = s; t1 = max(old[0]["s"], s + .15 * len(toks))                   # inserted at the start
+            d = (t1 - t0) / len(toks)
+            out += [dict(w=t, s=round(t0 + k * d, 3), e=round(t0 + (k + 1) * d, 3), p=1.0) for k, t in enumerate(toks)]
+    return words[:idx[0]] + out + words[idx[-1] + 1:]
+
+
+def words_edited(st, words):
+    for ed in st.get("textos", []): words = apply_text_edit(words, ed["s"], ed["e"], ed["text"])
+    return words
+
+
+def edit_text(name, s, e, text):
+    """Correct what was said between s and e (raw seconds): captions, segment texts and the export follow."""
+    text = " ".join(str(text).split())[:2000]
+    raw = json.loads((folder(name) / "words_raw.json").read_text(encoding="utf-8"))
+    def fn(st):
+        eds = [x for x in st.get("textos", []) if not (s - .01 <= x["s"] and x["e"] <= e + .01)]   # a new edit supersedes inner ones
+        st["textos"] = eds + [dict(s=round(s, 3), e=round(e, 3), text=text)]
+        ws = words_edited(st, raw)
+        for g in st["segments"]:
+            if g["s"] < e and g["e"] > s: g["text"] = " ".join(w["w"] for w in words_in(ws, g["s"], g["e"]))
+        st["words_rev"] = st.get("words_rev", 0) + 1
+    return update(name, fn)
+
+
 # ------------------------------------------------------------ shorter versions (10 / 15 / 30 s) of the same edit
 CTA_WORDS = ("siga", "segue", "comenta", "comente", "chama", "link", "whatsapp", "salva", "salve", "compartilha", "manda", "direct")
 
@@ -682,7 +734,7 @@ def export(name):
         fit, base = cut_plan(fmt, source_aspect(d))
         subprocess.run([PY, str(HERE / "cut.py"), st["src"], "keep.json", "cut.mp4", "--size", f"{base[0]}x{base[1]}", "--crf", "16", "--fit", fit],
                        check=True, capture_output=True)
-        words = json.loads((d / "words_raw.json").read_text(encoding="utf-8"))
+        words = words_edited(st, json.loads((d / "words_raw.json").read_text(encoding="utf-8")))   # + manual corrections
         _write_json(d / "words.json", remap_words(words, kept))
         job(name, "export", step="Encontrando rostos", pct=15)
         subprocess.run([PY, str(HERE / "faces.py"), "cut.mp4", "faces.json"], check=True, capture_output=True)
@@ -834,6 +886,7 @@ if __name__ == "__main__":
         update(a.args[0], lambda s: s.update(order=[int(x) for x in a.args[1:]])); _show(a.args[0])
     elif a.cmd == "export": export(a.args[0])
     elif a.cmd == "media": print("mídia", add_media(a.args[0], a.args[1]))
+    elif a.cmd == "texto": edit_text(a.args[0], float(a.args[1]), float(a.args[2]), " ".join(a.args[3:])); _show(a.args[0])
     elif a.cmd == "versao": n, tot = make_version(a.args[0], float(a.args[1])); print(f"versão {n}: {tot:.1f} s"); _show(n)
     elif a.cmd == "lenta":
         x = a.args; r = slow_peak(x[0], int(x[1]), float(x[2]) if len(x) > 2 else 2.0, float(x[3]) if len(x) > 3 else .35)

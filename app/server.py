@@ -209,7 +209,10 @@ class H(BaseHTTPRequestHandler):
                 if sub == "poll":
                     rev = P.load(name)["rev"] if (d / "cinex.json").exists() else -1
                     return self._send(200, dict(rev=rev, prep=P.read_job(name, "prep"), export=P.read_job(name, "export")))
-                if sub == "words": return self._file(d / "words_raw.json", "application/json")
+                if sub == "words":                     # transcription + the user's manual corrections
+                    st = P.load(name)
+                    if not st.get("textos"): return self._file(d / "words_raw.json", "application/json")
+                    return self._send(200, P.words_edited(st, json.loads((d / "words_raw.json").read_text(encoding="utf-8"))))
                 if sub == "waveform": return self._file(d / "waveform.json", "application/json")
                 if sub == "revisao": return self._file(d / "revisao.json", "application/json")
                 if sub == "faces":                     # preview only needs the biggest face centre (0..1) per 0.1 s
@@ -299,6 +302,10 @@ class H(BaseHTTPRequestHandler):
                 subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "clips", name, *paths],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
                 return self._send(200, {"ok": True})
+            if sub == "texto":                         # correct the transcription of a stretch
+                b = self._json(); s_, e_ = float(b.get("s", -1)), float(b.get("e", -1))
+                if not 0 <= s_ < e_: return self._err(400, "trecho inválido")
+                st = P.edit_text(name, s_, e_, str(b.get("text", ""))); return self._send(200, {"rev": st["rev"]})
             if sub == "versao":                        # shorter version -> new project (see app_project.make_version)
                 t = float(self._json().get("s", 0))
                 if not 5 <= t <= 180: return self._err(400, "duração entre 5 e 180 s")

@@ -62,8 +62,9 @@ async function loadMedia() {
 
 async function reloadState() {
   const j = await api(`/api/p/${name}`);
-  const had = st && st.segments.length;
+  const had = st && st.segments.length, wrev = st && st.words_rev;
   st = j.state; projectFonts = j.project_fonts || [];
+  if (had && (st.words_rev || 0) !== (wrev || 0)) words = await api(`/api/p/${name}/words`);   // text corrected
   if ((!had && st && st.segments.length) || (st && had && st.duration !== mediaDur)) await loadMedia();   // clips added
   renderAll();
 }

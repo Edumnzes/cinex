@@ -81,6 +81,8 @@
   (Começar, Corte, Estilo, Elementos, Revisão, Publicar), chat com a IA sempre ao lado como o meio principal de
   mudança, sugestões por página, prévia do vídeo em cada passo e envio do vídeo arrastando para a página. O editor
   com linha do tempo continua em `/editor` (Editor completo).
+- **Corrigir o texto das frases** na página Corte: clique, edite e salve. As palavras novas são realinhadas nos
+  tempos da fala; a correção fica guardada à parte (`textos`) e vale para legenda, prévia e exportação.
 - **Comando de voz:** fale o pedido; a transcrição roda no computador (faster-whisper, nada vai para a internet).
   Comandos curtos navegam: próximo passo, voltar, ir para…, tocar, pausar.
 - **Versões curtas (10 / 15 / 30 s)** do mesmo projeto: escolha das frases por otimização (gancho e CTA fixos,
