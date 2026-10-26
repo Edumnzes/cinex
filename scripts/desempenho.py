@@ -19,7 +19,7 @@ import datetime, json, statistics, sys
 from pathlib import Path
 
 ROOT = Path.home() / "instagram-legendas"
-TAGS = ("formato", "estilo", "gancho", "legenda", "motion", "tema", "editado_cinex", "duracao", "postagem")
+TAGS = ("formato", "estilo", "gancho", "legenda", "motion", "tema", "editado_cinex", "duracao", "postagem", "turbinado")
 
 
 def folder(h):

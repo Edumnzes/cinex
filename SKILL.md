@@ -143,7 +143,12 @@ Every brand learns from its own results. Data sits with the brand profile in `~/
   salvamentos, seguidores, visitas). Record each reel with `desempenho.py set <handle> '{codigo, url, data, views, ...,
   tags: {formato, tema, gancho, estilo, editado_cinex, duracao}}'` — tag from the caption and the cover, and mark
   reels edited by Cinex (match videos.md). `desempenho.py relatorio` ranks each tag against the profile's median
-  (views and retention weigh most); `aplicar` writes winners with ≥ 3 reels into `marca.json`. Use the ranking when
+  (views and retention weigh most); `aplicar` writes winners with ≥ 3 reels into `marca.json`.
+  Insights on the web: the reel's media id is its shortcode decoded as base-64 (alphabet `A–Z a–z 0–9 - _`); open
+  `instagram.com/insights/media/<id>/`, wait ~5 s, read the text (views, % não seguidores, visualizadores, curtidas,
+  comentários, salvamentos, compartilhamentos, seguidores). The web does not show average watch time — ask for prints
+  of "tempo médio de visualização" from the app when retention matters. A boosted reel ("Esse post está turbinado")
+  mixes paid views: record the organic numbers at the boost date, tag `turbinado`, and read the "Anúncio" tab later. Use the ranking when
   choosing format, hook and length; say when a conclusion rests on 1–2 reels. Never type credentials.
 - **Niche references**: the user adds links or uploads videos per brand in the app (`brand.py refs <handle>`).
   Uploaded videos are measured automatically into the style profile `nicho_<handle>`; read its sheets and fill the
