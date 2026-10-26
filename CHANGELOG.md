@@ -86,6 +86,7 @@
   cartões e listas agrupadas arredondadas (como nos Ajustes), botões em pílula, caixas de seleção redondas, chat em
   balões (como no iMessage) e transições suaves entre páginas. O editor completo ganhou o mesmo acabamento.
   O chat agora só é redesenhado quando chega mensagem nova (antes era refeito a cada 1,5 s).
+  Sem emojis na interface: ícones de linha no espírito dos SF Symbols, em quadrados coloridos como nos Ajustes.
 - **Revisão geral (correções):**
   - Palavras sumiam da legenda: o Whisper estica o tempo da palavra por cima da pausa seguinte, e a pausa
     cortada levava a palavra junto (só na legenda; o áudio estava certo). Agora o tempo de cada palavra é ajustado

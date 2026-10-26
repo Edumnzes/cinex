@@ -68,7 +68,8 @@ a { color: inherit; }
 .sidelabel { font-size: 11px; font-weight: 600; color: var(--faint); padding: 12px 10px 6px; text-transform: uppercase; letter-spacing: .04em; }
 .steps { display: flex; flex-direction: column; gap: 2px; }
 .step { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 7px 10px; font-size: 14px; color: var(--text); border-radius: 8px; }
-.step .ic { width: 22px; text-align: center; font-size: 15px; }
+.step .ic { width: 24px; height: 24px; border-radius: 6px; }
+.step .sym.ic svg { width: 15px; height: 15px; stroke-width: 2; }
 .step .num { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 600; background: var(--fill); color: var(--muted); }
 .step.done .num { background: var(--green); color: #fff; }
 .step.on { background: var(--accent); color: #fff; font-weight: 500; }        /* Finder-style selection */
@@ -84,13 +85,16 @@ a { color: inherit; }
 .pagebody.enter { animation: pagein .38s var(--ease); }
 @keyframes pagein { from { transform: translateY(12px); } to { transform: none; } }      /* motion only: content never hidden */
 @keyframes bubblein { from { transform: translateY(8px) scale(.96); } to { transform: none; } }
-.picon { font-size: 50px; line-height: 1; margin-bottom: 14px; }
+.picon { width: 58px; height: 58px; border-radius: 14px; margin-bottom: 16px; box-shadow: 0 6px 18px rgba(0, 0, 0, .14); }
+.sym.picon svg { width: 32px; height: 32px; stroke-width: 1.7; }
 .ptitle { font: 700 36px/1.12 -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", Inter, sans-serif;
   letter-spacing: -.028em; margin: 0 0 8px; }
 .plead { color: var(--muted); font-size: 18px; line-height: 1.4; margin: 0 0 26px; letter-spacing: -.015em; }
 h3 { font-size: 20px; font-weight: 600; margin: 34px 0 10px; letter-spacing: -.02em; }
 .callout { display: flex; gap: 12px; background: var(--callout); border-radius: var(--r-lg); padding: 14px 16px; margin: 14px 0; font-size: 15px; }
-.callout .ce { font-size: 20px; line-height: 1.3; }
+.callout .ce { color: var(--accent); margin-top: 1px; }
+.callout .sym.ce svg { width: 20px; height: 20px; }
+.callout.ok .ce { color: var(--green); } .callout.warn .ce { color: var(--orange); } .callout.err .ce { color: var(--red); }
 .callout.ok { background: var(--green-soft); } .callout.warn { background: var(--yellow-soft); } .callout.err { background: var(--red-soft); }
 .navrow { display: flex; gap: 10px; align-items: center; margin-top: 38px; padding-top: 20px; border-top: 1px solid var(--line); }
 
@@ -144,7 +148,8 @@ details.toggle > summary:hover { background: var(--hover); }
 /* drop zone + fields */
 .drop { border: 2px dashed var(--line2); border-radius: 18px; padding: 44px 20px; text-align: center; cursor: pointer; background: var(--card); transition: .2s var(--ease); }
 .drop:hover, .drop.over { border-color: var(--accent); background: var(--accent-soft); transform: scale(1.005); }
-.drop .de { font-size: 40px; margin-bottom: 6px; }
+.drop .de { color: var(--accent); margin-bottom: 8px; }
+.drop .sym.de svg { width: 40px; height: 40px; stroke-width: 1.5; }
 .pathrow { display: flex; gap: 8px; margin-top: 12px; }
 .pathrow input { flex: 1; border: 0; border-radius: var(--r); padding: 9px 12px; background: var(--fill); outline: none; }
 .pathrow input:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -218,3 +223,9 @@ details.toggle > summary:hover { background: var(--hover); }
   .ptitle { font-size: 28px; }
   .chat { border-left: 0; border-top: 1px solid var(--line); }
 }
+
+/* line icons (SF Symbols spirit): stroke only, inherit colour */
+.sym { display: inline-grid; place-items: center; flex: none; }
+.sym svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.sym.tile { color: #fff; }
+.row .ri { color: var(--accent); padding-top: 1px; }

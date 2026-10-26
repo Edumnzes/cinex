@@ -64,14 +64,41 @@ async function save(patch) {
 const guia = () => (st && st.guia) || {};
 async function mark(k) { if (!guia()[k]) await save({ guia: { ...guia(), [k]: true } }); }
 
+// ------------------------------------------------------------ icons (line glyphs in the spirit of SF Symbols; no emoji)
+const SYMS = {
+  play: '<rect x="3" y="5" width="18" height="14" rx="3.5"/><path d="M10 9.3v5.4l4.6-2.7z" fill="currentColor"/>',
+  scissors: '<circle cx="6" cy="7" r="2.6"/><circle cx="6" cy="17" r="2.6"/><path d="M8.3 8.5 20 17M8.3 15.5 20 7"/>',
+  palette: '<path d="M12 3a9 9 0 1 0 0 18c1.2 0 1.7-1 1.2-1.9-.6-1.1.2-2.3 1.4-2.3H17a4 4 0 0 0 4-4C21 7.3 17 3 12 3z"/><circle cx="7.6" cy="11.2" r="1.1" fill="currentColor"/><circle cx="10.2" cy="7.4" r="1.1" fill="currentColor"/><circle cx="14.6" cy="7.6" r="1.1" fill="currentColor"/>',
+  textformat: '<path d="M3.5 6.5h10M8.5 6.5V18"/><path d="M13.5 18 17 10l3.5 8M14.7 15.4h4.6"/>',
+  magnifier: '<circle cx="10.5" cy="10.5" r="6.2"/><path d="m15.2 15.2 5 5"/>',
+  paperplane: '<path d="M20.5 3.5 10.6 13.4M20.5 3.5 14.4 20.6l-3.8-7.2-7.1-3.9z"/>',
+  lightbulb: '<path d="M9.2 18h5.6M10.2 21h3.6M12 3a6 6 0 0 0-3.6 10.8c.7.5 1 1.3 1 2.1v.1h5.2v-.1c0-.8.3-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  check: '<circle cx="12" cy="12" r="9"/><path d="m8 12.4 2.8 2.8L16.2 9.6"/>',
+  warn: '<path d="M12 4 2.8 19.6h18.4z"/><path d="M12 10v4.6M12 17.3v.2"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.2V12l3.2 2"/>',
+  film: '<rect x="3" y="4" width="18" height="16" rx="2.6"/><path d="M7.5 4v16M16.5 4v16M3 9h4.5M3 15h4.5M16.5 9H21M16.5 15H21"/>',
+  music: '<path d="M9 18V6.2L20 4v11.8"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="15.8" r="2.5"/>',
+  phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.6"/><path d="M11 18.6h2"/>',
+  bubble: '<path d="M4 5.5h16v10.5H10l-5 4v-4H4z"/>',
+  tray: '<path d="M12 3.5v10M7.6 9.4 12 13.8l4.4-4.4"/><path d="M4 14v3.8A2.2 2.2 0 0 0 6.2 20h11.6a2.2 2.2 0 0 0 2.2-2.2V14"/>',
+};
+const CALLOUT = { "💡": "lightbulb", "✅": "check", "🎉": "check", "⚠️": "warn", "🤖": "clock", "⏳": "clock", "🗣️": "bubble",
+                  "✨": "textformat", "🎞️": "film", "🎵": "music", "🔍": "magnifier", "📱": "phone" };
+function sym(name, cls) {
+  const s_ = el("span", "sym" + (cls ? " " + cls : ""));
+  s_.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${SYMS[name] || ""}</svg>`;    // static markup from SYMS only
+  return s_;
+}
+function tile(name, color, cls) { const t = sym(name, "tile " + (cls || "")); t.style.background = color; return t; }
+
 // ------------------------------------------------------------ steps
 const STEPS = [
-  { id: "comecar", icon: "🎬", title: "Começar", lead: "Escolha a marca e envie o vídeo.", pv: false, done: () => !!(st && st.segments.length) },
-  { id: "corte", icon: "✂️", title: "Corte", lead: "A IA tirou pausas, repetições e tropeços. Confira as frases.", pv: true, done: () => !!(st && st.cut_locked) },
-  { id: "estilo", icon: "🎨", title: "Estilo", lead: "Onde vai publicar, como a legenda aparece e a cor do vídeo.", pv: true, done: () => !!guia().estilo },
-  { id: "elementos", icon: "✨", title: "Elementos", lead: "Textos na tela, imagens extras e música.", pv: true, done: () => !!guia().elementos },
-  { id: "revisao", icon: "🔍", title: "Revisão", lead: "Uma conferência do que ainda parece edição automática.", pv: true, done: () => !!guia().revisao },
-  { id: "publicar", icon: "🚀", title: "Publicar", lead: "Gere o vídeo final e prepare a postagem.", pv: true, done: () => !!(exp && exp.out) },
+  { id: "comecar", icon: "play", color: "#0a84ff", title: "Começar", lead: "Escolha a marca e envie o vídeo.", pv: false, done: () => !!(st && st.segments.length) },
+  { id: "corte", icon: "scissors", color: "#ff9f0a", title: "Corte", lead: "A IA tirou pausas, repetições e tropeços. Confira as frases.", pv: true, done: () => !!(st && st.cut_locked) },
+  { id: "estilo", icon: "palette", color: "#ff375f", title: "Estilo", lead: "Onde vai publicar, como a legenda aparece e a cor do vídeo.", pv: true, done: () => !!guia().estilo },
+  { id: "elementos", icon: "textformat", color: "#bf5af2", title: "Elementos", lead: "Textos na tela, imagens extras e música.", pv: true, done: () => !!guia().elementos },
+  { id: "revisao", icon: "magnifier", color: "#5e5ce6", title: "Revisão", lead: "Uma conferência do que ainda parece edição automática.", pv: true, done: () => !!guia().revisao },
+  { id: "publicar", icon: "paperplane", color: "#30d158", title: "Publicar", lead: "Gere o vídeo final e prepare a postagem.", pv: true, done: () => !!(exp && exp.out) },
 ];
 const CHIPS = {
   comecar: ["Quero cadastrar minha marca", "Que tipo de vídeo funciona no meu perfil?"],
@@ -95,16 +122,16 @@ function renderSteps() {
   $("#gsteps").replaceChildren(...STEPS.map((s, i) => {
     const locked = needsProject(s.id) && !(st && st.segments.length);
     const b = el("button", "step" + (s.id === step ? " on" : "") + (s.done() ? " done" : "") + (locked ? " locked" : ""));
-    b.append(el("span", "ic", s.icon), el("span", "", s.title), el("span", "num", s.done() ? "✓" : String(i + 1)));
+    b.append(tile(s.icon, s.color, "ic"), el("span", "", s.title), el("span", "num", s.done() ? "✓" : String(i + 1)));
     b.disabled = locked; b.onclick = () => go(s.id); return b;
   }));
 }
 
 function header(box, s) {
-  box.append(el("div", "picon", s.icon), el("h1", "ptitle", s.title), el("p", "plead", s.lead));
+  box.append(tile(s.icon, s.color, "picon"), el("h1", "ptitle", s.title), el("p", "plead", s.lead));
 }
-function callout(box, emoji, text, kind) {
-  const c = el("div", "callout" + (kind ? " " + kind : "")); c.append(el("span", "ce", emoji), el("div", "", text)); box.append(c); return c;
+function callout(box, icon, text, kind) {
+  const c = el("div", "callout" + (kind ? " " + kind : "")); c.append(sym(CALLOUT[icon] || icon, "ce"), el("div", "", text)); box.append(c); return c;
 }
 function navrow(box, nextLabel, onNext) {
   const r = el("div", "navrow"), i = stepIdx();
@@ -139,7 +166,7 @@ const PAGES = {
     // video
     box.append(el("h3", "", novo ? "2. Envie o vídeo" : "2. Seu vídeo"));
     if (novo) {
-      const d = el("div", "drop"); d.append(el("div", "de", "📥"), el("div", "", "Arraste o vídeo aqui ou clique para escolher"),
+      const d = el("div", "drop"); d.append(sym("tray", "de"), el("div", "", "Arraste o vídeo aqui ou clique para escolher"),
                                           el("div", "muted small", "Vídeo do celular, do jeito que gravou. A IA assiste, transcreve e propõe o corte."));
       d.onclick = () => $("#gfile").click();
       d.ondragover = (e) => { e.preventDefault(); d.classList.add("over"); }; d.ondragleave = () => d.classList.remove("over");
@@ -271,7 +298,7 @@ const PAGES = {
     const mu = st.music;
     if (mu && mu.src) {
       const r = el("div", "row"), x = el("button", "play", "✕"); x.onclick = async () => { await save({ music: null }); render(); };
-      r.append(el("span", "", "♪"), el("span", "rt", mu.src.split(/[\\/]/).pop() + " · abaixa quando alguém fala"), x); box.append(r);
+      r.append(sym("music", "ri"), el("span", "rt", mu.src.split(/[\\/]/).pop() + " · abaixa quando alguém fala"), x); box.append(r);
     } else {
       const b = el("button", "btn", "Tenho uma trilha licenciada (Artlist, Epidemic…)"); b.onclick = () => $("#gaudio").click(); box.append(b);
     }
