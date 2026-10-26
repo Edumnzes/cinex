@@ -77,6 +77,8 @@
   marcado, pessoas excluídas pela máscara, homografia RANSAC e suavização), deformado na perspectiva antes da câmera
   virtual e escondido atrás da pessoa quando ela passa na frente. Sem marcação (ou com fundo desfocado), vira
   elemento comum. O preview não recorta a pessoa; a exportação recorta.
+- **Versões curtas (10 / 15 / 30 s)** do mesmo projeto: escolha das frases por otimização (gancho e CTA fixos,
+  prova e densidade de fala), em um projeto novo que compartilha os arquivos sem duplicar espaço.
 - **Seis formatos de exportação:** 9:16, 4:5 (feed), 1:1, 16:9, 4:3 e LED 512×384 (painel de feira, desenhado em
   2x e reduzido no final). Preparo do vídeo, área segura e QA (`qa.py --platform`) por formato; a prévia do app
   tem o formato escolhido.

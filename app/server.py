@@ -248,6 +248,10 @@ class H(BaseHTTPRequestHandler):
                 subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "clips", name, *paths],
                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
                 return self._send(200, {"ok": True})
+            if sub == "versao":                        # shorter version -> new project (see app_project.make_version)
+                t = float(self._json().get("s", 0))
+                if not 5 <= t <= 180: return self._err(400, "duração entre 5 e 180 s")
+                n, tot = P.make_version(name, t); return self._send(200, {"name": n, "total": round(tot, 1)})
             if sub == "lenta":                         # slow motion on the action peak of a kept segment
                 r = P.slow_peak(name, int(self._json().get("id", 0)))
                 return self._send(200, {"s": r[0], "e": r[1], "pico": r[2]})

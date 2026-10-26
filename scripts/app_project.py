@@ -20,6 +20,7 @@ Claude Code is the brain: it reads the state, answers the chat and edits the cut
     python app_project.py lock <name> on|off             approve / reopen the cut
     python app_project.py order <name> <id> <id> ...      play order of kept segments (reorder phrases)
     python app_project.py clips <name> <video|folder> ...  add speech clips: transcribed, cut, appended to the timeline
+    python app_project.py versao <name> <seconds>          shorter version (10/15/30 s): best phrases -> new project <name>_<s>s
     python app_project.py lenta <name> <seg_id> [2.0] [0.35]   slow motion on the action peak of a kept segment
     python app_project.py media <name> <video>           add a clip to the project's media (B-roll): proxy + filmstrip
     python app_project.py broll <name> <media_id> <t0> <t1> [ss] [full|card]   B-roll over the speech (raw seconds)
@@ -264,7 +265,7 @@ def _replace(tmp, dst):
 def _rebuild(name):
     """Join the clips' proxies, words, waveform and faces into the project files the app reads."""
     d = folder(name); cl = load(name)["clips"]
-    lst = d / "clips" / "list.txt"
+    lst = d / "clips" / "list.txt"; lst.unlink(missing_ok=True)     # may be hard-linked with another version
     lst.write_text("".join(f"file '{(d / 'clips' / str(c['id']) / 'preview.mp4').as_posix()}'\n" for c in cl), encoding="utf-8")
     subprocess.run([_ff(), "-loglevel", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy",
                     "-movflags", "+faststart", str(d / "preview.new.mp4")], check=True, capture_output=True)
@@ -279,7 +280,8 @@ def _rebuild(name):
         faces += [dict(t=round(c["off"] + i / 10, 1), f=(fs[i]["f"] if i < len(fs) else [])) for i in range(n)]
     _write_json(d / "words_raw.new.json", words); _replace(d / "words_raw.new.json", d / "words_raw.json")
     _write_json(d / "waveform.json", {"step": step, "peaks": peaks})
-    (d / "faces_preview.json").write_text(json.dumps(faces), encoding="utf-8")
+    (d / "faces_preview.new.json").write_text(json.dumps(faces), encoding="utf-8")       # replace, never write in place:
+    _replace(d / "faces_preview.new.json", d / "faces_preview.json")                   # versions hard-link these files
     _replace(d / "preview.new.mp4", d / "preview.mp4")
 
 
@@ -409,6 +411,85 @@ def cut_list(st, kept):
         if c.get("sdur"): b = min(b, c["sdur"])
         if b - a > .02: out.append([round(a, 3), round(b, 3), c["src"], *opts(g)])
     return out
+
+
+# ------------------------------------------------------------ shorter versions (10 / 15 / 30 s) of the same edit
+CTA_WORDS = ("siga", "segue", "comenta", "comente", "chama", "link", "whatsapp", "salva", "salve", "compartilha", "manda", "direct")
+
+
+def phrases_of(st):
+    """Kept segments in play order grouped into phrases: a phrase ends at . ? ! or where the play order jumps."""
+    out, cur = [], []
+    for g in play_order(st):
+        if cur and (abs(g["s"] - cur[-1]["e"]) > 1.0 or re.search(r"[.?!]\s*$", cur[-1]["text"] or "")):
+            out.append(cur); cur = []
+        cur.append(g)
+    if cur: out.append(cur)
+    return out
+
+
+def pick_version(st, target):
+    """Best phrases that fit `target` seconds, in play order. Always the hook (first phrase) and, if there is one,
+    the closing CTA; the rest by score per second: numbers (proof), the project's highlight words, a motion element
+    on the phrase, and speech density (fewer dead air)."""
+    ph = phrases_of(st)
+    if not ph: raise ValueError("nenhum trecho mantido")
+    dur = [sum(seg_len(g) for g in p) for p in ph]
+    text = [" ".join(g["text"] or "" for g in p).lower() for p in ph]
+    keys = {k.lower() for k in st.get("keywords", [])}
+    mot = [(m["t0"], m["t1"]) for m in st.get("motions", [])]
+    def score(i):
+        t = text[i]; nw = len(t.split())
+        s = 2.0 * bool(re.search(r"\d", t)) + sum(1.0 for k in keys if k in t)
+        s += 1.5 * any(a < p["e"] and b > p["s"] for p in ph[i] for a, b in mot)
+        return s + min(2.0, nw / max(dur[i], .1) / 2)              # ~2.5 words/s of real speech scores well
+    forced = {0}
+    if len(ph) > 1 and any(w in text[-1] for w in CTA_WORDS): forced.add(len(ph) - 1)
+    # knapsack in 0.1 s steps: maximise score + a reward for filling the time (a 15 s version should be ~15 s)
+    cap = max(0, int((target + .5 - sum(dur[i] for i in forced)) * 10))
+    free = [i for i in range(len(ph)) if i not in forced and dur[i] * 10 <= cap]
+    best = [(0.0, ())] * (cap + 1)
+    for i in free:
+        w, v = int(round(dur[i] * 10)), score(i) + .35 * dur[i]
+        for c in range(cap, w - 1, -1):
+            if best[c - w][0] + v > best[c][0]: best[c] = (best[c - w][0] + v, best[c - w][1] + (i,))
+    chosen = forced | set(max(best, key=lambda x: x[0])[1])
+    return [ph[i] for i in sorted(chosen)], sum(dur[i] for i in chosen)
+
+
+def _link_tree(src, dst):
+    """Hard-link (same disk: instant, no extra space) or copy a project's media into a new project."""
+    for p in src.rglob("*"):
+        if p.is_dir() or p.name.endswith((".lock", ".tmp")): continue
+        q = dst / p.relative_to(src); q.parent.mkdir(parents=True, exist_ok=True)
+        try: os.link(p, q)
+        except OSError: shutil.copy2(p, q)
+
+
+def make_version(name, target):
+    """New project <name>_<target>s with only the chosen phrases kept (same order, captions, motion, B-roll)."""
+    st = load(name); chosen, total = pick_version(st, float(target))
+    keep_ids = {g["id"] for p in chosen for g in p}
+    new = re.sub(r"[^A-Za-z0-9_.-]", "_", f"{name}_{int(target)}s")[:64]
+    d, nd = folder(name), folder(new)
+    if nd.exists(): shutil.rmtree(nd)
+    nd.mkdir(parents=True)
+    for f in ("preview.mp4", "words_raw.json", "waveform.json", "faces_preview.json", "keep.json"):
+        if (d / f).exists():
+            try: os.link(d / f, nd / f)
+            except OSError: shutil.copy2(d / f, nd / f)
+    for sub_ in ("fonts", "media", "clips", "music", "motion_cache"):
+        if (d / sub_).is_dir(): _link_tree(d / sub_, nd / sub_)
+    st2 = json.loads(json.dumps(st)); st2.update(name=new, rev=0, cut_locked=False, created=_now(),
+                                               order=[g["id"] for g in play_order(st) if g["id"] in keep_ids])
+    for g in st2["segments"]:
+        if g["keep"] and g["id"] not in keep_ids: g["keep"] = False; g["reason"] = f"fora da versão de {int(target)} s"
+    lines = "\n".join(f"• {' '.join(g['text'] for g in p)[:90]}" for p in chosen)
+    st2["chat"] = [dict(who="cinex", t=_now(), seen=True,
+                        text=f"Versão de {int(target)} s a partir de {name} ({total:.1f} s): gancho, CTA e as frases com mais prova.\n{lines}")]
+    _write_json(nd / "cinex.json", st2)
+    _write_json(nd / "prep.json", dict(step="Pronto", pct=100, done=True, error=None, t=_now()))
+    return new, total
 
 
 # ------------------------------------------------------------ media (B-roll clips) + B-roll windows
@@ -751,6 +832,7 @@ if __name__ == "__main__":
         update(a.args[0], lambda s: s.update(order=[int(x) for x in a.args[1:]])); _show(a.args[0])
     elif a.cmd == "export": export(a.args[0])
     elif a.cmd == "media": print("mídia", add_media(a.args[0], a.args[1]))
+    elif a.cmd == "versao": n, tot = make_version(a.args[0], float(a.args[1])); print(f"versão {n}: {tot:.1f} s"); _show(n)
     elif a.cmd == "lenta":
         x = a.args; r = slow_peak(x[0], int(x[1]), float(x[2]) if len(x) > 2 else 2.0, float(x[3]) if len(x) > 3 else .35)
         print(f"câmera lenta em {r[0]:.2f}-{r[1]:.2f} (pico em {r[2]:.2f})"); _show(x[0])

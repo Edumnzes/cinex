@@ -146,6 +146,10 @@ frases de qualquer clipe. A transcrição leva alguns minutos por clipe.
 ação** acha o momento de mais movimento e brilho do trecho (uma chama, um salto) e deixa 2 s em 0,35x. A câmera lenta
 sai interpolada (sem quadros repetidos) e sem som.
 
+**Versões curtas:** na aba **Corte**, **Versões curtas › 10 s / 15 s / 30 s** cria um projeto novo
+(`<nome>_15s`) com o gancho, o CTA final e as frases com mais prova (números, palavras de destaque, motion) que
+cabem no tempo. O original não muda; a versão abre no app para ajustar e exportar.
+
 **Limpar a imagem:** no mesmo trecho, **Fundo › desfocar** deixa só a pessoa da frente nítida (quem passa atrás
 fica desfocado; aparece no vídeo exportado). **Enquadrar** aproxima até 250% e **Escolher o centro na prévia** define
 o ponto que fica no meio — para tirar do quadro uma sacola, um cabo ou alguém no fundo. O recorte sai do vídeo

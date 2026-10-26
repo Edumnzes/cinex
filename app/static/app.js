@@ -501,6 +501,16 @@ async function addClips(paths) {
         $("#clipstatus").textContent = "Adicionando… a prévia é refeita no fim (a transcrição leva alguns minutos por clipe)."; poll(); }
   catch (err) { $("#clipstatus").textContent = err.message; }
 }
+function bindVersions() {
+  for (const b of $("#versoes").children) b.onclick = async () => {
+    if (!name) return; b.disabled = true; $("#versaostatus").textContent = `Montando a versão de ${b.dataset.s} s…`;
+    try {
+      const r = await api(`/api/p/${name}/versao`, { method: "POST", body: JSON.stringify({ s: +b.dataset.s }) });
+      $("#versaostatus").textContent = `Pronto: ${r.name} (${r.total} s). Abrindo…`; await listProjects(r.name);
+    } catch (err) { $("#versaostatus").textContent = err.message; }
+    finally { b.disabled = false; }
+  };
+}
 function bindClips() {
   $("#clipform").onsubmit = (e) => { e.preventDefault(); const p = $("#clippath").value.trim(); if (!p || !name) return; $("#clippath").value = ""; addClips([p]); };
   $("#clipup").onchange = async (e) => {
@@ -629,7 +639,7 @@ function renderAll() {
 }
 
 async function init() {
-  bindCaptionUI(); bindLookUI(); bindFx(); bindBroll(); bindClips(); bindMusic();
+  bindCaptionUI(); bindLookUI(); bindFx(); bindBroll(); bindClips(); bindMusic(); bindVersions();
   $("#phone").addEventListener("click", (e) => {        // "Escolher o centro": the clicked point becomes the frame centre
     if (!pickCenter) return; e.stopPropagation(); e.preventDefault();
     const g = pickCenter; pickCenter = null; planeHint("");
