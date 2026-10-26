@@ -22,6 +22,7 @@ import json, os, re, shutil, subprocess, sys, time, datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE)); import hdr as HDR    # HLG/PQ phone footage → SDR
 ROOT = Path.home() / "reels"
 PY = sys.executable
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
@@ -138,7 +139,7 @@ def prepare(name, prompt=None):
     try:
         if not (d / "preview.mp4").exists():
             job(name, "prep", step="Gerando prévia", pct=5, done=False, error=None)
-            subprocess.run([_ff(), "-loglevel", "error", "-y", "-i", src, "-vf", "scale=-2:960", "-c:v", "libx264", "-preset",
+            subprocess.run([_ff(), "-loglevel", "error", "-y", "-i", src, "-vf", HDR.vf(src, "scale=-2:960"), "-c:v", "libx264", "-preset",
                             "veryfast", "-crf", "26", "-c:a", "aac", "-b:a", "96k", "-movflags", "+faststart",
                             str(d / "preview.mp4")], check=True)
         if not (d / "waveform.json").exists():

@@ -167,6 +167,7 @@ cinex/
 │   ├── cut.py                # renderiza o corte (+ cuts.json com o início de cada trecho)
 │   ├── detect_cuts.py        # confere os cortes visíveis na imagem
 │   ├── mix_audio.py          # mixa voz + ambiente + SFX e normaliza (−14 LUFS)
+│   ├── hdr.py                # detecta vídeo HDR (HLG/PQ do iPhone) e converte para SDR
 │   ├── brand.py              # lê/grava o perfil da marca (~/instagram-legendas/<arroba>/)
 │   ├── qa.py                 # controle de qualidade do arquivo final
 │   ├── decisions.py          # registro de decisões + nota 0–5 (decisoes.json)
@@ -313,7 +314,8 @@ pela categoria (`pop_03.wav`). Fontes gratuitas com uso comercial permitido: **M
 
 Com o conector **Adobe for creativity** ativo no Claude, só a trilha de voz é enviada ao Adobe
 (a imagem nunca sai do computador). O resultado volta em faixas separadas (voz limpa, ambiente,
-reverb) e é mixado localmente. Sem o conector, a skill normaliza o áudio original.
+reverb) e é mixado localmente. Sem o conector, a skill limpa a voz com o próprio ffmpeg
+(`mix_audio.py --clean`: corta graves, reduz ruído e comprime de leve) e normaliza.
 
 > No app desktop (aba Code), o resultado do Adobe chega por um painel que pode demorar a aparecer.
 > Alternativa manual: enviar `voice.wav` em podcast.adobe.com/enhance e devolver o arquivo tratado.
@@ -350,6 +352,8 @@ Detalhes em [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
 | Palavra cortada no meio | Alargar o limite daquele corte em 0,1–0,2 s e renderizar de novo |
 | Rosto pequeno não é seguido | Baixar `min_face` para ~28 no `project.py` |
 | Legenda com texto errado | Corrigir no `FIX` do projeto ou direto no `words.json` |
+| Imagem lavada, cor errada (iPhone) | Vídeo HDR (HLG). O Cinex converte sozinho; confira com `python scripts/hdr.py <vídeo>` |
+| Timeline mais curta que o esperado | Trecho pedido passa do fim do clipe; o aviso mostra qual e o tempo foi encurtado |
 
 ## Documentação detalhada
 

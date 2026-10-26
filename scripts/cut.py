@@ -7,9 +7,11 @@ Render twice: 1080x1920 crf 18 for review, 1440x2560 crf 14 as the base for rend
 --fit crop (default) fills the frame; blur shows the whole picture over a blurred copy of itself
 (vertical footage in a 16:9 export); keep scales without cropping (at least --size on both sides) so the
 engine's virtual camera can choose the framing (e.g. follow a face across a horizontal shot).
+HDR sources (iPhone HLG, PQ) are tone mapped to Rec.709 automatically (hdr.py).
 """
 import argparse, json, subprocess
 import imageio_ffmpeg
+from hdr import tonemap
 
 ap = argparse.ArgumentParser()
 ap.add_argument("src"); ap.add_argument("keep"); ap.add_argument("out")
@@ -18,18 +20,20 @@ ap.add_argument("--fit", choices=("crop", "blur", "keep"), default="crop")
 a = ap.parse_args()
 w, h = a.size.split("x")
 K = json.load(open(a.keep))
+tm = tonemap(a.src)                      # HLG/PQ phone footage → SDR (after scaling: cheaper)
+tm = "," + tm if tm else ""
 fl, cat = [], ""
 for i, (s, e) in enumerate(K):
     d = e - s
     cover = f"scale={w}:{h}:force_original_aspect_ratio=increase,crop={w}:{h}"
     if a.fit == "blur":
-        fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,split[b{i}][f{i}];[b{i}]{cover},boxblur=30:2,eq=brightness=-0.12[bg{i}];"
-                  f"[f{i}]scale={w}:{h}:force_original_aspect_ratio=decrease[fg{i}];"
+        fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,split[b{i}][f{i}];[b{i}]{cover},boxblur=30:2,eq=brightness=-0.12{tm}[bg{i}];"
+                  f"[f{i}]scale={w}:{h}:force_original_aspect_ratio=decrease{tm}[fg{i}];"
                   f"[bg{i}][fg{i}]overlay=(W-w)/2:(H-h)/2,setsar=1[v{i}]")
     elif a.fit == "keep":
-        fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,scale={w}:{h}:force_original_aspect_ratio=increase:force_divisible_by=2,setsar=1[v{i}]")
+        fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,scale={w}:{h}:force_original_aspect_ratio=increase:force_divisible_by=2{tm},setsar=1[v{i}]")
     else:
-        fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,{cover},setsar=1[v{i}]")
+        fl.append(f"[0:v]trim={s}:{e},setpts=PTS-STARTPTS,{cover}{tm},setsar=1[v{i}]")
     fl.append(f"[0:a]atrim={s}:{e},asetpts=PTS-STARTPTS,afade=t=in:d=0.02,afade=t=out:st={d - 0.03:.3f}:d=0.03[a{i}]")
     cat += f"[v{i}][a{i}]"
 fl.append(f"{cat}concat=n={len(K)}:v=1:a=1[v][a]")

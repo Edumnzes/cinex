@@ -30,6 +30,7 @@ import numpy as np, cv2, imageio_ffmpeg
 from PIL import Image
 
 FF = imageio_ffmpeg.get_ffmpeg_exe()
+sys.path.insert(0, str(Path(__file__).resolve().parent)); from hdr import vf as hvf   # HLG/PQ → SDR after scaling
 OW, OH, FPS = 1440, 2560, 30
 MODEL = str(Path(__file__).resolve().parent.parent / "assets" / "yunet.onnx")
 # Phone clips carry a "rotate" display matrix; ffmpeg rotates the pixels on decode but may copy the matrix
@@ -48,7 +49,7 @@ def probe(p, video=True):
 
 
 def frame_at(p, t, w=360):
-    raw = subprocess.run([FF, "-loglevel", "error", "-ss", str(t), "-i", str(p), "-frames:v", "1", "-vf", f"scale={w}:-2",
+    raw = subprocess.run([FF, "-loglevel", "error", "-ss", str(t), "-i", str(p), "-frames:v", "1", "-vf", hvf(p, f"scale={w}:-2"),
                           "-f", "image2pipe", "-vcodec", "png", "-"], capture_output=True).stdout
     return cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR) if raw else None
 
@@ -91,7 +92,7 @@ def split(a):
     dur = a.dur or min(bdur - a.bottom_ss, tdur - a.top_ss)
     top_h = int(round(OH * a.ratio / 2) * 2); bot_h = OH - top_h
     fx, fy = face_centre(a.bottom, a.bottom_ss, dur)
-    vf = (f"[0:v]fps={FPS},{cover(tw, th, OW, top_h)}[t];[1:v]fps={FPS},{cover(bw, bh, OW, bot_h, fx, max(fy - .08, 0))}[b];"
+    vf = (f"[0:v]{hvf(a.top, f'fps={FPS}', cover(tw, th, OW, top_h))}[t];[1:v]{hvf(a.bottom, f'fps={FPS}', cover(bw, bh, OW, bot_h, fx, max(fy - .08, 0)))}[b];"
           f"[t][b]vstack=inputs=2[v]")
     if tau and bau: af = f";[0:a]volume={a.top_gain}dB[ta];[1:a]volume={a.bottom_gain}dB[ba];[ta][ba]amix=inputs=2:normalize=0:duration=longest[a]"
     elif bau: af = f";[1:a]volume={a.bottom_gain}dB[a]"
@@ -119,7 +120,7 @@ def clone(a):
     xs = np.clip((np.arange(OW) - (sx - f / 2)) / f, 0, 1)                        # 0 = A, 1 = B
     m[:] = xs[None, :]
     mask = os.path.join(tempfile.gettempdir(), "reels_clone_mask.png"); Image.fromarray((m * 255).astype(np.uint8)).save(mask)
-    vf = (f"[0:v]fps={FPS},{cover(aw, ah, OW, OH)},format=yuv420p[a];[1:v]fps={FPS},{cover(bw, bh, OW, OH)},format=yuv420p[b];"
+    vf = (f"[0:v]{hvf(a.A, f'fps={FPS}', cover(aw, ah, OW, OH))},format=yuv420p[a];[1:v]{hvf(a.B, f'fps={FPS}', cover(bw, bh, OW, OH))},format=yuv420p[b];"
           f"[2:v]format=gray,scale={OW}:{OH}[m];[a][b][m]maskedmerge[v]")
     au = [i for i, has in ((0, aau), (1, bau)) if has]
     af = (";" + "".join(f"[{i}:a]" for i in au) + f"amix=inputs={len(au)}:normalize=0:duration=longest[au]") if len(au) == 2 else \
@@ -136,12 +137,15 @@ def assemble(a):
     clips = json.load(open(a.clips, encoding="utf-8")); tmp = Path(tempfile.mkdtemp(prefix="reels_asm_")); parts = []
     for i, c in enumerate(clips):
         w, h, d, has = probe(c["src"]); ss = c.get("ss", 0); dd = c.get("dur") or (d - ss)
+        if ss >= d: sys.exit(f"{c['src']}: ss={ss} passa do fim do clipe ({d:.2f}s)")
+        if dd > d - ss + .05:                              # a short clip would silently shorten the whole timeline
+            print(f"aviso: {Path(c['src']).name} tem só {d - ss:.2f}s depois de ss={ss}; dur {dd} encurtado"); dd = d - ss
         fx, fy = (face_centre(c["src"], ss, dd) if c.get("face") else (.5, .5))
         out = tmp / f"p{i:03d}.mp4"
         cmd = [FF, "-y", "-ss", str(ss), "-t", f"{dd:.3f}", "-i", c["src"]]
         if not has or a.audio: cmd += ["-f", "lavfi", "-t", f"{dd:.3f}", "-i", "anullsrc=r=48000:cl=stereo"]
         amap = "1:a" if (not has or a.audio) else "0:a"
-        cmd += ["-vf", f"fps={FPS},{cover(w, h, OW, OH, fx, fy)}", "-map", "0:v", "-map", amap, "-ar", "48000", "-ac", "2",
+        cmd += ["-vf", hvf(c["src"], f"fps={FPS}", cover(w, h, OW, OH, fx, fy)), "-map", "0:v", "-map", amap, "-ar", "48000", "-ac", "2",
                 "-c:v", "libx264", "-crf", "16", "-preset", "medium", "-pix_fmt", "yuv420p", "-metadata:s:v:0", "rotate=0", "-c:a", "aac", "-b:a", "192k", "-shortest", str(out)]
         run(cmd); parts.append((out, dd))
     total = sum(d for _, d in parts)

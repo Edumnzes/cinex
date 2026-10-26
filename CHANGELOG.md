@@ -77,6 +77,11 @@
   marcado, pessoas excluídas pela máscara, homografia RANSAC e suavização), deformado na perspectiva antes da câmera
   virtual e escondido atrás da pessoa quando ela passa na frente. Sem marcação (ou com fundo desfocado), vira
   elemento comum. O preview não recorta a pessoa; a exportação recorta.
+- **HDR do iPhone.** Vídeos HLG/PQ são detectados e convertidos para SDR (Rec.709) no corte, na prévia do app,
+  no B-roll do motor e no `compose.py` (`scripts/hdr.py`). Antes saíam lavados e com a cor errada.
+- `mix_audio.py --clean`: limpeza de voz só com ffmpeg, plano B quando o Adobe Enhance não está disponível.
+- B-roll e `compose.py assemble` avisam e encurtam a janela quando o trecho pedido passa do fim do clipe
+  (antes a timeline ficava mais curta sem aviso).
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

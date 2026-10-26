@@ -12,6 +12,7 @@ import json, subprocess, sys, math, re
 from pathlib import Path
 import numpy as np, cv2, imageio_ffmpeg
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+sys.path.insert(0, str(Path(__file__).resolve().parent)); from hdr import tonemap as _tonemap
 
 FFM = imageio_ffmpeg.get_ffmpeg_exe()
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
@@ -272,6 +273,7 @@ class _Clip:
         if self.p: self.p.kill()
         vf = (f"scale={self.w}:{self.h}:force_original_aspect_ratio=increase,crop={self.w}:{self.h}" if self.cover
               else f"scale={self.w}:{self.h}")
+        tm = _tonemap(self.src); vf += "," + tm if tm else ""          # HDR B-roll (iPhone HLG) → SDR
         self.p = subprocess.Popen([FFM, "-loglevel", "error", "-ss", f"{self.ss + lt:.3f}", "-i", self.src, "-vf", f"fps={FPS},{vf}",
                                    "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], stdout=subprocess.PIPE,
                                   stderr=subprocess.DEVNULL)
@@ -416,6 +418,10 @@ class Reel:
         self.broll = []
         for b in broll:
             b = dict(b); b.setdefault("ss", 0); b.setdefault("mode", "full"); b.setdefault("zoom", (1.0, 1.08))
+            room = _probe_dur(b["src"]) - b["ss"]                 # the window must fit in the clip (ss + dur <= length)
+            if room <= 0: raise ValueError(f"B-roll {b['src']}: ss={b['ss']} passa do fim do clipe")
+            if b["t1"] - b["t0"] > room + .05:
+                print(f"aviso: B-roll {Path(b['src']).name} tem só {room:.2f}s depois de ss={b['ss']}; janela encurtada"); b["t1"] = b["t0"] + room
             if b["mode"] == "full":
                 b["clip"] = _Clip(b["src"], b["ss"], W, H, True)
             else:

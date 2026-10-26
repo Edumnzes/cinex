@@ -198,6 +198,12 @@ Pick the phrases to keep in RAW seconds (first word `s` − 0.1 … last word `e
 python scripts/plan_cut.py RAW.MOV phrases.json keep.json      # prints segments + total duration
 ```
 A strong line from later in the video makes a great 1–2 s cold open (put it first in phrases.json).
+**HDR:** iPhone records HLG by default. `cut.py`, the app preview, engine B-roll and `compose.py` detect HLG/PQ
+(`python scripts/hdr.py <video>`) and tone map to Rec.709 automatically — never re-encode an HDR source with a
+plain `scale` (washed-out picture). Any new ffmpeg read of a SOURCE video goes through `hdr.vf(src, ...)`.
+**Clip bounds:** a B-roll/assemble window must fit in its clip (`ss + dur <= length`); both now clamp and warn.
+**Shell:** don't loop with `set -- $spec` (zsh, the macOS default, doesn't word-split) — loop in Python. Write
+decimals in ffmpeg filters with the leading zero (`d=0.015`; ffmpeg 7 rejects `.015`).
 Remove:
 dead head/tail, pauses **without a function**, breaths, "éé", drawn-out syllables, false starts and the
 wrong half of self-corrections ("261 kilowatts de kilowatts horas" → keep "261 … kilowatts horas"),
@@ -244,7 +250,8 @@ Only the audio goes to Adobe (smaller, and the picture never leaves the machine)
    (0.25–0.4 for noisy locations so it doesn't sound pasted-on; 0.1–0.2 indoors). It normalises in two passes and
    prints the loudness measured on the OUTPUT file — report that number (target −14 LUFS, peak ≤ −1 dBTP).
    Music is not configured yet: don't add music. Log the treatment in `audio_strategy`.
-If the Adobe connector isn't available, say so and still normalize with mix_audio.py using the original audio as "speech".
+If the Adobe connector isn't available, say so and use plan B: `python scripts/mix_audio.py render.mp4 render.mp4 final.mp4 --clean`
+(the render's own audio as "speech", cleaned with high-pass 90 Hz + FFT denoise + gentle compression, ~−14 LUFS).
 
 ## 3b. Direction: captions, colour, sound
 
