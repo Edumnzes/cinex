@@ -21,7 +21,7 @@ STATIC = APP / "static"
 PORT = 8765
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)       # no console window flashing on Windows
 MAX_BODY = 25 * 1024 * 1024                     # font uploads
-EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx"}
+EDITABLE = {"segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 
@@ -183,6 +183,8 @@ class H(BaseHTTPRequestHandler):
                 for m in body.get("motions", []):
                     if not (isinstance(m, dict) and m.get("type") in P.MOTIONS and isinstance(m.get("t0"), (int, float))
                             and isinstance(m.get("t1"), (int, float)) and m["t1"] > m["t0"]): return self._err(400, "motion inválido")
+                if not (isinstance(body.get("order", []), list) and all(isinstance(i, int) for i in body.get("order", []))):
+                    return self._err(400, "ordem inválida")
                 for s_ in body.get("sfx", []):
                     if not (isinstance(s_, dict) and isinstance(s_.get("t"), (int, float)) and isinstance(s_.get("cat"), str)):
                         return self._err(400, "som inválido")

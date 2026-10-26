@@ -97,8 +97,9 @@ nas legendas"), use the local app instead of delivering a finished file. The app
 brain**: you propose the cut, answer the app's chat and change the project. Current scope: cut, captions, camera
 (`camera`: follow, zoom 1.0–1.25, punch on cuts), colour (`color`: correct, look), motion (`motions`: [{id, type
 (titulo|topico|nome|citacao|frase|seguir|salvar), t0, t1 in raw seconds, text, text2, sfx}]) and SFX (`sfx`:
-[{id, t, cat, gain}], categories of ~/reels-banco/sfx; manual: ~2 per 10 s, key events only) — no phrase
-reordering in the app yet; for that, use the normal flow below. The app has a live preview: export only when
+[{id, t, cat, gain}], categories of ~/reels-banco/sfx; manual: ~2 per 10 s, key events only)
+and phrase order (`order`: kept segment ids in play order; `app_project.py order <name> <id> ...`; missing ids
+follow their source predecessor). The app has a live preview: export only when
 the user asks for the file.
 1. Start the server once, in the background: `python app/server.py` → http://127.0.0.1:8765 (local only).
 2. Create the project: `python scripts/app_project.py new <video> --name <name> --prompt "<marca.json termos>"`

@@ -43,6 +43,10 @@
   (`~/reels-banco/sfx`), volume por som, prévia de áudio durante a reprodução e aviso quando passa do limite do
   manual (~2 sons a cada 10 s). Na exportação, cada elemento usa o modelo do `formats.py` (posicionado fora do
   rosto) e as legendas somem enquanto uma citação ou frase grande está na tela.
+- **Reordenar frases no app:** lista "Ordem das frases" na aba Corte (arrastar, ↑ ↓, "abrir com esta frase" para cold
+  open, restaurar a ordem original). Frase = trechos mantidos separados só por pausas curtas, então move a frase
+  inteira. A prévia toca na nova ordem, a V1 numera as frases e legendas, motion e sons acompanham cada frase na
+  exportação (`order` no cinex.json; `app_project.py order`). Edições por intervalo preservam os ids dos trechos.
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.

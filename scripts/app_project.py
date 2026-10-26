@@ -15,6 +15,7 @@ Claude Code is the brain: it reads the state, answers the chat and edits the cut
     python app_project.py say <name> "<message>"         answer in the app's chat
     python app_project.py seg <name> <id|s-e> keep|cut ["reason"]   change one segment (or a time range)
     python app_project.py lock <name> on|off             approve / reopen the cut
+    python app_project.py order <name> <id> <id> ...      play order of kept segments (reorder phrases)
     python app_project.py export <name>                  cut + captions + loudness -> Downloads
 """
 import json, os, re, shutil, subprocess, sys, time, datetime
@@ -201,8 +202,10 @@ def set_seg(name, ref, keep, reason=None):
                     if e - s > .01:
                         ng = dict(g, s=round(s, 2), e=round(e, 2)); new.append(ng)
                         if i == 1: hit.append(ng)
-            for i, g in enumerate(new):
-                g["id"] = i + 1; g["text"] = " ".join(w["w"] for w in words_in(words, g["s"], g["e"]))
+            seen, nxt = set(), max((g["id"] for g in st["segments"]), default=0) + 1
+            for g in new:                                # the first piece keeps the id, later pieces get new ones
+                if g["id"] in seen: g["id"] = nxt; nxt += 1
+                seen.add(g["id"]); g["text"] = " ".join(w["w"] for w in words_in(words, g["s"], g["e"]))
             st["segments"] = new
         if not hit: raise KeyError(f"segmento {ref} não encontrado")
         for g in hit:
@@ -212,15 +215,30 @@ def set_seg(name, ref, keep, reason=None):
 
 
 # ------------------------------------------------------------ export: cut -> captions -> loudness -> Downloads
+def play_order(st):
+    """Kept segments in PLAY order. `order` lists segment ids (set by the app when phrases are reordered);
+    a kept segment missing from it (new cut, range edit) goes right after its kept predecessor in the source."""
+    kept = [g for g in st["segments"] if g["keep"]]; by = {g["id"]: g for g in kept}
+    out = [i for i in st.get("order", []) if i in by]; out = list(dict.fromkeys(out))
+    for j, g in enumerate(kept):
+        if g["id"] in out: continue
+        prev = next((k["id"] for k in reversed(kept[:j]) if k["id"] in out), None)
+        out.insert(out.index(prev) + 1 if prev is not None else 0, g["id"])
+    return [by[i] for i in out]
+
+
 def raw_to_cut(t, segs, end=False):
-    """Raw-source time -> cut timeline. A time inside a removed stretch snaps to the next kept clip
-    (or, for an end time, to the end of the previous one)."""
-    off = 0.0
+    """Raw-source time -> cut timeline for segments in play order (they may be reordered). A time inside a
+    removed stretch snaps to the next kept clip in the source (or, for an end time, the end of the previous one)."""
+    off, starts = 0.0, {}
     for g in segs:
-        if t < g["s"]: return off if not end else max(0.0, off)
-        if t < g["e"]: return off + t - g["s"]
-        off += g["e"] - g["s"]
-    return off
+        if g["s"] <= t < g["e"]: return off + t - g["s"]
+        starts[g["id"]] = off; off += g["e"] - g["s"]
+    if end:
+        prev = max((g for g in segs if g["e"] <= t), key=lambda g: g["e"], default=None)
+        return starts[prev["id"]] + prev["e"] - prev["s"] if prev else 0.0
+    nxt = min((g for g in segs if g["s"] > t), key=lambda g: g["s"], default=None)
+    return starts[nxt["id"]] if nxt else off
 
 
 # motion templates of the app -> formats.py (one function each; the engine places them away from faces)
@@ -268,7 +286,7 @@ def export(name):
     d = folder(name); st = load(name); c = st["captions"]; os.chdir(d)
     fmt = st.get("format", "vertical"); FW, FH = FORMATS[fmt]
     try:
-        kept = [g for g in st["segments"] if g["keep"]]
+        kept = play_order(st)                            # play order (phrases may be reordered)
         if not kept: raise ValueError("nenhum trecho mantido no corte")
         job(name, "export", step="Cortando", pct=3, done=False, error=None, out=None)
         _write_json(d / "keep.json", [[g["s"], g["e"]] for g in kept])
@@ -305,7 +323,9 @@ def export(name):
         tops = [m for m in ms if m["type"] == "topico"]
         for m in ms:
             c0, c1 = raw_to_cut(m["t0"], kept), raw_to_cut(m["t1"], kept, end=True)
-            if c1 - c0 < .3: continue                     # the element sits entirely inside a removed stretch
+            if c1 - c0 < .3:                              # ends in another (reordered) phrase: keep its own length
+                if any(g["s"] <= m["t0"] < g["e"] for g in kept): c1 = c0 + (m["t1"] - m["t0"])
+                else: continue                            # entirely inside a removed stretch
             n = tops.index(m) + 1 if m in tops else 0
             fns.append(motion_fn(F, m, c0, c1, acc, n, len(tops)))
             if m["type"] in ("citacao", "frase"): hide.append((c0, c1))   # the line is already on screen
@@ -335,6 +355,8 @@ def export(name):
 # ------------------------------------------------------------ CLI
 def _show(name):
     st = load(name)
+    po = [g["id"] for g in play_order(st)]
+    if po != [g["id"] for g in st["segments"] if g["keep"]]: print("ordem de reprodução:", " ".join(map(str, po)))
     kept = sum(g["e"] - g["s"] for g in st["segments"] if g["keep"])
     print(f"{name}: {st['duration']:.1f} s -> {kept:.1f} s mantidos · corte {'TRAVADO' if st['cut_locked'] else 'aberto'} · rev {st['rev']}")
     for g in st["segments"]:
@@ -369,5 +391,7 @@ if __name__ == "__main__":
     elif a.cmd == "say": say(a.args[0], " ".join(a.args[1:]))
     elif a.cmd == "seg": set_seg(a.args[0], a.args[1], a.args[2] == "keep", " ".join(a.args[3:]) or None); _show(a.args[0])
     elif a.cmd == "lock": update(a.args[0], lambda s: s.update(cut_locked=a.args[1] == "on"))
+    elif a.cmd == "order":                             # play order of kept segment ids (missing ones follow the source)
+        update(a.args[0], lambda s: s.update(order=[int(x) for x in a.args[1:]])); _show(a.args[0])
     elif a.cmd == "export": export(a.args[0])
     else: print(__doc__)

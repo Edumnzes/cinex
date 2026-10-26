@@ -103,7 +103,7 @@ async function poll() {
 
 // ------------------------------------------------------------ captions (same grouping rules as reels_lib)
 function buildGroups() {
-  kept = st.segments.filter((g) => g.keep).sort((a, b) => a.s - b.s);
+  kept = playOrder();                         // play order (phrases may be reordered)
   let off = 0; const toks = [], c = st.captions, fix = st.fix || {}, keys = new Set((st.keywords || []).map((k) => k.toUpperCase()));
   for (const g of kept) {
     for (const w of words) {
@@ -344,16 +344,17 @@ function renderTimeline() {
     b.textContent = b.title = g.w.map((w) => w.d).join(" ");
     return b;
   }));
+  const reo = isReordered(), pn = reo ? phraseNumber() : null;
   $("#blocks").replaceChildren(...st.segments.map((g) => {
     const b = document.createElement("div");
     b.className = `blk ${g.keep ? "keep" : "cut"}${sel === g.id ? " sel" : ""}`;
     b.style.left = g.s * pps + "px"; b.style.width = Math.max(2, (g.e - g.s) * pps - 2) + "px";
-    b.textContent = g.keep ? g.text || "…" : g.reason || "cortado"; b.title = `#${g.id} ${g.s.toFixed(2)}–${g.e.toFixed(2)} s\n${g.text || ""}`;
+    b.textContent = (g.keep && reo && pn.get(g.id) ? pn.get(g.id) + " · " : "") + (g.keep ? g.text || "…" : g.reason || "cortado"); b.title = `#${g.id} ${g.s.toFixed(2)}–${g.e.toFixed(2)} s\n${g.text || ""}`;
     b.onclick = () => select(g.id, true);
     b.ondblclick = () => toggle(g.id);
     return b;
   }));
-  drawWave(); renderInfo(); renderFx();
+  drawWave(); renderInfo(); renderFx(); renderOrder();
 }
 
 function drawWave() {
@@ -384,7 +385,7 @@ function toggle(id) {
   g.keep = !g.keep; if (!g.keep && !g.reason) g.reason = "cortado no app";
   afterCutChange();
 }
-function afterCutChange() { buildGroups(); renderTimeline(); renderDur(); save({ segments: st.segments }); }
+function afterCutChange() { buildGroups(); renderTimeline(); renderDur(); st.order = playOrder().map((g) => g.id); save({ segments: st.segments, order: st.order }); }
 
 function renderInfo() {
   const box = $("#selinfo"), g = st.segments.find((x) => x.id === sel);
@@ -427,11 +428,7 @@ function tick() {
 function update() {
   const v = $("#video");
   if (st && !v.paused && $("#skipcut").checked) {
-    const t = v.currentTime, g = st.segments.find((x) => t >= x.s && t < x.e);
-    if (g && !g.keep) {
-      const next = kept.find((x) => x.s >= g.e - 0.001);
-      if (next) v.currentTime = next.s; else { v.pause(); }
-    }
+    followOrder(v);                                              // skip cuts, follow the phrase order
   }
   if (st) {
     const t = v.currentTime;
@@ -478,8 +475,9 @@ async function init() {
   const step = (d) => { const v = $("#video"); v.pause(); v.currentTime = Math.max(0, Math.min(st.duration, v.currentTime + d)); };
   const jump = (dir) => {
     const t = $("#video").currentTime, list = $("#skipcut").checked ? kept : st.segments;
-    const g = dir > 0 ? list.find((x) => x.s > t + 0.01) : [...list].reverse().find((x) => x.s < t - 0.3);
-    $("#video").currentTime = g ? g.s : dir > 0 ? t : 0;
+    const i = list.findIndex((x) => t >= x.s - 0.02 && t < x.e);           // neighbours in PLAY order
+    const g = i < 0 ? (dir > 0 ? list.find((x) => x.s > t) : null) : list[i + (dir > 0 ? 1 : (t - list[i].s > 0.3 ? 0 : -1))];
+    $("#video").currentTime = g ? g.s : dir > 0 ? t : 0; playIdx = g ? list.indexOf(g) : -1;
   };
   $("#backbtn").onclick = () => st && step(-1 / FPS); $("#fwdbtn").onclick = () => st && step(1 / FPS);
   $("#prevbtn").onclick = () => st && jump(-1); $("#nextbtn").onclick = () => st && jump(1);
@@ -493,6 +491,7 @@ async function init() {
   $("#exportbtn").onclick = async () => {
     try { await api(`/api/p/${name}/export`, { method: "POST", body: "{}" }); poll(); } catch (e) { alert(e.message); }
   };
+  $("#orderreset").onclick = () => { if (!st || st.cut_locked) return; st.order = []; buildGroups(); renderTimeline(); renderDur(); save({ order: [] }); };
   $("#lockbtn").onclick = () => { st.cut_locked = !st.cut_locked; renderTimeline(); save({ cut_locked: st.cut_locked }); };
   $("#chatform").onsubmit = async (e) => {
     e.preventDefault(); const t = $("#chatin").value.trim(); if (!t || !name) return;

@@ -132,7 +132,8 @@ Abre em http://127.0.0.1:8765 (só no seu computador). Na tela:
 - **Aprovar e travar corte** e **Exportar:** o vídeo final vai para `Downloads/<nome>_cinex.mp4` (ou `_cinex_16x9.mp4`).
 
 O app faz corte, legendas, enquadramento (seguir rosto, zoom, zoom nos cortes), cor (correção automática e looks),
-motion (títulos, tópicos, nome, citação, frase grande, chamadas) e efeitos sonoros do seu banco.
+motion (títulos, tópicos, nome, citação, frase grande, chamadas), efeitos sonoros do seu banco e a ordem das frases
+(arraste na aba Corte; dá para abrir o vídeo com uma frase forte do meio).
 
 ## Estrutura do repositório
 
