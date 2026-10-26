@@ -321,6 +321,7 @@ class H(BaseHTTPRequestHandler):
                 n = int(self.headers.get("Content-Length") or 0)
                 if not 0 < n <= 200 * 1024 * 1024: return self._err(400, "arquivo grande demais (máx. 200 MB)")
                 dd = P.folder(name) / "music"; dd.mkdir(exist_ok=True); dest = dd / fn
+                dest.unlink(missing_ok=True)           # never write into a file a short version shares (hard link)
                 with open(dest, "wb") as f:
                     left = n
                     while left > 0:
@@ -368,6 +369,7 @@ class H(BaseHTTPRequestHandler):
                     if not (isinstance(s_, dict) and isinstance(s_.get("t"), (int, float)) and isinstance(s_.get("cat"), str)):
                         return self._err(400, "som inválido")
                 if "segments" in body:
+                    for g in body["segments"]: g.pop("off", None)        # the editor's cut-timeline offset: not state
                     for g in body["segments"]:
                         if not (isinstance(g.get("s"), (int, float)) and isinstance(g.get("e"), (int, float)) and isinstance(g.get("keep"), bool)
                                 and g.get("speed", 1) in (1, .5, .35, .25) and isinstance(g.get("mudo", False), bool)
@@ -412,7 +414,7 @@ class H(BaseHTTPRequestHandler):
                 if not 0 < n <= MAX_BODY: return self._err(400, "arquivo grande demais (máx. 25 MB)")
                 data = self.rfile.read(n)
                 if data[:4] not in (b"\x00\x01\x00\x00", b"OTTO", b"true"): return self._err(400, "não parece uma fonte TrueType/OpenType")
-                d = P.folder(name) / "fonts"; d.mkdir(exist_ok=True); (d / fn).write_bytes(data)
+                d = P.folder(name) / "fonts"; d.mkdir(exist_ok=True); (d / fn).unlink(missing_ok=True); (d / fn).write_bytes(data)   # versions hard-link fonts/
                 P.update(name, lambda s: s["captions"].update(font=fn))
                 return self._send(200, {"font": fn})
             return self._err(404, "rota não encontrada")

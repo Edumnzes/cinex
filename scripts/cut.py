@@ -66,7 +66,7 @@ for s_, e_, src, o in K:
 if len(runs) == 1:
     render(runs[0][0], runs[0][1], a.out, a.fit, w, h)
 else:                                         # several clips: render each run, then join them (same codec settings)
-    tmp = tempfile.mkdtemp(prefix="cinex_cut_"); parts = []
+    tmp = tempfile.mkdtemp(prefix="cinex_cut_"); parts = []; w0 = h0 = None
     for i, (src, segs) in enumerate(runs):
         p = os.path.join(tmp, f"p{i:04d}.mp4")
         if i == 0 or a.fit != "keep": render(src, segs, p, a.fit, w, h)

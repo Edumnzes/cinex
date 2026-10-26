@@ -81,6 +81,15 @@
   (Começar, Corte, Estilo, Elementos, Revisão, Publicar), chat com a IA sempre ao lado como o meio principal de
   mudança, sugestões por página, prévia do vídeo em cada passo e envio do vídeo arrastando para a página. O editor
   com linha do tempo continua em `/editor` (Editor completo).
+- **Revisão geral (correções):**
+  - Palavras sumiam da legenda: o Whisper estica o tempo da palavra por cima da pausa seguinte, e a pausa
+    cortada levava a palavra junto (só na legenda; o áudio estava certo). Agora o tempo de cada palavra é ajustado
+    à fala medida pela energia; projetos antigos: `app_project.py ressincronizar <nome>`.
+  - Dividir um trecho (câmera lenta no pico, corte por intervalo) apagava as correções de texto da lista de frases.
+  - Versões curtas de vídeos com fala corrida (sem ponto final) saíam curtas demais: frases longas agora são
+    divididas nas vírgulas.
+  - Envio de música e de fonte não grava mais por cima de arquivo compartilhado com uma versão curta; o app não
+    salva mais o campo interno `off` nos trechos; rótulo de proporção do QA por formato (4:5, 1:1, 4:3…).
 - **Corrigir o texto das frases** na página Corte: clique, edite e salve. As palavras novas são realinhadas nos
   tempos da fala; a correção fica guardada à parte (`textos`) e vale para legenda, prévia e exportação.
 - **Comando de voz:** fale o pedido; a transcrição roda no computador (faster-whisper, nada vai para a internet).

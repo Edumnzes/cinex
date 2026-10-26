@@ -1,0 +1,79 @@
+{
+  "arquivo": "C:/Users/menez/Downloads/teste_revisao_cinex_4x5.mp4",
+  "plataforma": "feed",
+  "veredito": "APROVADO",
+  "itens": [
+    {
+      "item": "resolução",
+      "status": "OK",
+      "valor": "1080x1350",
+      "esperado": "1080x1350"
+    },
+    {
+      "item": "proporção 4:5",
+      "status": "OK",
+      "valor": "1080:1350",
+      "esperado": "4:5"
+    },
+    {
+      "item": "fps",
+      "status": "OK",
+      "valor": 30.0,
+      "esperado": "29.9-30.1"
+    },
+    {
+      "item": "duração",
+      "status": "OK",
+      "valor": "21.50s",
+      "esperado": "3-3600s"
+    },
+    {
+      "item": "áudio presente",
+      "status": "OK",
+      "valor": true,
+      "esperado": true
+    },
+    {
+      "item": "volume integrado",
+      "status": "OK",
+      "valor": -14.2,
+      "esperado": "-14 LUFS ±1,5"
+    },
+    {
+      "item": "pico real",
+      "status": "OK",
+      "valor": -1.3,
+      "esperado": "≤ -1.0 dBTP"
+    },
+    {
+      "item": "distorção (clipping)",
+      "status": "OK",
+      "valor": 0,
+      "esperado": 0
+    },
+    {
+      "item": "quadros pretos",
+      "status": "OK",
+      "valor": [],
+      "esperado": "nenhum"
+    },
+    {
+      "item": "imagem congelada ≥1,5 s",
+      "status": "OK",
+      "valor": [],
+      "esperado": "nenhuma"
+    },
+    {
+      "item": "decodifica até o fim",
+      "status": "OK",
+      "valor": "ok",
+      "esperado": "sem erros"
+    }
+  ],
+  "pendente_manual": [
+    "assistir o arquivo inteiro",
+    "revisar legendas, nomes, números e datas",
+    "cor consistente entre planos",
+    "transições sem quebra"
+  ]
+}

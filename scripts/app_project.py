@@ -22,6 +22,7 @@ Claude Code is the brain: it reads the state, answers the chat and edits the cut
     python app_project.py clips <name> <video|folder> ...  add speech clips: transcribed, cut, appended to the timeline
     python app_project.py versao <name> <seconds>          shorter version (10/15/30 s): best phrases -> new project <name>_<s>s
     python app_project.py texto <name> <s> <e> "texto corrigido"   fix the transcription of a stretch (raw seconds)
+    python app_project.py ressincronizar <name>             re-fit word times to the audio (projects made before the fix)
     python app_project.py lenta <name> <seg_id> [2.0] [0.35]   slow motion on the action peak of a kept segment
     python app_project.py media <name> <video>           add a clip to the project's media (B-roll): proxy + filmstrip
     python app_project.py broll <name> <media_id> <t0> <t1> [ss] [full|card]   B-roll over the speech (raw seconds)
@@ -110,6 +111,46 @@ def words_in(words, s, e):
     return [w for w in words if s <= (w["s"] + w["e"]) / 2 < e]
 
 
+def snap_words(words, keep):
+    """Whisper stretches a word's time over the pause after it, so its middle can land in a silent stretch the
+    energy cut removed — and the word would vanish from the captions while it's still heard. Clip every word that
+    straddles a kept stretch and a removed (silent) one to the kept part where most of it is."""
+    out = []
+    for w in words:
+        ov = [(min(w["e"], b) - max(w["s"], a), a, b) for a, b in keep if min(w["e"], b) > max(w["s"], a)]
+        if ov:
+            _, a, b = max(ov)
+            if w["s"] < a or w["e"] > b: w = dict(w, s=round(max(w["s"], a), 3), e=round(min(w["e"], b), 3))
+        out.append(w)
+    return out
+
+
+def resync_words(name):
+    """Projects prepared before snap_words: measure the speech energy again (plan_cut over each source) and fit
+    the word times to it. Only times and segment texts change — what is kept or cut stays as the user left it."""
+    d = folder(name); st = load(name); cl = clips_of(st)
+    def snapped(src, words, dur):
+        tmp = d / "_resync"; tmp.mkdir(exist_ok=True)
+        _write_json(tmp / "phrases.json", [[0, dur]])
+        subprocess.run([PY, str(HERE / "plan_cut.py"), str(src), str(tmp / "phrases.json"), str(tmp / "keep.json")], check=True, capture_output=True)
+        out = snap_words(words, json.loads((tmp / "keep.json").read_text())); shutil.rmtree(tmp, ignore_errors=True); return out
+    if st.get("clips"):
+        for c in cl:
+            p = d / "clips" / str(c["id"]) / "words.json"
+            _write_json(p, snapped(c["src"], json.loads(p.read_text(encoding="utf-8")), c.get("sdur") or c["dur"]))
+        _rebuild(name)
+    else:
+        _write_json(d / "words_raw.json", snapped(st["src"], json.loads((d / "words_raw.json").read_text(encoding="utf-8")), st["duration"]))
+    raw = json.loads((d / "words_raw.json").read_text(encoding="utf-8"))
+    def fn(st):
+        ws = words_edited(st, raw)
+        for g in st["segments"]:
+            g["text"] = " ".join(w["w"] for w in words_in(ws, g["s"], g["e"]))
+            if not g["keep"] and not g["text"] and g.get("reason") == "fala cortada": g["reason"] = "pausa"   # it was silence
+        st["words_rev"] = st.get("words_rev", 0) + 1
+    update(name, fn)
+
+
 def segments_from_keep(keep, dur, words, start=0.0):
     """Contiguous segments covering start..dur: the kept stretches plus the pauses between them."""
     segs, cur = [], start
@@ -172,8 +213,10 @@ def prepare(name, prompt=None):
                 _write_json(d / "phrases.json", [[0, st["duration"]]])
                 subprocess.run([PY, str(HERE / "plan_cut.py"), src, str(d / "phrases.json"), str(d / "keep.json")],
                                check=True, capture_output=True)
-            words = json.loads((d / "words_raw.json").read_text(encoding="utf-8"))
-            segs = segments_from_keep(json.loads((d / "keep.json").read_text()), st["duration"], words)
+            keep = json.loads((d / "keep.json").read_text())
+            words = snap_words(json.loads((d / "words_raw.json").read_text(encoding="utf-8")), keep)   # times follow the audio
+            _write_json(d / "words_raw.json", words)
+            segs = segments_from_keep(keep, st["duration"], words)
             update(name, lambda s: s.update(segments=segs))
         job(name, "prep", step="Pronto", pct=100, done=True, error=None)
     except Exception as e:
@@ -212,7 +255,7 @@ def set_seg(name, ref, keep, reason=None):
             hit = [g for g in st["segments"] if g["id"] == int(ref)]
         else:                                           # "12.3-14.0": cut/keep a time range, splitting segments
             a, b = map(float, ref.split("-")); hit = []
-            words = json.loads((folder(name) / "words_raw.json").read_text(encoding="utf-8"))
+            words = words_edited(st, json.loads((folder(name) / "words_raw.json").read_text(encoding="utf-8")))   # keep manual corrections
             new = []
             for g in st["segments"]:
                 parts = [(g["s"], min(g["e"], a)), (max(g["s"], a), min(g["e"], b)), (max(g["s"], b), g["e"])]
@@ -337,8 +380,10 @@ def add_clips(name, paths):
             else:                                        # no audio (pure image): nothing to transcribe, keep it whole
                 _write_json(cd / "words.json", []); _write_json(cd / "keep.json", [[0, dur]])
             off = sum(c["dur"] for c in st["clips"])
-            words = [dict(w, s=w["s"] + off, e=w["e"] + off) for w in json.loads((cd / "words.json").read_text(encoding="utf-8"))]
-            keep = [[max(0, a) + off, min(b, dur) + off] for a, b in json.loads((cd / "keep.json").read_text())]
+            lk = json.loads((cd / "keep.json").read_text())
+            local = snap_words(json.loads((cd / "words.json").read_text(encoding="utf-8")), lk); _write_json(cd / "words.json", local)
+            words = [dict(w, s=w["s"] + off, e=w["e"] + off) for w in local]
+            keep = [[max(0, a) + off, min(b, dur) + off] for a, b in lk]
             segs = segments_from_keep(keep, off + dur, words, start=off)
             def fn(s, cid=cid, src=src, off=off, dur=dur, segs=segs):
                 nxt = max((g["id"] for g in s["segments"]), default=0) + 1
@@ -488,6 +533,15 @@ def pick_version(st, target):
     on the phrase, and speech density (fewer dead air)."""
     ph = phrases_of(st)
     if not ph: raise ValueError("nenhum trecho mantido")
+    units = []                                   # run-on speech (no full stop for 10 s+): split long phrases at commas
+    for p in ph:
+        if sum(seg_len(g) for g in p) <= target * .5: units.append(p); continue
+        cur = []
+        for g in p:
+            cur.append(g)
+            if re.search(r"[,;:]\s*$", g["text"] or ""): units.append(cur); cur = []
+        if cur: units.append(cur)
+    ph = units
     dur = [sum(seg_len(g) for g in p) for p in ph]
     text = [" ".join(g["text"] or "" for g in p).lower() for p in ph]
     keys = {k.lower() for k in st.get("keywords", [])}
@@ -886,6 +940,7 @@ if __name__ == "__main__":
         update(a.args[0], lambda s: s.update(order=[int(x) for x in a.args[1:]])); _show(a.args[0])
     elif a.cmd == "export": export(a.args[0])
     elif a.cmd == "media": print("mídia", add_media(a.args[0], a.args[1]))
+    elif a.cmd == "ressincronizar": resync_words(a.args[0]); _show(a.args[0])
     elif a.cmd == "texto": edit_text(a.args[0], float(a.args[1]), float(a.args[2]), " ".join(a.args[3:])); _show(a.args[0])
     elif a.cmd == "versao": n, tot = make_version(a.args[0], float(a.args[1])); print(f"versão {n}: {tot:.1f} s"); _show(n)
     elif a.cmd == "lenta":

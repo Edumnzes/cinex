@@ -66,7 +66,8 @@ def run(argv=None):
         res.append(dict(item=name, status="OK" if ok else ("AVISO" if warn else "FALHA"), valor=val, esperado=want))
 
     add("resolução", (w, h) == spec["size"], f"{w}x{h}", "%dx%d" % spec["size"])
-    ar = "%d:%d" % ((9, 16) if spec["size"][0] < spec["size"][1] else (16, 9))
+    from math import gcd
+    g_ = gcd(*spec["size"]); ar = "%d:%d" % (spec["size"][0] // g_, spec["size"][1] // g_)   # 9:16, 4:5, 1:1, 16:9, 4:3
     add("proporção " + ar, h and abs(w / h - spec["size"][0] / spec["size"][1]) < .01, f"{w}:{h}", ar)
     add("fps", spec["fps"][0] <= fps <= spec["fps"][1], fps, "%s-%s" % spec["fps"])
     add("duração", spec["dur"][0] <= dur <= spec["dur"][1], f"{dur:.2f}s", "%s-%ss" % spec["dur"])
