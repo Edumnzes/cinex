@@ -81,6 +81,8 @@
   (Começar, Corte, Estilo, Elementos, Revisão, Publicar), chat com a IA sempre ao lado como o meio principal de
   mudança, sugestões por página, prévia do vídeo em cada passo e envio do vídeo arrastando para a página. O editor
   com linha do tempo continua em `/editor` (Editor completo).
+- Computador novo: sem o modelo de recorte da pessoa, a exportação não quebra mais (retrato e texto atrás da
+  pessoa ficam de fora, com aviso). README com a instalação da `v3` e os extras opcionais.
 - **Começar = cadastro de perfis; nova página Upload.** O primeiro passo agora cria e edita o perfil da marca no
   app (nome, o que faz, público, chamada, contato, cores, estilo de legenda, nomes certos e destaques). O Upload
   reúne os formatos e o envio de um ou mais vídeos: **um vídeo só** (junta e escolhe as melhores falas) ou

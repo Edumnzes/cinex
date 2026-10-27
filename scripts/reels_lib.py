@@ -454,7 +454,7 @@ class Reel:
                 o.setdefault("t1", o["t0"] + o["clip"].dur / o.get("speed", 1.0))
                 self.overlays.append(o)
         self.flashes, self.sfx = list(flashes), list(sfx)
-        self._matte = None                       # created on first use by an overlay with atras=True
+        self._matte = None                       # created on first use (text behind the person, portrait, 3D text)
         # planes: text stuck to the scene — dict(src=alpha .mov, t0, t1, quads={frame: [[x,y]*4] in SOURCE px}, atras=True)
         # (plane_track.track). Warped onto the source frame BEFORE the virtual camera, so zoom/reframe move it with the scene.
         self.planes = []
@@ -953,7 +953,7 @@ class Reel:
 
     def _overlays(self, ov, t, behind=False):
         for o in self.overlays:
-            if bool(o.get("atras")) != behind: continue
+            if bool(o.get("atras") and self._matte is not False) != behind: continue      # no matte: drawn in front
             if not (o["t0"] <= t < o["t1"]): continue
             im = o["clip"].frame(t - o["t0"])
             if im is None: continue
@@ -984,16 +984,26 @@ class Reel:
             out[y0:y1, x0:x1] = out[y0:y1, x0:x1] * (1 - a) + wp[..., :3] * a; hit = True
         if not hit: return frame
         if any(pl.get("atras", True) for pl in act):
-            if self._matte is None: self._matte = _Matte()
-            m = self._matte.alpha(frame, t); out = out * (1 - m) + frame.astype(np.float32) * m
+            mt = self._get_matte()
+            if mt: m = mt.alpha(frame, t); out = out * (1 - m) + frame.astype(np.float32) * m
         return out.astype(np.uint8)
+
+    def _get_matte(self):
+        """The person matte, or None when MediaPipe / its model isn't installed on this computer: then the effects that
+        need it degrade (no portrait blur, text in front instead of behind) and the export still finishes."""
+        if self._matte is None:
+            try: self._matte = _Matte()
+            except Exception as e:
+                print(f"aviso: recorte da pessoa indisponível ({e}); retrato e texto atrás da pessoa ficam de fora"); self._matte = False
+        return self._matte or None
 
     def _portrait(self, img, t):
         """Portrait effect: keep the FRONT person sharp (the matte blob under the tracked face, else the biggest) and
         blur + slightly dim everything else — people passing behind, a messy background."""
         if not any(a <= t < b for a, b in self.portrait): return img
-        if self._matte is None: self._matte = _Matte()
-        a = self._matte.alpha(img, t)[..., 0]
+        mt = self._get_matte()
+        if not mt: return img
+        a = mt.alpha(img, t)[..., 0]
         n, lab, stats, _ = cv2.connectedComponentsWithStats((a > .5).astype(np.uint8), 8)
         if n > 1:
             fb = self.face_box(t); keep = None
@@ -1014,8 +1024,7 @@ class Reel:
         frame = self._planes(frame, t)
         img = self._portrait(grade(self.color_correct(self.camera(frame, t), t), self.look), t)
         img = self.bg_fx(self._broll_full(img, t), t)
-        if any(o.get("atras") and o["t0"] <= t < o["t1"] for o in self.overlays):   # text BEHIND the person
-            if self._matte is None: self._matte = _Matte()
+        if any(o.get("atras") and o["t0"] <= t < o["t1"] for o in self.overlays) and self._get_matte():   # text BEHIND the person
             back = Image.new("RGBA", (W, H)); self._overlays(back, t, behind=True)
             b = np.asarray(back, dtype=np.float32); ba = b[..., 3:4] / 255
             a = self._matte.alpha(img, t)

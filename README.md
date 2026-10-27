@@ -67,8 +67,10 @@ Não é preciso instalar ffmpeg: a skill usa o binário do pacote `imageio-ffmpe
 
 ## Instalação
 
+Precisa de **Python 3.11+** e **Git**. A versão 3 (app com modo guiado) está na branch `v3`:
+
 ```bash
-git clone https://github.com/Edumnzes/cinex.git ~/.claude/skills/cinex
+git clone -b v3 https://github.com/Edumnzes/cinex.git ~/.claude/skills/cinex
 ```
 
 ```bash
@@ -78,6 +80,32 @@ python ~/.claude/skills/cinex/scripts/setup_env.py
 O segundo comando cria o ambiente Python em `~/reelsenv` (caminho curto de propósito — caminhos
 longos quebram o `venv` no Windows) e instala as dependências de [requirements.txt](requirements.txt).
 Ele imprime o caminho do Python e do ffmpeg que a skill vai usar.
+
+Abra o app (modo guiado) em http://127.0.0.1:8765:
+
+```bash
+~/reelsenv/Scripts/python ~/.claude/skills/cinex/app/server.py --open
+```
+
+(no Mac/Linux o Python fica em `~/reelsenv/bin/python`). Na primeira transcrição e no primeiro comando de voz o
+Whisper baixa os modelos sozinho (~1,5 GB e ~0,5 GB, uma vez só).
+
+**Extras opcionais** — sem eles tudo funciona, com estas diferenças:
+
+- **Motion em HTML** (títulos com tipografia e animação de designer). Sem ele, o Cinex usa o motion clássico.
+  Precisa do Node.js 22+ e do FFmpeg no PATH; numa pasta fora do OneDrive:
+  ```bash
+  mkdir ~/cinex-hf && cd ~/cinex-hf && npm install hyperframes && npx hyperframes browser ensure
+  ```
+- **Recorte da pessoa** (texto atrás da pessoa, efeito retrato, texto 3D passando por trás). Sem ele, esses efeitos
+  ficam de fora e o vídeo sai do mesmo jeito. Baixe o modelo do MediaPipe (Google, ~16 MB):
+  ```bash
+  mkdir -p ~/reels-banco/modelos && curl -L -o ~/reels-banco/modelos/selfie_multiclass_256x256.tflite https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite
+  ```
+
+Os perfis de marca (`~/instagram-legendas`), o banco (`~/reels-banco`) e os projetos (`~/reels`) ficam fora do
+repositório: num computador novo eles começam vazios. Para levar um perfil, copie a pasta dele em
+`~/instagram-legendas/<arroba>`.
 
 Para atualizar depois:
 
