@@ -25,3 +25,4 @@ docs/*.pdf
 
 # GSD planning (local only)
 .planning/
+.claude/CLAUDE.md
