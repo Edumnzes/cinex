@@ -577,12 +577,77 @@ function bindMusic() {
 
 // ------------------------------------------------------------ chat
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+// guide card (D-12), problem messages (D-06) and waiting/cancelled metas (D-13): the guided mode's copy, text-only buttons (A-11)
+const PS = "Abra o PowerShell: aperte a tecla Windows, digite PowerShell e aperte Enter.";
+const SETUP = {
+  missing: { txt: "Eu respondo aqui usando o Claude Code da sua conta, e ele ainda não está neste computador. São 3 passos:",
+    steps: [[PS], ["Cole este comando e aperte Enter: ", { code: "irm https://claude.ai/install.ps1 | iex", copy: true }],
+      ["Quando terminar, feche o PowerShell e abra de novo. Digite ", { code: "claude" }, ", aperte Enter e entre com a sua conta quando ele pedir (abre uma página no navegador)."]] },
+  login: { txt: "O Claude Code está instalado, mas ainda não entrou na sua conta. É rápido:",
+    steps: [[PS], ["Digite ", { code: "claude", copy: true }, " e aperte Enter."],
+      ["Siga o que aparecer para entrar com a sua conta (abre uma página no navegador). Quando terminar, pode fechar o PowerShell."]] },
+};
+const SETUP_ERR = ["nao_instalado", "nao_logado"], WAIT_ERR = ["sem_rede", "limite"];
+const NOSTART = "Não consegui começar agora. Tente de novo em instantes.";
+let acts = {}, actsFor = null, chatSig0 = "";             // message index -> {busy} | {res: [ok, text]} | {err}: survives rebuilds
+const chatSig = () => ((st && st.chat) || []).map((m) => +!!m.seen + 2 * !!m.feita + 4 * !!m.cancelada).join("") + "|" + (chatJob.erro || "");
+const ia = (body) => api(`/api/p/${name}/ia`, { method: "POST", body: JSON.stringify(body), timeout: 60000 });
+function actBtn(i, label, busyLabel, run) {
+  const row = el("div", "acts"), busy = !!(acts[i] || {}).busy, b = el("button", "primary", busy ? busyLabel : label);
+  b.type = "button"; b.disabled = busy;
+  b.onclick = async () => { acts[i] = { busy: true }; b.disabled = true; b.textContent = busyLabel; acts[i] = await run(); await poll(); renderChat(); };
+  row.append(b); return row;
+}
+function codeEl(p) {
+  const f = document.createDocumentFragment(); f.append(el("code", "code", p.code));
+  if (p.copy) {
+    const c = el("button", "linkbtn", "Copiar"); c.type = "button";
+    c.onclick = () => navigator.clipboard.writeText(p.code).then(() => { c.textContent = "Copiado"; setTimeout(() => { c.textContent = "Copiar"; }, 2000); }, () => {});
+    f.append(" ", c);
+  }
+  return f;
+}
+async function testar() {                                  // auth status + network only: never spends usage
+  try {
+    const r = await ia({ acao: "testar" });
+    return { res: r.ok ? [true, "Tudo certo: o Claude Code está conectado. Vou responder sua mensagem agora."]
+      : !r.instalado ? [false, "Ainda não encontrei o Claude Code neste computador. Se acabou de instalar, feche e abra o PowerShell de novo e confira o passo 2."]
+      : !r.logado ? [false, "O Claude Code está instalado, mas ainda não entrou na sua conta. Faça o passo 2 e toque em Testar de novo."]
+      : [false, "Sem conexão com a internet. Sua mensagem está guardada e eu envio sozinho quando a conexão voltar."] };
+  } catch { return { res: [false, NOSTART] }; }
+}
+function setupCard(m, i, active) {
+  const c = SETUP[m.reason] || SETUP.missing, g = el("div", "guide"), t = el("b", "", m.text); t.id = "esetup" + i;
+  g.setAttribute("role", "region"); g.setAttribute("aria-labelledby", t.id);
+  const ol = el("ol"); c.steps.forEach((parts) => { const li = el("li"); parts.forEach((x) => li.append(typeof x === "string" ? x : codeEl(x))); ol.append(li); });
+  g.append(t, el("div", "", c.txt), ol, el("div", "", "Pronto? Toque em Testar de novo."));
+  if (active) g.append(actBtn(i, "Testar de novo", "Testando…", testar));
+  const res = (acts[i] || {}).res; if (res) g.append(el("div", "actres" + (res[0] ? " ok" : " wn"), res[1]));
+  g.append(el("div", "note", "Enquanto isso, o resto do Cinex funciona normalmente. Sua mensagem fica guardada."));
+  return g;
+}
 function renderChat() {
   const box = $("#msgs"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
-  const msgs = (st.chat || []).map((m) => {
-    const user = m.who === "user", d = el("div", "msg" + (user ? " user" : ""));
-    const who = el("div", "who", user ? "Você" : "Cinex"); who.append(el("small", "", (m.t || "").slice(11, 16)));
-    d.append(el("div", "av", user ? "V" : "C"), who, el("div", "txt", m.text)); return d;
+  const chat = st.chat || [], erro = chatJob.erro || "", lastSetup = chat.findLastIndex((m) => m.kind === "setup");
+  if (actsFor !== name) { acts = {}; actsFor = name; }        // button states belong to one project
+  chatSig0 = chatSig();
+  const msgs = chat.map((m, i) => {
+    if (m.kind === "setup") return setupCard(m, i, i === lastSetup && SETUP_ERR.includes(erro));   // A-05
+    const user = m.who === "user", d = el("div", "msg" + (user ? " user" : "") + (m.kind === "warn" ? " warn" : "") + (m.cancelada ? " cancelada" : ""));
+    const hm = (m.t || "").slice(11, 16), meta = el("small", "", hm);
+    if (user && m.cancelada) meta.textContent = `${hm} · Cancelada`;
+    else if (user && !m.seen && WAIT_ERR.includes(erro)) {
+      const c = el("button", "whobtn", "Cancelar"); c.type = "button"; c.setAttribute("aria-label", "Cancelar esta mensagem");
+      c.onclick = async () => { c.disabled = true; try { await ia({ acao: "cancelar", msgs: [i] }); } catch {} await reloadState(); };
+      meta.textContent = `${hm} · Aguardando · `; meta.append(c);
+    }
+    const who = el("div", "who", user ? "Você" : "Cinex"); who.append(meta);
+    d.append(el("div", "av", user ? "V" : "C"), who, el("div", "txt", m.text));
+    if (m.kind === "warn" && m.acao === "tentar" && !m.feita) {           // A-07: the same message again, no new bubble
+      d.append(actBtn(i, "Tentar de novo", "Tentando de novo…", async () => { try { await ia({ acao: "tentar", msg: i }); return {}; } catch { return { err: true }; } }));
+      if ((acts[i] || {}).err) d.append(el("div", "actres wn", NOSTART));
+    }
+    return d;
   });
   box.replaceChildren(...(msgs.length ? msgs : [el("div", "empty", "Nenhuma mensagem ainda. Peça um ajuste: “corta a parte em que eu gaguejo”, “legenda maior”…")]));
   if (atEnd) box.scrollTop = box.scrollHeight;
@@ -591,14 +656,31 @@ function renderChat() {
 // automatic answer: status line (D-08), "Parar resposta" (D-09), today's counter (D-07). Text only via textContent.
 let sentAt = 0, chatJob = {}, uso = 0;
 function stopReset(b) { if (b.disabled) { b.disabled = false; b.textContent = "Parar resposta"; } }
+function aviso(c, erro, k) {                                // no internet / usage limit (D-13): resent by itself, or cancel
+  if (c.dataset.mode !== erro) {
+    const b = el("button", "secondary stopbtn"); b.type = "button"; b.title = "Cancelar as mensagens que estão esperando";
+    b.onclick = async () => { b.disabled = true; try { await ia({ acao: "cancelar" }); } catch {} b.disabled = false; await reloadState(); poll(); };
+    c.className = "cstatus warn"; c.dataset.mode = erro; c.replaceChildren(el("span", "sttxt"), b);
+  }
+  const guard = k === 1 ? "Sua mensagem está guardada" : `Suas ${k} mensagens estão guardadas`;
+  const txt = erro === "sem_rede" ? `Sem conexão com a internet. ${guard} e eu envio sozinho quando a conexão voltar.`
+    : `O limite de uso da sua conta do Claude Code acabou por agora. ${guard} e eu respondo sozinho quando liberar${chatJob.ate ? `, por volta das ${chatJob.ate}` : ""}.`;
+  const t = c.querySelector(".sttxt"), b = c.querySelector(".stopbtn"), lb = k === 1 ? "Cancelar envio" : "Cancelar mensagens";
+  if (t.textContent !== txt) t.textContent = txt;
+  if (b.textContent !== lb) b.textContent = lb;
+  c.hidden = false;
+}
 function showChat(job, n) {
   chatJob = job; uso = n;
+  if (st && chatSig() !== chatSig0) renderChat();            // metas / buttons follow job.erro and the message marks
   const u = $("#uso"); u.textContent = `${n} hoje`;
   u.title = "Respostas automáticas de hoje. Cada uma usa um pouco do seu limite do Claude Code.";
   u.setAttribute("aria-label", n === 1 ? "1 resposta automática hoje" : `${n} respostas automáticas hoje`);
   const c = $("#cstatus"), busy = !!job.busy;
+  if (SETUP_ERR.includes(job.erro)) { c.hidden = true; return; }               // the guide card says it all
+  if (WAIT_ERR.includes(job.erro) && job.k > 0) return aviso(c, job.erro, job.k);
   const pend = ((st && st.chat) || []).some((m) => m.who === "user" && !m.seen && !m.cancelada);
-  let b = c.querySelector(".stopbtn");
+  let b = c.dataset.mode === "work" && c.querySelector(".stopbtn");
   if (b && (!busy || b.dataset.idx !== String(job.idx))) stopReset(b);     // that answer ended (or the next one began)
   if (!busy && !pend && Date.now() - sentAt > 2000) { c.hidden = true; return; }
   if (!b) {                                                   // fixed structure: only text changes, the dots keep animating
@@ -609,7 +691,7 @@ function showChat(job, n) {
     };
     const dots = el("span", "dots"); dots.append(el("i"), el("i"), el("i"));
     const suf = el("span", "stsuf"); suf.setAttribute("aria-hidden", "true");
-    c.replaceChildren(dots, el("span", "sttxt"), suf, b);
+    c.className = "cstatus"; c.dataset.mode = "work"; c.replaceChildren(dots, el("span", "sttxt"), suf, b);
   }
   const txt = busy ? (job.step || "Trabalhando no seu pedido…") : "Lendo o seu pedido…";
   const secs = busy && job.desde ? (Date.now() - Date.parse(job.desde)) / 1000 : 0;
