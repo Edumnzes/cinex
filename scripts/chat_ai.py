@@ -171,6 +171,47 @@ def kick(name):
     threading.Thread(target=_worker, args=(name,), daemon=True).start()
 
 
+def _pendente(st):
+    return any(m["who"] == "user" and not m.get("seen") for m in st["chat"])   # cancelled ones are seen
+
+
+def set_mode(modo):
+    """D-14: Automático / Sessão aberta for the whole app (A-02). Back to auto: answer what waited meanwhile."""
+    P.set_chat_mode(modo)
+    if modo != "auto": return
+    for p in P.projects():
+        try:
+            if _pendente(P.load(p["name"])): kick(p["name"])
+        except Exception: pass
+
+
+def ensure(name, st):
+    """Called by every poll: a message waiting in auto mode with no worker (lost, or the server restarted) restarts it.
+    Not while the guide card waits for "Testar de novo": that would spend a call to hear "not logged in" again."""
+    if (P.chat_mode() == "auto" and name not in _CHAT and _pendente(st)
+            and P.read_job(name, "chat").get("erro") not in ("nao_instalado", "nao_logado")):
+        kick(name)
+
+
+def _presas(chat):
+    """User messages the worker took (by auto) that never got an answer: the server died in the middle."""
+    return [i for i, m in enumerate(chat) if m["who"] == "user" and m.get("seen") and m.get("by") == "auto"
+            and not any(x["who"] == "cinex" for x in chat[i + 1:])]
+
+
+def recover():
+    """Server start: back to the queue whatever was being answered, then answer. Messages taken by the open session
+    (by "sessao") are left alone: it may still be answering them. One broken project never blocks the others."""
+    for f in P.ROOT.glob("*/cinex.json"):
+        name = f.parent.name
+        try:
+            st = P.load(name)
+            if _presas(st["chat"]): st = P.update(name, lambda s: [s["chat"][i].update(seen=False, by=None) for i in _presas(s["chat"])])
+            if P.read_job(name, "chat").get("busy"): P.job(name, "chat", busy=False, step=None)
+            if P.chat_mode() == "auto" and _pendente(st): kick(name)
+        except Exception: pass
+
+
 def _worker(name):
     try:
         while True:

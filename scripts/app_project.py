@@ -16,7 +16,8 @@ Claude Code is the brain: it reads the state, answers the chat and edits the cut
     python app_project.py serie <base> <video> [<video> ...] [--marca h] [--formato f]  a SEQUENCE: one project per file
     python app_project.py list
     python app_project.py show <name>                    segments with text, captions, unread chat
-    python app_project.py wait <name> [--timeout 900]    block until the user writes in the app's chat
+    python app_project.py wait <name> [--timeout 900]    block until the user writes in the app's chat (mode Sessão aberta)
+    python app_project.py modo auto|sessao               who answers the app's chat: the app itself (auto) or this session
     python app_project.py say <name> "<message>"         answer in the app's chat
     python app_project.py seg <name> <id|s-e> keep|cut ["reason"]   change one segment (or a time range)
     python app_project.py lock <name> on|off             approve / reopen the cut
@@ -334,16 +335,29 @@ def unread(name):
     return [m for m in load(name)["chat"] if m["who"] == "user" and not m.get("seen")]
 
 
-def mark_seen(name):
-    update(name, lambda s: [m.update(seen=True) for m in s["chat"] if m["who"] == "user"])
+def _modo_path(): return ROOT / "_chat_modo.json"    # computed on each call: tests swap ROOT
+
+
+def chat_mode():
+    """Who answers the chat, for the whole app (A-02): "auto" (the server's worker, default) or "sessao" (`wait`)."""
+    try: m = _read_json(_modo_path()).get("modo")
+    except (OSError, ValueError, AttributeError): m = None     # no file yet, or not a {"modo": ...} object
+    return "sessao" if m == "sessao" else "auto"
+
+
+def set_chat_mode(modo):
+    if modo not in ("auto", "sessao"): raise ValueError("modo inválido")
+    _write_json(_modo_path(), {"modo": modo})
 
 
 def claim(name, mode, limit=None):
-    """Atomically take unread user messages for `mode` ("auto" = the server's worker): [(index, msg)].
-    Lock-free check first, so an idle chat never bumps rev."""
-    if not unread(name): return []
+    """Atomically take unread user messages for `mode` ("auto" = the server's worker, "sessao" = `wait`): [(index, msg)].
+    Lock-free checks first, so an idle chat never bumps rev."""
+    if chat_mode() != mode or not unread(name): return []
     got = []
     def fn(st):
+        # the mode only decides WHO takes them; exactly once comes from `seen`, set here under the project's lock
+        if chat_mode() != mode: return
         for i, m in enumerate(st["chat"]):
             if m["who"] == "user" and not m.get("seen") and (limit is None or len(got) < limit):
                 m.update(seen=True, by=mode); got.append((i, dict(m)))
@@ -1088,14 +1102,17 @@ if __name__ == "__main__":
     elif a.cmd == "show": _show(a.args[0])
     elif a.cmd == "wait":                              # Claude: run in background, re-invoked when the user writes
         t0 = time.time()
+        if chat_mode() == "auto":
+            print("(o chat está no modo Automático: o Cinex responde sozinho; para atender por aqui, rode "
+                  "`app_project.py modo sessao` ou escolha Sessão aberta no app)", flush=True)
         while time.time() - t0 < a.timeout:
-            msgs = unread(a.args[0])
+            msgs = [m for _, m in claim(a.args[0], "sessao")]
             if msgs:
-                mark_seen(a.args[0])
                 for m in msgs: print(f"[{m['t']}] usuário" + (f" (página {m['passo']})" if m.get("passo") else "") + f": {m['text']}")
                 break
             time.sleep(1.5)
         else: print("(sem mensagens novas)")
+    elif a.cmd == "modo": set_chat_mode(a.args[0]); print("modo:", chat_mode())
     elif a.cmd == "say": say(a.args[0], " ".join(a.args[1:]))
     elif a.cmd == "seg": set_seg(a.args[0], a.args[1], a.args[2] == "keep", " ".join(a.args[3:]) or None); _show(a.args[0])
     elif a.cmd == "lock": update(a.args[0], lambda s: s.update(cut_locked=a.args[1] == "on"))

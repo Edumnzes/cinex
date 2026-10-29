@@ -26,7 +26,7 @@ MAX_BODY = 25 * 1024 * 1024                     # font uploads
 MAX_REF = 600 * 1024 * 1024                     # niche reference videos (streamed to disk)
 MAX_MEDIA = 8 * 1024 * 1024 * 1024              # B-roll clips sent from the browser (4K phone clips are big)
 MAX_VOICE = 12 * 1024 * 1024                    # one voice command (~1 min of opus)
-IA_ACOES = {"parar", "testar", "tentar", "cancelar"}   # POST /api/p/<n>/ia: what the app may ask of the automatic chat
+IA_ACOES = {"parar", "testar", "tentar", "cancelar", "modo"}   # POST /api/p/<n>/ia: what the app may ask of the automatic chat
 _VOICE = {}                                     # faster-whisper model for voice commands, loaded on first use
 _VOICE_LOCK = threading.Lock()
 
@@ -219,9 +219,11 @@ class H(BaseHTTPRequestHandler):
                     return self._send(200, dict(state=st, prep=P.read_job(name, "prep"), export=P.read_job(name, "export"),
                                                 project_fonts=sorted(p.name for p in (d / "fonts").glob("*")) if (d / "fonts").exists() else []))
                 if sub == "poll":
-                    rev = P.load(name)["rev"] if (d / "cinex.json").exists() else -1
-                    return self._send(200, dict(rev=rev, prep=P.read_job(name, "prep"), export=P.read_job(name, "export"),
-                                                chat=P.read_job(name, "chat"), uso=C.uso()))
+                    st = P.load(name) if (d / "cinex.json").exists() else None
+                    if st: C.ensure(name, st)          # a lost worker / a restart: the queue never gets stuck
+                    return self._send(200, dict(rev=st["rev"] if st else -1, prep=P.read_job(name, "prep"),
+                                                export=P.read_job(name, "export"), chat=P.read_job(name, "chat"),
+                                                uso=C.uso(), modo=P.chat_mode()))
                 if sub == "words":                     # transcription + the user's manual corrections
                     st = P.load(name)
                     if not st.get("textos"): return self._file(d / "words_raw.json", "application/json")
@@ -371,7 +373,8 @@ class H(BaseHTTPRequestHandler):
                 b = self._json(); text = str(b.get("text", "")).strip()[:4000]
                 if not text: return self._err(400, "mensagem vazia")
                 passo = str(b.get("passo", ""))[:20] or None    # the guided-mode step the user is on (context for Claude)
-                P.say(name, text, who="user", passo=passo); C.kick(name)   # automatic answer: Claude Code in the background
+                P.say(name, text, who="user", passo=passo)
+                if P.chat_mode() == "auto": C.kick(name)   # automatic answer; Sessão aberta: `app_project.py wait` takes it
                 return self._send(200, {"ok": True})
             if sub == "ia":                            # automatic chat controls (D-09 stop, D-12 test, A-07 retry, D-13 cancel)
                 b = self._json(); b = b if isinstance(b, dict) else {}
@@ -391,6 +394,10 @@ class H(BaseHTTPRequestHandler):
                     if msgs is not None and not (isinstance(msgs, list) and all(type(x) is int for x in msgs)):
                         return self._err(400, "mensagem inválida")
                     n = P.cancel(name, msgs); C.cancelar(name); return self._send(200, {"ok": True, "n": n})
+                if acao == "modo":                     # D-14 / A-02: who answers, for the whole app
+                    try: C.set_mode(str(b.get("modo")))
+                    except ValueError: return self._err(400, "modo inválido")
+                    return self._send(200, {"ok": True, "modo": P.chat_mode()})
                 C.stop(name); return self._send(200, {"ok": True})
             if sub == "mostrar":                       # show the exported file in Explorer / Finder
                 self._json(); out = (P.read_job(name, "export") or {}).get("out")
@@ -483,6 +490,7 @@ def main():
     url = f"http://127.0.0.1:{PORT}"
     print(f"Cinex rodando em {url}  (Ctrl+C para parar)", flush=True)
     if a.open: threading.Timer(.5, lambda: webbrowser.open(url)).start()
+    threading.Thread(target=C.recover, daemon=True).start()   # answers cut short by the last shutdown
     try: srv.serve_forever()
     except KeyboardInterrupt: pass
 
