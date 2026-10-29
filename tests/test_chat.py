@@ -90,3 +90,80 @@ class TestAuto(ServerCase):
         C._CHAT["t1"]["proc"].kill()
         self.wait_idle("t1")
         self.assertEqual(P.load("t1")["chat"][-1]["text"], C.TXT_FALHA)
+
+
+class TestStatus(ServerCase):
+    def setUp(self):
+        super().setUp(); self.make_project()
+
+    def test_labels(self):
+        for (tool, a), want in [(("cortar_ou_manter", {"trecho": "12", "manter": False}), "Cortando o trecho 12…"),
+                                (("cortar_ou_manter", {"trecho": "12", "manter": True}), "Devolvendo o trecho 12…"),
+                                (("ajustar", {"campo": "captions"}), "Ajustando a legenda…"),
+                                (("ajustar", {"campo": "broll"}), "Colocando a imagem de apoio…"),
+                                (("camera_lenta", {"trecho": 4}), "Deixando o trecho 4 em câmera lenta…"),
+                                (("versao_curta", {"segundos": 15}), "Montando a versão de 15 segundos…"),
+                                (("ver_projeto", {}), "Lendo o projeto…"), (("revisar", {}), "Olhando o vídeo e as legendas…"),
+                                (("corrigir_texto", {}), "Corrigindo o texto da legenda…"),
+                                (("ressincronizar", {}), "Acertando o tempo das legendas…"), (("xyz", {}), "Trabalhando no seu pedido…")]:
+            with self.subTest(tool=tool, a=a): self.assertEqual(C.label(tool, a), want)
+
+    def test_stream(self):
+        C.CLAUDE_CMD = [PY, str(FAKE), "ferramentas"]
+        P.say("t1", "corta o trecho 12 e aumenta a legenda", who="user"); C.kick("t1")
+        steps, desde = set(), []
+        def done():
+            j = P.read_job("t1", "chat"); steps.add(j.get("step")); desde.append(j.get("desde"))
+            return "t1" not in C._CHAT
+        self.wait_for(done, 15)
+        self.assertLessEqual({"Cortando o trecho 12…", "Ajustando a legenda…"}, steps)
+        self.assertTrue([d for d in desde if d])
+        self.assertIs(P.read_job("t1", "chat")["busy"], False)
+        self.assertEqual(P.load("t1")["chat"][-1]["text"], "Cortei o trecho 12 e aumentei a legenda.")
+
+    def test_unknown_event(self):
+        P.job("t1", "chat", step="Lendo o projeto…")
+        S = {"pedido": "haiku", "step": "Lendo o projeto…", "modelo": None, "result": None}
+        C.on_event("t1", {"type": "coisa_nova"}, S)
+        self.assertEqual(P.read_job("t1", "chat")["step"], "Lendo o projeto…")
+        self.assertEqual(S["step"], "Lendo o projeto…")
+
+    def test_reserva(self):
+        C.CLAUDE_CMD = [PY, str(FAKE), "reserva"]
+        P.say("t1", "reescreve o gancho", who="user"); C.kick("t1"); self.wait_idle("t1")
+        j = P.read_job("t1", "chat")
+        self.assertIn("sonnet", j["modelo"]); self.assertIs(j["reserva"], True)
+        C.CLAUDE_CMD = [PY, str(FAKE), "ok"]
+        P.say("t1", "deixa a legenda maior", who="user"); C.kick("t1"); self.wait_idle("t1")
+        j = P.read_job("t1", "chat")
+        self.assertIn("haiku", j["modelo"]); self.assertIs(j["reserva"], False)
+
+
+class TestStop(ServerCase):
+    def test_stop(self):
+        self.make_project()
+        C.CLAUDE_CMD = [PY, str(FAKE), "lento"]
+        n0 = C.uso()
+        P.say("t1", "oi", who="user"); C.kick("t1")
+        self.wait_for(lambda: [e for e in self.fake_log() if e["ev"] == "start"])
+        self.wait_for(lambda: (C._CHAT.get("t1") or {}).get("proc"))
+        proc = C._CHAT["t1"]["proc"]
+        self.assertEqual(self.req("POST", "/api/p/t1/ia", {"acao": "parar"}), (200, {"ok": True}))
+        self.wait_for(lambda: "t1" not in C._CHAT or proc.poll() is not None, 5, "a IA não parou em 5 s")
+        self.wait_idle("t1")
+        self.assertEqual(P.load("t1")["chat"][-1]["text"], C.TXT_PARADO)
+        self.assertIs(P.read_job("t1", "chat")["busy"], False)
+        self.assertEqual(C.uso(), n0)
+
+
+class TestUso(ServerCase):
+    def test_count(self):
+        self.make_project()
+        self.assertEqual(C.uso(), 0)
+        P.say("t1", "oi", who="user"); P.say("t1", "e aí", who="user"); C.kick("t1"); self.wait_idle("t1")
+        self.assertEqual(C.uso(), 2)
+        self.assertEqual(self.req("GET", "/api/p/t1/poll")[1]["uso"], 2)
+
+    def test_new_day(self):
+        P._write_json(P.ROOT / "_chat_uso.json", {"dia": "2000-01-01", "n": 5})
+        self.assertEqual(C.uso(), 0)

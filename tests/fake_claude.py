@@ -1,9 +1,10 @@
 """Fake `claude` CLI for the tests: canned stream-json events per scenario; every call is logged.
 
-    python fake_claude.py <ok|edita|lento> [the args the worker built...]
+    python fake_claude.py <ok|edita|lento|ferramentas|reserva> [the args the worker built...]
 
 Scenarios: ok (text answer), edita (captions.size += 10 in the project of the cwd, like a tool call would),
-lento (init, then sleeps 60 s: the test kills it). Log: FAKE_CLAUDE_LOG, one JSON event per line
+lento (init, then sleeps 60 s: the test kills it), ferramentas (two tool calls 0.8 s apart: status steps),
+reserva (init reports sonnet: the fallback model answered). Log: FAKE_CLAUDE_LOG, one JSON event per line
 ({"ev": "start", argv, stdin, cwd} and {"ev": "end"}). Unknown args are ignored.
 """
 import json, os, sys, time
@@ -24,6 +25,10 @@ def emit(**ev):
 def text(t): return dict(type="assistant", message=dict(role="assistant", content=[dict(type="text", text=t)]))
 
 
+def tool(name, **inp):
+    return dict(type="assistant", message=dict(role="assistant", content=[dict(type="tool_use", id="toolu_x", name=name, input=inp)]))
+
+
 def main(argv):
     sys.stdout.reconfigure(encoding="utf-8")
     scen, args = (argv[1] if len(argv) > 1 else "ok"), argv[2:]
@@ -31,10 +36,15 @@ def main(argv):
     stdin = sys.stdin.buffer.read().decode("utf-8", "replace")
     log(ev="start", argv=args, stdin=stdin, cwd=os.getcwd())
     try:
-        emit(type="system", subtype="init", model="claude-haiku-4-5", tools=[],
+        emit(type="system", subtype="init", model="claude-sonnet-4-5" if scen == "reserva" else "claude-haiku-4-5", tools=[],
              mcp_servers=[dict(name="cinex", status="connected")])
         if scen == "lento":
             time.sleep(60)
+        elif scen == "ferramentas":
+            emit(**tool("mcp__cinex__cortar_ou_manter", trecho="12", manter=False)); time.sleep(.8)
+            emit(**tool("mcp__cinex__ajustar", campo="captions", valor=dict(size=70))); time.sleep(.8)
+            emit(**text("Cortei o trecho 12 e aumentei a legenda."))
+            emit(type="result", subtype="success", is_error=False, result="Cortei o trecho 12 e aumentei a legenda.")
         elif scen == "edita":
             sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
             import app_project as P                  # CINEX_ROOT comes from the environment

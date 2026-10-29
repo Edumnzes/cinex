@@ -24,6 +24,16 @@ class TestGuards(ServerCase):
         self.assertEqual(chat({"text": "oi"}), 200)
         self.assertEqual([m["text"] for m in P.load("t1")["chat"] if m["who"] == "user"], ["oi"])   # the worker may answer
 
+    def test_ia(self):
+        self.assertEqual(self.req("POST", "/api/p/t1/ia", headers={"X-Cinex": None})[0], 403)
+        self.assertEqual(self.req("POST", "/api/p/t1/ia", {"acao": "xyz"}), (400, {"error": "ação inválida"}))
+        self.assertEqual(self.req("POST", "/api/p/t1/ia", {"acao": "parar"}), (200, {"ok": True}))   # nothing running: no-op
+
+    def test_poll(self):
+        code, r = self.req("GET", "/api/p/t1/poll")
+        self.assertEqual(code, 200)
+        self.assertLessEqual({"rev", "prep", "export", "chat", "uso"}, set(r))
+
 
 class TestNames(ServerCase):
     def test_paths(self):
