@@ -563,6 +563,19 @@ function actBtn(i, label, busyLabel, run) {
   b.onclick = async () => { acts[i] = { busy: true }; b.disabled = true; b.lastChild.textContent = busyLabel; acts[i] = await run(); chatKey = ""; await refresh(); };
   row.append(b); return row;
 }
+// D-01: "Gerar agora" in an answer. The export only starts on this click, once: the server marks the message feita
+function exportAct(i, m, running) {
+  if (m.feita) { const d = actLine("actdone", "check", "Pedido feito. Acompanhe na página Publicar."); d.id = "gdone" + i; d.tabIndex = -1; return [d]; }
+  const a = acts[i] || {}, row = el("div", "acts"), b = el("button", "btn primary", running ? "Já está gerando" : a.busy ? "Gerando…" : "Gerar agora");
+  b.type = "button"; b.disabled = running || !!a.busy;
+  b.onclick = async () => {
+    acts[i] = { busy: true }; b.disabled = true; b.textContent = "Gerando…";
+    try { await api(`/api/p/${name}/export`, { method: "POST", body: JSON.stringify({ msg: i }) }); acts[i] = {}; } catch { acts[i] = { err: true }; }
+    chatKey = ""; await refresh();
+    const d = document.getElementById("gdone" + i); if (d) d.focus();          // the screen reader reads the result
+  };
+  row.append(b); return a.err ? [row, actLine("acterr", "warn", NOSTART)] : [row];
+}
 function codeEl(p) {
   const f = document.createDocumentFragment(); f.append(el("code", "code", p.code));
   if (p.copy) {
@@ -600,7 +613,8 @@ function renderChat() {
   if (actsFor !== name) { acts = {}; actsFor = name; }            // button states belong to one project
   const marks = chat.map((m) => +!!m.seen + 2 * !!m.feita + 4 * !!m.cancelada).join("");   // metas and buttons follow these
   const fila = modo === "auto" && chatJob.busy && !WAIT_ERR.includes(erro);   // unseen messages wait behind the current answer
-  const key = (name || "") + "|" + chat.length + "|" + ((chat.at(-1) || {}).t || "") + "|" + marks + "|" + erro + "|" + fila;
+  const expRun = !!(exp && exp.done === false);             // "Gerar agora" -> "Já está gerando"
+  const key = (name || "") + "|" + chat.length + "|" + ((chat.at(-1) || {}).t || "") + "|" + marks + "|" + erro + "|" + fila + "|" + expRun;
   if (key !== chatKey) {                                  // rebuild only when a message arrived (polling runs every 1.5 s)
   const fresh = key.split("|")[0] === chatKey.split("|")[0] ? chatShown : chat.length;   // animate only the new ones
   chatKey = key; chatShown = chat.length;
@@ -624,6 +638,7 @@ function renderChat() {
         body.append(actBtn(i, "Tentar de novo", "Tentando de novo…", async () => { try { await ia({ acao: "tentar", msg: i }); return {}; } catch { return { err: true }; } }));
         if ((acts[i] || {}).err) body.append(actLine("acterr", "warn", NOSTART));
       }
+      if (!u && m.acao === "export") body.append(...exportAct(i, m, expRun));   // any other acao: no button
       d.append(el("div", "av", u ? "V" : "C"), body); return d;
     });
     box.replaceChildren(...(msgs.length ? msgs : [el("div", "empty", "Peça qualquer ajuste aqui, do seu jeito: “tira a parte em que eu gaguejo”, “legenda maior”, “coloca o preço na tela”.")]));

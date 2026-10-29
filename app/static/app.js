@@ -84,6 +84,7 @@ function showJobs(prep, exp) {
   else if (prep && prep.done === false) banner(`Preparando o projeto: ${prep.step} (${prep.pct || 0}%)`);
   else banner("");
   const box = $("#exportbox"), running = exp && exp.done === false;
+  expRun = !!running;                                         // "Gerar agora" in the chat -> "Já está gerando"
   box.hidden = !exp || !exp.step;
   if (exp && exp.step) {
     $("#exportbar").style.width = (exp.pct || 0) + "%";
@@ -590,8 +591,8 @@ const SETUP = {
 };
 const SETUP_ERR = ["nao_instalado", "nao_logado"], WAIT_ERR = ["sem_rede", "limite"];
 const NOSTART = "Não consegui começar agora. Tente de novo em instantes.";
-let acts = {}, actsFor = null, chatSig0 = "";             // message index -> {busy} | {res: [ok, text]} | {err}: survives rebuilds
-const chatSig = () => ((st && st.chat) || []).map((m) => +!!m.seen + 2 * !!m.feita + 4 * !!m.cancelada).join("") + "|" + (chatJob.erro || "") + "|" + naFila();
+let acts = {}, actsFor = null, chatSig0 = "", expRun = false;             // message index -> {busy} | {res: [ok, text]} | {err}: survives rebuilds
+const chatSig = () => ((st && st.chat) || []).map((m) => +!!m.seen + 2 * !!m.feita + 4 * !!m.cancelada).join("") + "|" + (chatJob.erro || "") + "|" + naFila() + "|" + expRun;
 const naFila = () => modo === "auto" && !!chatJob.busy && !WAIT_ERR.includes(chatJob.erro);   // unseen ones wait behind the current answer
 const ia = (body) => api(`/api/p/${name}/ia`, { method: "POST", body: JSON.stringify(body), timeout: 60000 });
 function actBtn(i, label, busyLabel, run) {
@@ -599,6 +600,19 @@ function actBtn(i, label, busyLabel, run) {
   b.type = "button"; b.disabled = busy;
   b.onclick = async () => { acts[i] = { busy: true }; b.disabled = true; b.textContent = busyLabel; acts[i] = await run(); await poll(); renderChat(); };
   row.append(b); return row;
+}
+// D-01: "Gerar agora" in an answer. The export only starts on this click, once: the server marks the message feita
+function exportAct(i, m) {
+  if (m.feita) { const d = el("div", "actdone", "Pedido feito. Acompanhe a barra embaixo da prévia."); d.id = "edone" + i; d.tabIndex = -1; return [d]; }
+  const a = acts[i] || {}, row = el("div", "acts"), b = el("button", "primary", expRun ? "Já está gerando" : a.busy ? "Gerando…" : "Gerar agora");
+  b.type = "button"; b.disabled = expRun || !!a.busy;
+  b.onclick = async () => {
+    acts[i] = { busy: true }; b.disabled = true; b.textContent = "Gerando…";
+    try { await api(`/api/p/${name}/export`, { method: "POST", body: JSON.stringify({ msg: i }) }); acts[i] = {}; } catch { acts[i] = { err: true }; }
+    await poll(); renderChat();
+    const d = document.getElementById("edone" + i); if (d) d.focus();          // the screen reader reads the result
+  };
+  row.append(b); return a.err ? [row, el("div", "actres wn", NOSTART)] : [row];
 }
 function codeEl(p) {
   const f = document.createDocumentFragment(); f.append(el("code", "code", p.code));
@@ -649,6 +663,7 @@ function renderChat() {
       d.append(actBtn(i, "Tentar de novo", "Tentando de novo…", async () => { try { await ia({ acao: "tentar", msg: i }); return {}; } catch { return { err: true }; } }));
       if ((acts[i] || {}).err) d.append(el("div", "actres wn", NOSTART));
     }
+    if (!user && m.acao === "export") d.append(...exportAct(i, m));     // any other acao: no button
     return d;
   });
   box.replaceChildren(...(msgs.length ? msgs : [el("div", "empty", "Nenhuma mensagem ainda. Peça um ajuste: “corta a parte em que eu gaguejo”, “legenda maior”…")]));

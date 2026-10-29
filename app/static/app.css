@@ -229,10 +229,12 @@ body.resizing video { pointer-events: none; }
 .msg.warn .txt { background: var(--warn-soft); border-radius: 6px; padding: 4px 8px; }
 .msg.cancelada { opacity: .6; }
 .acts { display: flex; gap: 8px; margin-top: 8px; }
-.msg .acts, .msg .actres { grid-column: 2; }
+.msg .acts, .msg .actres, .msg .actdone { grid-column: 2; }
 .acts button.primary { font-size: 13px; }
 .actres { font-size: 12px; color: var(--muted); margin-top: 4px; }
 .actres.ok { color: var(--text); } .actres.ok::before { content: "✓ "; } .actres.wn::before { content: "! "; color: var(--orange); font-weight: 600; }
+.actdone { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.actdone::before { content: "✓"; color: var(--text); }
 .guide { background: var(--warn-soft); border-left: 3px solid var(--orange); border-radius: var(--r); padding: 12px; font-size: 13px; flex: none; }
 .guide b { font-weight: 600; }
 .guide ol { padding-left: 24px; display: grid; gap: 8px; margin: 8px 0; }

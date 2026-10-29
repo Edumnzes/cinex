@@ -196,7 +196,8 @@ details.toggle > summary:hover { background: var(--hover); }
 .acts .btn { font-size: 13px; font-weight: 600; padding: 8px 16px; display: inline-flex; align-items: center; gap: 4px; }
 .acts .sym svg { width: 14px; height: 14px; }
 .actres, .acterr { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); margin-top: 4px; order: 4; }
-.actres .sym svg, .acterr .sym svg { width: 14px; height: 14px; }
+.actres .sym svg, .acterr .sym svg, .actdone .sym svg { width: 14px; height: 14px; }
+.actdone { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); margin-top: 8px; order: 3; }
 .okico { color: var(--green); } .warnico { color: var(--orange); }
 .msgs .callout.setup { margin: 0; padding: 16px; border-radius: var(--r-lg); }
 .msgs .callout.setup.new { animation: bubblein .28s var(--ease); }
