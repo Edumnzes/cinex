@@ -53,6 +53,9 @@ def t_text(name, a):
 # often, add specific tools.
 def t_adjust(name, a):
     campo, valor = need(a, "campo", str), a.get("valor")
+    if isinstance(valor, str) and valor.strip()[:1] in ("{", "["):   # the AI often sends the JSON as text
+        try: valor = json.loads(valor)
+        except ValueError: pass
     if campo not in CAMPOS: raise ValueError(f"campo não editável: {campo}")
     def fn(st):
         if campo in DEFAULTS:

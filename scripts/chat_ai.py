@@ -347,9 +347,9 @@ def run_ai(name, i, m, modelo=None):
         timer.daemon = True; timer.start()
         try: proc.stdin.write(prompt.encode("utf-8")); proc.stdin.close()
         except OSError: pass                   # died before reading: no result below -> failure message
-        with proc.stdout:
+        with proc.stdout, open(P.folder(name) / "chat.log", "w", encoding="utf-8") as log:   # last answer, local only
             for raw in proc.stdout:            # one JSON event per line
-                line = raw.decode("utf-8", "replace")
+                line = raw.decode("utf-8", "replace"); log.write(line)
                 try: on_event(name, json.loads(line), S)
                 except ValueError:
                     if line.strip(): S["outras"] = (S["outras"] + [line.strip()])[-5:]   # technical detail, never shown
