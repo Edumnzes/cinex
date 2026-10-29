@@ -85,6 +85,8 @@ const SYMS = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   tray: '<path d="M12 3.5v10M7.6 9.4 12 13.8l4.4-4.4"/><path d="M4 14v3.8A2.2 2.2 0 0 0 6.2 20h11.6a2.2 2.2 0 0 0 2.2-2.2V14"/>',
   stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/>',
+  retry: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3"/><path d="M19.5 4.5v4h-4"/>',
+  wifislash: '<path d="M2.8 9a13.5 13.5 0 0 1 18.4 0M5.9 12.4a9 9 0 0 1 12.2 0M9 15.7a4.6 4.6 0 0 1 6 0"/><circle cx="12" cy="19" r=".9" fill="currentColor"/><path d="m4 4 16 16"/>',
 };
 const CALLOUT = { "💡": "lightbulb", "✅": "check", "🎉": "check", "⚠️": "warn", "🤖": "clock", "⏳": "clock", "🗣️": "bubble",
                   "✨": "textformat", "🎞️": "film", "🎵": "music", "🔍": "magnifier", "📱": "phone" };
@@ -540,21 +542,87 @@ async function render() {
 }
 
 // ------------------------------------------------------------ chat
+// guide card when Claude Code is missing / not logged in (D-12): fixed copy of the interface, the server only sends the title
+const PS = "Abra o PowerShell: aperte a tecla Windows, digite PowerShell e aperte Enter.";
+const SETUP = {
+  missing: { txt: "Eu respondo aqui usando o Claude Code da sua conta, e ele ainda não está neste computador. São 3 passos:",
+    steps: [[PS], ["Cole este comando e aperte Enter: ", { code: "irm https://claude.ai/install.ps1 | iex", copy: true }],
+      ["Quando terminar, feche o PowerShell e abra de novo. Digite ", { code: "claude" }, ", aperte Enter e entre com a sua conta quando ele pedir (abre uma página no navegador)."]] },
+  login: { txt: "O Claude Code está instalado, mas ainda não entrou na sua conta. É rápido:",
+    steps: [[PS], ["Digite ", { code: "claude", copy: true }, " e aperte Enter."],
+      ["Siga o que aparecer para entrar com a sua conta (abre uma página no navegador). Quando terminar, pode fechar o PowerShell."]] },
+};
+const SETUP_ERR = ["nao_instalado", "nao_logado"], WAIT_ERR = ["sem_rede", "limite"];
+const NOSTART = "Não consegui começar agora. Tente de novo em instantes.";
+let acts = {}, actsFor = null;                                             // message index -> {busy} | {res: [icon, text]} | {err}: survives rebuilds
+const ia = (body) => api(`/api/p/${name}/ia`, { method: "POST", body: JSON.stringify(body), timeout: 60000 });
+function actLine(cls, icon, text) { const d = el("div", cls); d.append(sym(icon, icon === "check" ? "okico" : "warnico"), el("span", "", text)); return d; }
+function actBtn(i, label, busyLabel, run) {
+  const row = el("div", "acts"), b = el("button", "btn primary"), a = acts[i] || {}; b.type = "button";
+  b.append(sym("retry"), el("span", "", a.busy ? busyLabel : label)); b.disabled = !!a.busy;
+  b.onclick = async () => { acts[i] = { busy: true }; b.disabled = true; b.lastChild.textContent = busyLabel; acts[i] = await run(); chatKey = ""; await refresh(); };
+  row.append(b); return row;
+}
+function codeEl(p) {
+  const f = document.createDocumentFragment(); f.append(el("code", "code", p.code));
+  if (p.copy) {
+    const c = el("button", "linkbtn small", "Copiar"); c.type = "button";
+    c.onclick = () => navigator.clipboard.writeText(p.code).then(() => { c.textContent = "Copiado"; setTimeout(() => { c.textContent = "Copiar"; }, 2000); }, () => {});
+    f.append(" ", c);
+  }
+  return f;
+}
+async function testar() {                                  // auth status + network only: never spends usage
+  try {
+    const r = await ia({ acao: "testar" });
+    return { res: r.ok ? ["check", "Tudo certo: o Claude Code está conectado. Vou responder sua mensagem agora."]
+      : !r.instalado ? ["warn", "Ainda não encontrei o Claude Code neste computador. Se acabou de instalar, feche e abra o PowerShell de novo e confira o passo 2."]
+      : !r.logado ? ["warn", "O Claude Code está instalado, mas ainda não entrou na sua conta. Faça o passo 2 e toque em Testar de novo."]
+      : ["warn", "Sem conexão com a internet. Sua mensagem está guardada e eu envio sozinho quando a conexão voltar."] };
+  } catch { return { res: ["warn", NOSTART] }; }
+}
+function setupCard(m, i, active, isNew) {
+  const c = SETUP[m.reason] || SETUP.missing, card = el("div", "callout warn setup" + (isNew ? " new" : "")), body = el("div");
+  const t = el("b", "", m.text); t.id = "gsetup" + i;
+  card.setAttribute("role", "region"); card.setAttribute("aria-labelledby", t.id);
+  const ol = el("ol"); c.steps.forEach((parts) => { const li = el("li"); parts.forEach((x) => li.append(typeof x === "string" ? x : codeEl(x))); ol.append(li); });
+  body.append(t, el("div", "", c.txt), ol, el("div", "", "Pronto? Toque em Testar de novo."));
+  if (active) body.append(actBtn(i, "Testar de novo", "Testando…", testar));
+  const res = (acts[i] || {}).res; if (res) body.append(actLine("actres", ...res));
+  body.append(el("div", "note", "Enquanto isso, o resto do Cinex funciona normalmente. Sua mensagem fica guardada."));
+  card.append(sym("warn", "ce"), body); return card;
+}
+
 let chatKey = "", chatShown = 0;
 function renderChat() {
   const box = $("#gmsgs"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-  const chat = (st && st.chat) || [];
-  const key = (name || "") + "|" + chat.length + "|" + ((chat.at(-1) || {}).t || "");
+  const chat = (st && st.chat) || [], erro = chatJob.erro || "";
+  if (actsFor !== name) { acts = {}; actsFor = name; }            // button states belong to one project
+  const marks = chat.map((m) => +!!m.seen + 2 * !!m.feita + 4 * !!m.cancelada).join("");   // metas and buttons follow these
+  const key = (name || "") + "|" + chat.length + "|" + ((chat.at(-1) || {}).t || "") + "|" + marks + "|" + erro;
   if (key !== chatKey) {                                  // rebuild only when a message arrived (polling runs every 1.5 s)
   const fresh = key.split("|")[0] === chatKey.split("|")[0] ? chatShown : chat.length;   // animate only the new ones
   chatKey = key; chatShown = chat.length;
   if (!name) {
     box.replaceChildren(el("div", "empty", "Oi! Eu sou o Cinex. Envie seu vídeo ao lado e eu cuido da edição. Depois é só me dizer o que quer mudar, escrevendo ou falando."));
   } else {
+    const lastSetup = chat.findLastIndex((m) => m.kind === "setup");
     const msgs = chat.map((m, i) => {
-      const u = m.who === "user", d = el("div", "msg" + (u ? " user" : "") + (i >= fresh ? " new" : ""));
-      const who = el("div", "who", u ? "Você" : "Cinex"); who.append(el("small", "", (m.t || "").slice(11, 16)));
+      if (m.kind === "setup") return setupCard(m, i, i === lastSetup && SETUP_ERR.includes(erro), i >= fresh);   // A-05
+      const u = m.who === "user", cls = (u ? " user" : "") + (m.kind === "warn" ? " warn" : "") + (m.cancelada ? " cancelada" : "");
+      const d = el("div", "msg" + cls + (i >= fresh ? " new" : "")), hm = (m.t || "").slice(11, 16), meta = el("small", "", hm);
+      if (u && m.cancelada) meta.textContent = `${hm} · Cancelada`;
+      else if (u && !m.seen && WAIT_ERR.includes(erro)) {
+        const c = el("button", "whobtn", "Cancelar"); c.type = "button"; c.setAttribute("aria-label", "Cancelar esta mensagem");
+        c.onclick = async () => { c.disabled = true; try { await ia({ acao: "cancelar", msgs: [i] }); } catch {} await refresh(); };
+        meta.textContent = `${hm} · Aguardando · `; meta.append(c);
+      }
+      const who = el("div", "who", u ? "Você" : "Cinex"); who.append(meta);
       const body = el("div"); body.append(who, el("div", "txt", m.text));
+      if (m.kind === "warn" && m.acao === "tentar" && !m.feita) {           // A-07: the same message again, no new bubble
+        body.append(actBtn(i, "Tentar de novo", "Tentando de novo…", async () => { try { await ia({ acao: "tentar", msg: i }); return {}; } catch { return { err: true }; } }));
+        if ((acts[i] || {}).err) body.append(actLine("acterr", "warn", NOSTART));
+      }
       d.append(el("div", "av", u ? "V" : "C"), body); return d;
     });
     box.replaceChildren(...(msgs.length ? msgs : [el("div", "empty", "Peça qualquer ajuste aqui, do seu jeito: “tira a parte em que eu gaguejo”, “legenda maior”, “coloca o preço na tela”.")]));
@@ -567,11 +635,28 @@ function renderChat() {
 // status line of the automatic answer (D-08) + "Parar resposta" (D-09) + today's counter (D-07); data from poll
 let chatJob = {}, uso = 0, uploading = false;
 function stopReset(b) { if (b.disabled) { b.disabled = false; b.lastChild.textContent = "Parar resposta"; } }
+function renderAviso(stt, erro, k) {                      // no internet / usage limit (D-13): resent by itself, or cancel
+  if (stt.dataset.mode !== erro) {
+    const b = el("button", "stopbtn"); b.type = "button"; b.title = "Cancelar as mensagens que estão esperando";
+    b.onclick = async () => { b.disabled = true; try { await ia({ acao: "cancelar" }); } catch {} b.disabled = false; await refresh(); };
+    stt.className = "status warn"; stt.dataset.mode = erro;
+    stt.replaceChildren(sym(erro === "sem_rede" ? "wifislash" : "clock", "warnico"), el("span", "sttxt"), b);
+  }
+  const guard = k === 1 ? "Sua mensagem está guardada" : `Suas ${k} mensagens estão guardadas`;
+  const txt = erro === "sem_rede" ? `Sem conexão com a internet. ${guard} e eu envio sozinho quando a conexão voltar.`
+    : `O limite de uso da sua conta do Claude Code acabou por agora. ${guard} e eu respondo sozinho quando liberar${chatJob.ate ? `, por volta das ${chatJob.ate}` : ""}.`;
+  const t = stt.querySelector(".sttxt"), b = stt.querySelector(".stopbtn"), lb = k === 1 ? "Cancelar envio" : "Cancelar mensagens";
+  if (t.textContent !== txt) t.textContent = txt;
+  if (b.textContent !== lb) b.textContent = lb;
+  stt.hidden = false;
+}
 function renderStatus() {
   if (uploading) return;                                   // file upload progress owns #gstatus meanwhile
-  const stt = $("#gstatus"), chat = (name && st && st.chat) || [], busy = !!(name && chatJob.busy);
+  const stt = $("#gstatus"), chat = (name && st && st.chat) || [], busy = !!(name && chatJob.busy), erro = name && chatJob.erro;
+  if (SETUP_ERR.includes(erro)) { stt.hidden = true; return; }                  // the guide card says it all
+  if (WAIT_ERR.includes(erro) && chatJob.k > 0) return renderAviso(stt, erro, chatJob.k);
   const pend = chat.filter((m) => m.who === "user" && !m.seen && !m.cancelada);
-  let b = stt.querySelector(".stopbtn");
+  let b = stt.dataset.mode === "work" && stt.querySelector(".stopbtn");
   if (b && (!busy || b.dataset.idx !== String(chatJob.idx))) stopReset(b);    // that answer ended (or the next one began)
   if (!busy && !pend.length) { stt.hidden = true; return; }
   if (!b) {                                                // fixed structure: only text changes, the dots keep animating
@@ -582,7 +667,7 @@ function renderStatus() {
       try { await api(`/api/p/${name}/ia`, { method: "POST", body: JSON.stringify({ acao: "parar" }) }); } catch { stopReset(b); }
     };
     const suf = el("span", "stsuf"); suf.setAttribute("aria-hidden", "true");
-    stt.className = "status";
+    stt.className = "status"; stt.dataset.mode = "work";
     stt.replaceChildren(Object.assign(el("span", "dots"), { innerHTML: "<i></i><i></i><i></i>" }), el("span", "sttxt"), suf, b);
   }
   const txt = busy ? (chatJob.step || "Trabalhando no seu pedido…") : "Lendo o seu pedido…";
@@ -674,7 +759,7 @@ async function uploadMany(files, kind) {
   if (kind !== "broll" && paths.length) await api(`/api/p/${name}/clips`, { method: "POST", body: JSON.stringify({ paths }) });
   callStatus(""); await refresh();
 }
-function callStatus(t) { uploading = !!t; const s = $("#gstatus"); s.hidden = !t; s.className = "status"; s.textContent = t; if (!t) renderStatus(); }
+function callStatus(t) { uploading = !!t; const s = $("#gstatus"); s.hidden = !t; s.className = "status"; s.dataset.mode = ""; s.textContent = t; if (!t) renderStatus(); }
 
 let pollRev = -1;
 async function poll() {

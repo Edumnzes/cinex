@@ -181,9 +181,27 @@ details.toggle > summary:hover { background: var(--hover); }
 .msg.user .txt { background: var(--bubble-me); color: #fff; }
 .empty { color: var(--muted); font-size: 14px; padding: 10px 6px; text-align: center; }
 .status { margin: 0 16px 8px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
-.status.warn { color: var(--orange); }
+.status.warn { background: var(--yellow-soft); color: var(--text); border-radius: var(--r); padding: 8px 12px; align-items: flex-start; }
+.status .warnico { color: var(--orange); }
 .status .sttxt { flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .status .stsuf { color: var(--faint); }
+.status.warn .sttxt { display: block; }                  /* the warning is never clipped */
+/* problem messages, guide card, action rows (D-06, D-12, D-13) */
+.msg.warn .txt { background: var(--yellow-soft); color: var(--text); }
+.msg.cancelada { opacity: .6; }
+.acts { display: flex; gap: 8px; align-items: center; margin-top: 8px; order: 3; }
+.acts .btn { font-size: 13px; font-weight: 600; padding: 8px 16px; display: inline-flex; align-items: center; gap: 4px; }
+.acts .sym svg { width: 14px; height: 14px; }
+.actres, .acterr { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); margin-top: 4px; order: 4; }
+.actres .sym svg, .acterr .sym svg { width: 14px; height: 14px; }
+.okico { color: var(--green); } .warnico { color: var(--orange); }
+.msgs .callout.setup { margin: 0; padding: 16px; border-radius: var(--r-lg); }
+.msgs .callout.setup.new { animation: bubblein .28s var(--ease); }
+.callout.setup b { display: block; font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+.callout.setup ol { padding-left: 24px; display: grid; gap: 8px; margin: 8px 0; }
+.callout.setup .note { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.code { font: 13px ui-monospace, "Cascadia Mono", Consolas, monospace; background: var(--fill); border-radius: 6px; padding: 0 4px; user-select: all; }
+.whobtn { color: var(--muted); font-size: 11px; padding: 0; border-radius: 0; } .whobtn:hover:not(:disabled) { background: none; text-decoration: underline; }
 .stopbtn { display: inline-flex; align-items: center; gap: 4px; border-radius: 980px; background: var(--fill); color: var(--text);
   font-size: 13px; font-weight: 600; padding: 4px 12px; min-height: 28px; }
 .stopbtn:hover:not(:disabled) { background: var(--press); }
