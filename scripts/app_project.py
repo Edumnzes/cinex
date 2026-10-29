@@ -384,14 +384,15 @@ def cancel(name, idx=None):
     update(name, fn); return len(got)
 
 
-def mark_done(name, i):
-    """Use-once "Tentar de novo": check and mark in one update (two clicks never requeue twice).
-    -> the ref of the message to answer again, or None if chat[i] isn't a pending retry."""
+def mark_done(name, i, acao="tentar"):
+    """Use-once button of a Cinex answer ("Tentar de novo", "Gerar agora"): check and mark in one update (two clicks
+    never act twice). -> "tentar": the ref of the message to answer again; others: True. None if chat[i] isn't pending."""
     got = []
     def fn(st):
-        m = st["chat"][i] if 0 <= i < len(st["chat"]) else {}
-        if m.get("acao") == "tentar" and not m.get("feita") and type(m.get("ref")) is int:
-            m["feita"] = True; got.append(m["ref"])
+        m = st["chat"][i] if type(i) is int and 0 <= i < len(st["chat"]) else {}
+        if (m.get("who") == "cinex" and m.get("acao") == acao and not m.get("feita")
+                and (acao != "tentar" or type(m.get("ref")) is int)):
+            m["feita"] = True; got.append(m.get("ref", True))
     update(name, fn); return got[0] if got else None
 
 

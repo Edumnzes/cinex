@@ -35,6 +35,7 @@ _USO_LOCK = threading.Lock()               # daily counter: only the server proc
 RESERVA = "Trabalhando no seu pedido…"
 LABEL = {"ver_projeto": "Lendo o projeto…", "revisar": "Olhando o vídeo e as legendas…",
          "corrigir_texto": "Corrigindo o texto da legenda…", "ressincronizar": "Acertando o tempo das legendas…"}
+ACOES = {"exportar": "export"}             # confirmar(acao) -> the button in the answer (D-01); anything else: no button
 
 
 def claude_exe():
@@ -116,6 +117,8 @@ def on_event(name, ev, S):
             if not isinstance(b, dict): continue
             if b.get("type") == "tool_use" and str(b.get("name", "")).startswith("mcp__cinex__"):
                 step = label(b["name"].removeprefix("mcp__cinex__"), b.get("input"))
+                if b["name"] == "mcp__cinex__confirmar":
+                    S["acao"] = ACOES.get((b.get("input") if isinstance(b.get("input"), dict) else {}).get("acao"))
             elif b.get("type") == "text": step = "Escrevendo a resposta…"
         if ev.get("error"): S["erro_assist"] = ev["error"]   # "authentication_failed", "rate_limit", ...
     elif t == "result": S["result"] = ev
@@ -354,7 +357,7 @@ def run_ai(name, i, m, modelo=None):
         if S.get("tempo"): return P.say(name, TXT_TEMPO, kind="warn", acao="tentar", ref=i)
         why = classify(S, rc)                  # decided by is_error: "Not logged in" comes with subtype "success"
         if why is None:
-            P.say(name, S["result"]["result"].strip()); _contar(); _PAUSA["n"] = 0
+            P.say(name, S["result"]["result"].strip(), **({"acao": S["acao"]} if S.get("acao") else {})); _contar(); _PAUSA["n"] = 0
         elif why == "nao_logado": return _setup(name, i, "login")
         elif why in ("sem_rede", "limite"):
             P.unclaim(name, [i]); _pausar(why, ate_limite(S) if why == "limite" else None)

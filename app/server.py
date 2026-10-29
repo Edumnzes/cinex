@@ -29,6 +29,7 @@ MAX_VOICE = 12 * 1024 * 1024                    # one voice command (~1 min of o
 IA_ACOES = {"parar", "testar", "tentar", "cancelar", "modo"}   # POST /api/p/<n>/ia: what the app may ask of the automatic chat
 _VOICE = {}                                     # faster-whisper model for voice commands, loaded on first use
 _VOICE_LOCK = threading.Lock()
+_EXPORT_LOCK = threading.Lock()                 # check + start + mark of POST /export, one request at a time
 
 
 def voice_to_text(data, suffix):
@@ -406,12 +407,18 @@ class H(BaseHTTPRequestHandler):
                 elif sys.platform == "darwin": subprocess.Popen(["open", "-R", out])
                 else: subprocess.Popen(["xdg-open", str(Path(out).parent)])
                 return self._send(200, {"ok": True})
-            if sub == "export":
-                self._json()
-                if running(name): return self._err(409, "exportação já em andamento")
-                P.job(name, "export", step="Começando", pct=1, done=False, error=None, out=None)
-                subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "export", name],
-                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
+            if sub == "export":                        # Publicar's button ({}) or "Gerar agora" in an answer ({msg: i}, D-01)
+                b = self._json(); j = b.get("msg") if isinstance(b, dict) else []
+                with _EXPORT_LOCK:                     # two clicks at once: one export, one use of the button
+                    c = P.load(name)["chat"]
+                    if j is not None and not (type(j) is int and 0 <= j < len(c) and c[j]["who"] == "cinex"
+                                              and c[j].get("acao") == "export" and not c[j].get("feita")):
+                        return self._err(400, "mensagem inválida")
+                    if running(name): return self._err(409, "exportação já em andamento")
+                    P.job(name, "export", step="Começando", pct=1, done=False, error=None, out=None)
+                    subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "export", name],
+                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
+                    if j is not None: P.mark_done(name, j, "export")
                 return self._send(200, {"ok": True})
             if sub == "font":
                 fn = Path(self.headers.get("X-Filename", "")).name
