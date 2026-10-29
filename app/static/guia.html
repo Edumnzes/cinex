@@ -32,9 +32,9 @@
 
   <!-- chat with the AI: always there -->
   <section class="chat" aria-label="Conversa com o Cinex">
-    <header class="chathead"><b>Conversa</b><span class="muted">com o Cinex</span></header>
+    <header class="chathead"><b>Conversa</b><span class="muted">com o Cinex</span><div id="gbar" class="chatbar"><span id="guso" class="usage"></span></div></header>
     <div id="gmsgs" class="msgs" aria-live="polite"></div>
-    <div id="gstatus" class="status" hidden></div>
+    <div id="gstatus" class="status" role="status" aria-live="polite" aria-atomic="true" hidden></div>
     <div id="gchips" class="chips"></div>
     <form id="gform" class="composer">
       <textarea id="gin" rows="1" placeholder="Peça qualquer ajuste…" aria-label="Mensagem"></textarea>

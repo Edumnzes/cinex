@@ -20,7 +20,7 @@ const store = { get(k) { try { return localStorage.getItem(k); } catch { return 
 
 let name = null, st = null, prep = null, exp = null, step = "comecar", projects = [], marcas = [], fresh = false;
 let perfilNovo = false, perfilData = null, pend = [], modoUp = "unico", formDirty = false;      // Começar (profiles) and Upload page state
-let sentAt = 0, lastCinex = 0, review = null, typing = false;
+let lastCinex = 0, review = null, typing = false;
 
 // ------------------------------------------------------------ data helpers (same rules as the editor)
 function playOrder() {
@@ -84,6 +84,7 @@ const SYMS = {
   person: '<circle cx="12" cy="8" r="3.8"/><path d="M4.5 20.5c.8-4 3.8-6.2 7.5-6.2s6.7 2.2 7.5 6.2"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   tray: '<path d="M12 3.5v10M7.6 9.4 12 13.8l4.4-4.4"/><path d="M4 14v3.8A2.2 2.2 0 0 0 6.2 20h11.6a2.2 2.2 0 0 0 2.2-2.2V14"/>',
+  stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="2.5"/>',
 };
 const CALLOUT = { "💡": "lightbulb", "✅": "check", "🎉": "check", "⚠️": "warn", "🤖": "clock", "⏳": "clock", "🗣️": "bubble",
                   "✨": "textformat", "🎞️": "film", "🎵": "music", "🔍": "magnifier", "📱": "phone" };
@@ -560,15 +561,43 @@ function renderChat() {
   }
   if (atEnd) box.scrollTop = box.scrollHeight;
   }
-  // waiting for the AI
-  const last = chat.at(-1), wait = name && last && last.who === "user";
-  const stt = $("#gstatus");
-  if (!wait) { stt.hidden = true; return; }
-  const secs = (Date.now() - (sentAt || Date.parse(last.t))) / 1000;
-  stt.hidden = false; stt.className = "status" + (secs > 45 ? " warn" : "");
-  stt.replaceChildren(...(secs > 45
-    ? [el("span", "", "Sem resposta ainda. O Claude Code precisa estar aberto com o Cinex ouvindo esta conversa.")]
-    : [Object.assign(el("span", "dots"), { innerHTML: "<i></i><i></i><i></i>" }), el("span", "", "O Cinex está trabalhando…")]));
+  renderStatus(); renderUso();
+}
+
+// status line of the automatic answer (D-08) + "Parar resposta" (D-09) + today's counter (D-07); data from poll
+let chatJob = {}, uso = 0, uploading = false;
+function stopReset(b) { if (b.disabled) { b.disabled = false; b.lastChild.textContent = "Parar resposta"; } }
+function renderStatus() {
+  if (uploading) return;                                   // file upload progress owns #gstatus meanwhile
+  const stt = $("#gstatus"), chat = (name && st && st.chat) || [], busy = !!(name && chatJob.busy);
+  const pend = chat.filter((m) => m.who === "user" && !m.seen && !m.cancelada);
+  let b = stt.querySelector(".stopbtn");
+  if (b && (!busy || b.dataset.idx !== String(chatJob.idx))) stopReset(b);    // that answer ended (or the next one began)
+  if (!busy && !pend.length) { stt.hidden = true; return; }
+  if (!b) {                                                // fixed structure: only text changes, the dots keep animating
+    b = el("button", "stopbtn"); b.type = "button"; b.setAttribute("aria-label", "Parar a resposta do Cinex");
+    b.append(sym("stop"), el("span", "", "Parar resposta"));
+    b.onclick = async () => {
+      b.disabled = true; b.dataset.idx = String(chatJob.idx); b.lastChild.textContent = "Parando…";
+      try { await api(`/api/p/${name}/ia`, { method: "POST", body: JSON.stringify({ acao: "parar" }) }); } catch { stopReset(b); }
+    };
+    const suf = el("span", "stsuf"); suf.setAttribute("aria-hidden", "true");
+    stt.className = "status";
+    stt.replaceChildren(Object.assign(el("span", "dots"), { innerHTML: "<i></i><i></i><i></i>" }), el("span", "sttxt"), suf, b);
+  }
+  const txt = busy ? (chatJob.step || "Trabalhando no seu pedido…") : "Lendo o seu pedido…";
+  const secs = busy && chatJob.desde ? (Date.now() - Date.parse(chatJob.desde)) / 1000 : 0;
+  const suf = secs >= 60 ? ` · ${Math.floor(secs / 60)} min` : "";
+  const t = stt.querySelector(".sttxt"), s = stt.querySelector(".stsuf");
+  if (t.textContent !== txt) t.textContent = txt;
+  if (s.textContent !== suf) s.textContent = suf;
+  stt.hidden = false;
+}
+function renderUso() {
+  const u = $("#guso"); if (!u) return;
+  u.textContent = `${uso} hoje`;
+  u.title = "Respostas automáticas de hoje. Cada uma usa um pouco do seu limite do Claude Code.";
+  u.setAttribute("aria-label", uso === 1 ? "1 resposta automática hoje" : `${uso} respostas automáticas hoje`);
 }
 function renderChips() {
   $("#gchips").replaceChildren(...(name ? CHIPS[step] || [] : []).map((t) => { const b = el("button", "chip", t); b.onclick = () => send(t); return b; }));
@@ -576,7 +605,6 @@ function renderChips() {
 async function send(text) {
   text = (text || "").trim(); if (!text) return;
   if (!name) { alert("Envie um vídeo primeiro: a conversa fica guardada junto com ele."); return; }
-  sentAt = Date.now();
   try { await api(`/api/p/${name}/chat`, { method: "POST", body: JSON.stringify({ text, passo: step }) }); $("#gin").value = ""; autosize(); await refresh(); }
   catch (e) { alert(e.message); }
 }
@@ -646,7 +674,7 @@ async function uploadMany(files, kind) {
   if (kind !== "broll" && paths.length) await api(`/api/p/${name}/clips`, { method: "POST", body: JSON.stringify({ paths }) });
   callStatus(""); await refresh();
 }
-function callStatus(t) { const s = $("#gstatus"); s.hidden = !t; s.className = "status"; s.textContent = t; }
+function callStatus(t) { uploading = !!t; const s = $("#gstatus"); s.hidden = !t; s.className = "status"; s.textContent = t; if (!t) renderStatus(); }
 
 let pollRev = -1;
 async function poll() {
@@ -654,7 +682,7 @@ async function poll() {
   try {
     const p = await api(`/api/p/${name}/poll`);
     const changed = p.rev !== pollRev || JSON.stringify(p.prep) !== JSON.stringify(prep) || JSON.stringify(p.export) !== JSON.stringify(exp);
-    prep = p.prep; exp = p.export;
+    prep = p.prep; exp = p.export; chatJob = p.chat || {}; uso = p.uso || 0;
     if (p.rev !== pollRev) { pollRev = p.rev; const j = await api(`/api/p/${name}`); st = j.state; }
     if (changed) render(); else renderChat();
   } catch {}

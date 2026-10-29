@@ -159,10 +159,12 @@ details.toggle > summary:hover { background: var(--hover); }
 
 /* ---------- chat (iMessage) */
 .chat { border-left: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; background: var(--card); }
-.chathead { display: flex; align-items: baseline; gap: 8px; padding: 16px 18px 12px; border-bottom: 1px solid var(--line);
+.chathead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 16px 18px 12px; border-bottom: 1px solid var(--line);
   background: var(--side); -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px); }
 .chathead b { font-size: 16px; font-weight: 600; }
 .chathead .muted { font-size: 13px; }
+.chatbar { width: 100%; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.usage { margin-left: auto; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .msgs { flex: 1; overflow: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 10px; }
 .msg { display: flex; gap: 8px; align-items: flex-end; max-width: 92%; }
 .msg.new { animation: bubblein .28s var(--ease); transform-origin: bottom left; }
@@ -180,6 +182,12 @@ details.toggle > summary:hover { background: var(--hover); }
 .empty { color: var(--muted); font-size: 14px; padding: 10px 6px; text-align: center; }
 .status { margin: 0 16px 8px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
 .status.warn { color: var(--orange); }
+.status .sttxt { flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.status .stsuf { color: var(--faint); }
+.stopbtn { display: inline-flex; align-items: center; gap: 4px; border-radius: 980px; background: var(--fill); color: var(--text);
+  font-size: 13px; font-weight: 600; padding: 4px 12px; min-height: 28px; }
+.stopbtn:hover:not(:disabled) { background: var(--press); }
+.stopbtn .sym svg { width: 14px; height: 14px; }
 .dots { display: inline-flex; gap: 3px; background: var(--bubble); padding: 9px 12px; border-radius: 16px; }
 .dots i { display: block; width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: blink 1.2s infinite; }
 .dots i:nth-child(2) { animation-delay: .2s; } .dots i:nth-child(3) { animation-delay: .4s; }
