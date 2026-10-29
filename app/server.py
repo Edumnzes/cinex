@@ -26,6 +26,7 @@ MAX_BODY = 25 * 1024 * 1024                     # font uploads
 MAX_REF = 600 * 1024 * 1024                     # niche reference videos (streamed to disk)
 MAX_MEDIA = 8 * 1024 * 1024 * 1024              # B-roll clips sent from the browser (4K phone clips are big)
 MAX_VOICE = 12 * 1024 * 1024                    # one voice command (~1 min of opus)
+IA_ACOES = {"parar"}                            # POST /api/p/<n>/ia: what the app may ask of the automatic chat
 _VOICE = {}                                     # faster-whisper model for voice commands, loaded on first use
 _VOICE_LOCK = threading.Lock()
 
@@ -219,7 +220,8 @@ class H(BaseHTTPRequestHandler):
                                                 project_fonts=sorted(p.name for p in (d / "fonts").glob("*")) if (d / "fonts").exists() else []))
                 if sub == "poll":
                     rev = P.load(name)["rev"] if (d / "cinex.json").exists() else -1
-                    return self._send(200, dict(rev=rev, prep=P.read_job(name, "prep"), export=P.read_job(name, "export")))
+                    return self._send(200, dict(rev=rev, prep=P.read_job(name, "prep"), export=P.read_job(name, "export"),
+                                                chat=P.read_job(name, "chat"), uso=C.uso()))
                 if sub == "words":                     # transcription + the user's manual corrections
                     st = P.load(name)
                     if not st.get("textos"): return self._file(d / "words_raw.json", "application/json")
@@ -371,6 +373,10 @@ class H(BaseHTTPRequestHandler):
                 passo = str(b.get("passo", ""))[:20] or None    # the guided-mode step the user is on (context for Claude)
                 P.say(name, text, who="user", passo=passo); C.kick(name)   # automatic answer: Claude Code in the background
                 return self._send(200, {"ok": True})
+            if sub == "ia":                            # automatic chat controls (D-09: stop the current answer)
+                acao = self._json().get("acao")
+                if not isinstance(acao, str) or acao not in IA_ACOES: return self._err(400, "ação inválida")
+                C.stop(name); return self._send(200, {"ok": True})
             if sub == "mostrar":                       # show the exported file in Explorer / Finder
                 self._json(); out = (P.read_job(name, "export") or {}).get("out")
                 if not out or not Path(out).is_file(): return self._err(404, "nenhum vídeo exportado ainda")
