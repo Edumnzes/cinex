@@ -232,6 +232,14 @@ class TestErrors(FailCase):
         time.sleep(.3)
         self.assertEqual(len(self.starts()), n)
 
+    def test_testar_offline(self):
+        """Logged in but no network: not ok, yet the message goes back to the worker (the network pause resends it)."""
+        self.login_card(); self.use("ok")
+        with mock.patch.dict(os.environ, {"FAKE_AUTH": '{"loggedIn": true}'}), mock.patch.object(C, "rede_ok", return_value=False):
+            code, r = self.ia({"acao": "testar"})
+            self.assertEqual((code, r["ok"], r["rede"]), (200, False, False))
+            self.wait_for(lambda: len(self.cinex()) == 2); self.wait_idle("t1")
+
 
 class TestLimit(FailCase):
     def test_offline(self):

@@ -379,7 +379,7 @@ class H(BaseHTTPRequestHandler):
                 if not isinstance(acao, str) or acao not in IA_ACOES: return self._err(400, "ação inválida")
                 if acao == "testar":                   # auth status + socket only: never spends usage
                     h = C.health(); ok = all(h.values())
-                    if ok: C.retomar(name)
+                    if h["instalado"] and h["logado"]: C.retomar(name)   # offline: the network pause resends it
                     return self._send(200, dict(h, ok=ok))
                 if acao == "tentar":                   # the SAME message again, once (mark_done checks and marks atomically)
                     j = b.get("msg")
