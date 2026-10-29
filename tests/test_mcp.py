@@ -5,7 +5,7 @@ from tests.base import P, PY, REPO, ProjectCase
 
 MCP = REPO / "scripts" / "cinex_mcp.py"
 ALLOWLIST = {"ver_projeto", "cortar_ou_manter", "corrigir_texto", "ajustar", "camera_lenta", "versao_curta",
-             "revisar", "ressincronizar", "voltar_como_estava"}
+             "revisar", "ressincronizar", "voltar_como_estava", "confirmar"}
 FORBIDDEN = {"name", "nome", "projeto", "project", "path", "caminho", "arquivo", "file", "src", "url"}
 
 
@@ -78,3 +78,12 @@ class TestMcp(ProjectCase):
         r = self.call("t1", "versao_curta", segundos=15)
         self.assertTrue(r["isError"]); self.assertIn("já existe", r["content"][0]["text"])
         self.assertTrue((d / "meu.txt").exists())
+
+    def test_confirmar(self):
+        r = self.call("t1", "confirmar", acao="exportar")
+        self.assertFalse(r["isError"], r); self.assertIn("Não diga que já foi feito", r["content"][0]["text"])
+        self.assertEqual(P.load("t1")["rev"], 0)                        # shows a button, changes nothing
+        self.assertFalse((P.folder("t1") / "ponto_salvo.json").exists())
+        self.assertFalse((P.folder("t1") / "export.json").exists())
+        self.assertTrue(self.call("t1", "confirmar", acao="apagar")["isError"])
+        self.assertTrue(self.call("t1", "confirmar")["isError"])
