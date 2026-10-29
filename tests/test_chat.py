@@ -1,6 +1,7 @@
 """scripts/chat_ai.py: the locked-down `claude -p` command, clean env, model choice and the auto worker (CHAT-01/02, D-05).
 Every worker run uses tests/fake_claude.py (C.CLAUDE_CMD): the real CLI is never called."""
 import json, os, time, unittest
+from pathlib import Path
 from unittest import mock
 
 from tests.base import C, FAKE, P, PY, REPO, ProjectCase, ServerCase
@@ -167,3 +168,177 @@ class TestUso(ServerCase):
     def test_new_day(self):
         P._write_json(P.ROOT / "_chat_uso.json", {"dia": "2000-01-01", "n": 5})
         self.assertEqual(C.uso(), 0)
+
+
+class FailCase(ServerCase):
+    """Failure paths (D-06, D-12, D-13, A-05..A-07). rede_ok() is patched whenever it can run: no test touches the network."""
+
+    def setUp(self):
+        super().setUp(); self.make_project()
+
+    def use(self, scen): C.CLAUDE_CMD = [PY, str(FAKE), scen]
+
+    def starts(self, name=None):
+        return [e for e in self.fake_log() if e["ev"] == "start" and (name is None or Path(e["cwd"]).name == name)]
+
+    def cinex(self, name="t1"): return [m for m in P.load(name)["chat"] if m["who"] == "cinex"]
+
+    def job(self, name="t1"): return P.read_job(name, "chat")
+
+    def ia(self, body, name="t1"): return self.req("POST", f"/api/p/{name}/ia", body)
+
+
+class TestErrors(FailCase):
+    def test_missing(self):
+        C.CLAUDE_CMD = None
+        with mock.patch.object(C, "claude_exe", return_value=None):
+            self.assertEqual(self.req("POST", "/api/p/t1/chat", {"text": "oi"})[0], 200)
+            self.wait_idle("t1")
+            self.assertEqual([(m.get("kind"), m.get("reason")) for m in self.cinex()], [("setup", "missing")])
+            self.assertEqual(self.cinex()[0]["text"], C.TXT_SETUP["missing"])
+            self.assertIs(P.load("t1")["chat"][0]["seen"], False)
+            self.assertEqual(self.job()["erro"], "nao_instalado")
+            self.assertEqual(self.req("POST", "/api/p/t1/chat", {"text": "e aí"})[0], 200)
+            self.wait_idle("t1")
+            self.assertEqual(len(self.cinex()), 1)               # A-05: no second card
+            self.assertEqual(self.job()["erro"], "nao_instalado")
+
+    def login_card(self):
+        self.use("nao_logado")
+        P.say("t1", "oi", who="user"); C.kick("t1"); self.wait_idle("t1")
+        self.assertEqual([(m.get("kind"), m.get("reason")) for m in self.cinex()], [("setup", "login")])
+        self.assertEqual(self.job()["erro"], "nao_logado")
+        self.assertIs(P.load("t1")["chat"][0]["seen"], False)
+
+    def test_login(self):
+        self.login_card()
+
+    def test_testar(self):
+        self.login_card(); self.use("ok")
+        with mock.patch.dict(os.environ, {"FAKE_AUTH": '{"loggedIn": true}'}), mock.patch.object(C, "rede_ok", return_value=True):
+            code, r = self.ia({"acao": "testar"})
+            self.assertEqual((code, r), (200, {"instalado": True, "logado": True, "rede": True, "ok": True}))
+            self.wait_for(lambda: len(self.cinex()) == 2); self.wait_idle("t1")
+        self.assertEqual([m["text"] for m in self.cinex()], [C.TXT_SETUP["login"], "Pronto."])   # A-06: one answer
+        auth = [e for e in self.fake_log() if e["ev"] == "auth"]
+        self.assertTrue(auth); self.assertNotIn("-p", auth[0]["argv"])
+        self.assertIsNone(self.job()["erro"])
+
+    def test_testar_fail(self):
+        self.login_card(); n = len(self.starts())
+        with mock.patch.dict(os.environ, {"FAKE_AUTH": '{"loggedIn": false}'}), mock.patch.object(C, "rede_ok", return_value=True):
+            code, r = self.ia({"acao": "testar"})
+        self.assertEqual(code, 200); self.assertIs(r["ok"], False); self.assertIs(r["logado"], False)
+        time.sleep(.3)
+        self.assertEqual(len(self.starts()), n)
+
+
+class TestLimit(FailCase):
+    def test_offline(self):
+        C.NET_RETRY = .3; self.use("offline")
+        with mock.patch.object(C, "rede_ok", return_value=False):
+            P.say("t1", "oi", who="user"); C.kick("t1")
+            self.wait_for(lambda: self.job().get("erro") == "sem_rede", 5, "sem_rede não chegou em 5 s")
+            self.assertEqual(self.job()["k"], 1)
+            proc = C._CHAT["t1"]["proc"]
+            self.wait_for(lambda: proc.poll() is not None, 3, "o fake offline continuou vivo")
+            self.use("ok")
+        with mock.patch.object(C, "rede_ok", return_value=True):
+            self.wait_for(lambda: self.cinex(), 5); self.wait_idle("t1")
+        self.assertEqual(self.cinex()[0]["text"], "Pronto.")
+        self.assertIsNone(self.job()["erro"])
+
+    def test_limite(self):
+        self.use("limite")
+        with mock.patch.dict(os.environ, {"FAKE_RESET": "2"}):
+            P.say("t1", "oi", who="user"); C.kick("t1")
+            self.wait_for(lambda: self.job().get("erro") == "limite", 5)
+            self.assertRegex(self.job()["ate"], r"^\d\d:\d\d$")
+            fim = C._PAUSA["ate"]; self.use("ok")
+            self.make_project("t2"); P.say("t2", "oi", who="user"); C.kick("t2")
+            self.wait_for(lambda: self.cinex("t1") and self.cinex("t2"), 10); self.wait_idle("t1"); self.wait_idle("t2")
+        t2 = self.starts("t2")
+        self.assertEqual(len(t2), 1); self.assertGreaterEqual(t2[0]["t"], fim - .05)   # no call during the pause
+        self.assertEqual((self.cinex("t1")[0]["text"], self.cinex("t2")[0]["text"]), ("Pronto.", "Pronto."))
+
+    def test_backoff(self):
+        C.LIMIT_RETRY = .2; self.use("limite"); esperas, real = [], C._pausar
+        def spy(erro, ate=None):
+            real(erro, ate); esperas.append((C._PAUSA["n"], C._PAUSA["ate"] - time.time()))
+        with mock.patch.dict(os.environ, {"FAKE_RESET": "0"}), mock.patch.object(C, "_pausar", spy):
+            P.say("t1", "oi", who="user"); C.kick("t1")
+            self.wait_for(lambda: self.job().get("erro") == "limite", 5)
+            self.assertIsNone(self.job()["ate"])                 # reset time unknown
+            self.wait_for(lambda: len(esperas) >= 2, 5); self.use("ok")
+            self.wait_for(lambda: self.cinex(), 5); self.wait_idle("t1")
+        self.assertEqual([n for n, _ in esperas[:2]], [1, 2])
+        self.assertAlmostEqual(esperas[1][1], 2 * esperas[0][1], delta=.08)
+        C._PAUSA["n"] = 20; C._pausar("limite")
+        self.assertLessEqual(C._PAUSA["ate"] - time.time(), C.LIMIT_MAX)
+        C._PAUSA.update(erro=None, n=0)
+
+
+class TestCancel(FailCase):
+    def test_all(self):
+        C.LIMIT_RETRY = 30; self.use("limite")
+        with mock.patch.dict(os.environ, {"FAKE_RESET": "0"}):
+            P.say("t1", "oi", who="user"); C.kick("t1")
+            self.wait_for(lambda: self.job().get("erro") == "limite", 5)
+            P.say("t1", "e aí", who="user")
+            self.assertEqual(self.ia({"acao": "cancelar"}), (200, {"ok": True, "n": 2}))
+            self.wait_idle("t1")
+        user = [m for m in P.load("t1")["chat"] if m["who"] == "user"]
+        self.assertEqual([(m.get("cancelada"), m["seen"]) for m in user], [(True, True), (True, True)])
+        self.assertEqual(len(self.starts()), 1)
+        self.assertIsNone(self.job()["erro"])
+
+    def test_one(self):
+        P.say("t1", "a", who="user"); P.say("t1", "b", who="user")
+        self.assertEqual(self.ia({"acao": "cancelar", "msgs": [0]}), (200, {"ok": True, "n": 1}))
+        c = P.load("t1")["chat"]
+        self.assertIs(c[0].get("cancelada"), True); self.assertIsNone(c[1].get("cancelada")); self.assertIs(c[1]["seen"], False)
+        self.assertEqual(self.ia({"acao": "cancelar", "msgs": ["x"]})[0], 400)
+        self.assertEqual(self.ia({"acao": "cancelar", "msgs": 1})[0], 400)
+
+
+class TestRetry(FailCase):
+    def test_falha(self):
+        self.use("falha")
+        P.say("t1", "corta o trecho 2", who="user"); C.kick("t1"); self.wait_idle("t1")
+        w = self.cinex()[-1]
+        self.assertEqual((w["text"], w.get("kind"), w.get("acao"), w.get("ref")), (C.TXT_FALHA, "warn", "tentar", 0))
+        j = len(P.load("t1")["chat"]) - 1
+        self.use("ok")
+        self.assertEqual(self.ia({"acao": "tentar", "msg": j}), (200, {"ok": True}))
+        self.wait_for(lambda: len(self.cinex()) == 2); self.wait_idle("t1")
+        st = self.starts()
+        self.assertEqual(len(st), 2); self.assertEqual(st[0]["stdin"], st[1]["stdin"])
+        c = P.load("t1")["chat"]
+        self.assertEqual(len([m for m in c if m["who"] == "user"]), 1)   # A-07: no new user bubble
+        self.assertIs(c[j]["feita"], True); self.assertEqual(c[-1]["text"], "Pronto.")
+        self.assertEqual(self.ia({"acao": "tentar", "msg": j})[0], 400)
+        self.assertEqual(self.ia({"acao": "tentar", "msg": 0})[0], 400)
+        self.assertEqual(self.ia({"acao": "tentar", "msg": "0"})[0], 400)
+
+
+class TestTimeout(FailCase):
+    def test_timeout(self):
+        C.TIMEOUT = 1; self.use("lento")
+        P.say("t1", "oi", who="user"); C.kick("t1")
+        proc = self.wait_for(lambda: (C._CHAT.get("t1") or {}).get("proc"))
+        self.wait_for(lambda: self.cinex(), 5, "o tempo esgotado não chegou em 5 s"); self.wait_idle("t1")
+        w = self.cinex()[0]
+        self.assertEqual((w["text"], w.get("acao"), w.get("ref")), (C.TXT_TEMPO, "tentar", 0))
+        self.assertIsNotNone(proc.poll())
+
+
+class TestModelFallback(FailCase):
+    def test_opus_to_sonnet(self):
+        self.use("modelo")
+        P.say("t1", "reescreve o gancho", who="user"); C.kick("t1"); self.wait_idle("t1")
+        st = self.starts()
+        self.assertEqual([arg(e["argv"], "--model") for e in st], ["opus", "sonnet"])
+        self.assertEqual(self.cinex()[-1]["text"], "Pronto.")
+        self.assertIs(self.job()["reserva"], True); self.assertIn("opus", C.MODEL_BLOCK)
+        P.say("t1", "escreve uma ideia de roteiro", who="user"); C.kick("t1"); self.wait_idle("t1")
+        self.assertEqual(arg(self.starts()[-1]["argv"], "--model"), "sonnet")

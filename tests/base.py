@@ -49,7 +49,10 @@ class ServerCase(ProjectCase):
         super().setUp()
         self._log = os.environ.get("FAKE_CLAUDE_LOG")
         os.environ["FAKE_CLAUDE_LOG"] = str(Path(self._tmp.name) / "fake_claude.log")
-        if C: C.CLAUDE_CMD = [PY, str(FAKE), "ok"]; C._CHAT.clear()
+        if C:
+            C.CLAUDE_CMD = [PY, str(FAKE), "ok"]; C._CHAT.clear(); C.MODEL_BLOCK.clear()
+            C._PAUSA.update(erro=None, ate=0, conhecido=False, n=0)     # the account-wide pause never leaks between tests
+            self._consts = {k: getattr(C, k) for k in ("TIMEOUT", "NET_RETRY", "LIMIT_RETRY", "LIMIT_MAX")}   # tests shrink them
         import server
         self.server = server
         self.srv = ThreadingHTTPServer(("127.0.0.1", 0), server.H)
@@ -61,6 +64,8 @@ class ServerCase(ProjectCase):
         try:
             if C: self.wait_for(lambda: not C._CHAT, 10, "worker do chat ainda rodando")
         finally:
+            if C:
+                for k, v in self._consts.items(): setattr(C, k, v)
             if self._log is None: os.environ.pop("FAKE_CLAUDE_LOG", None)
             else: os.environ["FAKE_CLAUDE_LOG"] = self._log
             super().tearDown()
