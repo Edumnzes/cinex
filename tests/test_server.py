@@ -14,12 +14,14 @@ class TestGuards(ServerCase):
         self.assertEqual(self.req("GET", "/api/projects", headers={"Host": f"localhost:{port}"})[0], 200)
 
     def test_writes(self):
-        chat = lambda **h: self.req("POST", "/api/p/t1/chat", {"text": "oi"}, headers=h)[0]
+        # refused requests carry no body: the server answers 403 without reading it and closes the socket, and on
+        # Windows unread data turns the close into a reset that can eat the response
+        chat = lambda body=None, **h: self.req("POST", "/api/p/t1/chat", body, headers=h)[0]
         self.assertEqual(chat(Origin="http://evil.com"), 403)
         self.assertEqual(chat(Origin="null"), 403)
         self.assertEqual(chat(**{"X-Cinex": None}), 403)
         self.assertEqual(chat(**{"X-Cinex": "0"}), 403)
-        self.assertEqual(chat(), 200)
+        self.assertEqual(chat({"text": "oi"}), 200)
         self.assertEqual(P.load("t1")["chat"][-1]["text"], "oi")
 
 

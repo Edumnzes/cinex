@@ -53,6 +53,42 @@ CAPTION_PRESETS = {                                          # same as the app's
     "hormozi": dict(font="sans", weight="Black", upper=True, size=62, stroke=6, words=3),
     "minimal": dict(font="sans", weight="SemiBold", upper=False, size=50, stroke=0, words=3),
     "cinematic": dict(font="cond", weight="Black", upper=True, size=78, stroke=0, words=3)}
+EDITABLE = {"guia", "segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca", "motion_engine", "broll", "music"}
+AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}
+
+
+def validate_patch(body):
+    """State patch from the app (PUT /state) or the chat: keep only EDITABLE fields; ValueError if a value is invalid."""
+    body = {k: v for k, v in body.items() if k in EDITABLE}
+    if body.get("format", "vertical") not in FORMATS: raise ValueError("formato inválido")
+    if not all(isinstance(body.get(k, {}), dict) for k in ("camera", "color", "captions", "guia")): raise ValueError("valor inválido")
+    for m in body.get("motions", []):
+        if not (isinstance(m, dict) and m.get("type") in MOTIONS and isinstance(m.get("t0"), (int, float))
+                and isinstance(m.get("t1"), (int, float)) and m["t1"] > m["t0"]): raise ValueError("motion inválido")
+    if not (isinstance(body.get("order", []), list) and all(isinstance(i, int) for i in body.get("order", []))):
+        raise ValueError("ordem inválida")
+    for b in body.get("broll", []):
+        if not (isinstance(b, dict) and isinstance(b.get("media"), int) and all(isinstance(b.get(k), (int, float)) for k in ("t0", "t1", "ss"))
+                and b["t1"] > b["t0"] and b["ss"] >= 0 and b.get("mode", "full") in ("full", "card")): raise ValueError("b-roll inválido")
+    for s_ in body.get("sfx", []):
+        if not (isinstance(s_, dict) and isinstance(s_.get("t"), (int, float)) and isinstance(s_.get("cat"), str)):
+            raise ValueError("som inválido")
+    if "segments" in body:
+        for g in body["segments"]: g.pop("off", None)        # the editor's cut-timeline offset: not state
+        for g in body["segments"]:
+            if not (isinstance(g.get("s"), (int, float)) and isinstance(g.get("e"), (int, float)) and isinstance(g.get("keep"), bool)
+                    and g.get("speed", 1) in (1, .5, .35, .25) and isinstance(g.get("mudo", False), bool)
+                    and isinstance(g.get("retrato", False), bool)
+                    and (g.get("quadro") is None or (isinstance(g["quadro"], dict) and 1 <= g["quadro"].get("z", 0) <= 3
+                         and all(isinstance(g["quadro"].get(k), (int, float)) and 0 <= g["quadro"][k] <= 1 for k in ("cx", "cy"))))):
+                raise ValueError("segmento inválido")
+    if "music" in body:                    # licensed track only (viral songs go in Instagram's editor)
+        mu = body["music"]
+        if mu is not None and not (isinstance(mu, dict) and Path(str(mu.get("src", ""))).is_file()
+                                   and Path(mu["src"]).suffix.lower() in AUDIO_EXT and isinstance(mu.get("db", -18), (int, float))
+                                   and -40 <= mu.get("db", -18) <= 0 and isinstance(mu.get("duck", True), bool)):
+            raise ValueError("música inválida")
+    return body
 
 
 def _ff():

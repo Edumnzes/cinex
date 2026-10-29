@@ -60,8 +60,6 @@ def marca_info(h):
     return dict(handle=h, arquivos=st, marca=brand.load_brand(h) if st["marca.json"] else None, perfil_atualizado=head,
                 referencias=refs, estilo_nicho=f"nicho_{h}" if prof.exists() else None, desempenho=rep,
                 analisando=(d / ".analisando").exists())
-EDITABLE = {"guia", "segments", "captions", "cut_locked", "keywords", "fix", "format", "camera", "color", "motions", "sfx", "order", "estilo", "marca", "motion_engine", "broll", "music"}
-AUDIO_EXT = {".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg"}
 WEIGHTS = ["Regular", "Medium", "SemiBold", "Bold", "ExtraBold", "Black"]
 _FONTS = {}
 
@@ -238,7 +236,7 @@ class H(BaseHTTPRequestHandler):
                 if sub == "preview.mp4": return self._file(d / "preview.mp4", "video/mp4")
                 if sub == "music":                     # the project's licensed track, for the preview
                     mu = (P.load(name).get("music") or {}) if (d / "cinex.json").exists() else {}
-                    if not mu.get("src") or Path(mu["src"]).suffix.lower() not in AUDIO_EXT: return self._err(404, "sem música")
+                    if not mu.get("src") or Path(mu["src"]).suffix.lower() not in P.AUDIO_EXT: return self._err(404, "sem música")
                     return self._file(mu["src"])
                 if sub == "media" and len(parts) == 5:          # B-roll proxy (<id>.mp4) and filmstrip (<id>.jpg)
                     if not re.fullmatch(r"\d{1,5}\.(mp4|jpg)", parts[4]): return self._err(404, "não encontrado")
@@ -335,7 +333,7 @@ class H(BaseHTTPRequestHandler):
             if sub == "musicup":                       # licensed track sent from the browser -> <project>/music/
                 from urllib.parse import unquote
                 fn = Path(unquote(self.headers.get("X-Filename", ""))).name
-                if not re.fullmatch(r"[\w .()&'-]{1,120}", fn) or Path(fn).suffix.lower() not in AUDIO_EXT:
+                if not re.fullmatch(r"[\w .()&'-]{1,120}", fn) or Path(fn).suffix.lower() not in P.AUDIO_EXT:
                     return self._err(400, "envie um áudio (.mp3, .wav, .m4a…)")
                 n = int(self.headers.get("Content-Length") or 0)
                 if not 0 < n <= 200 * 1024 * 1024: return self._err(400, "arquivo grande demais (máx. 200 MB)")
@@ -360,37 +358,8 @@ class H(BaseHTTPRequestHandler):
                 if not self._save_body(dest): return self._err(400, "envio interrompido")
                 if sub == "clipup": return self._send(200, {"path": str(dest)})    # the app then posts all paths to /clips
                 self._media_job(name, dest); return self._send(200, {"ok": True})
-            if sub == "state":
-                body = {k: v for k, v in self._json().items() if k in EDITABLE}
-                if body.get("format", "vertical") not in P.FORMATS: return self._err(400, "formato inválido")
-                if not all(isinstance(body.get(k, {}), dict) for k in ("camera", "color", "captions", "guia")): return self._err(400, "valor inválido")
-                for m in body.get("motions", []):
-                    if not (isinstance(m, dict) and m.get("type") in P.MOTIONS and isinstance(m.get("t0"), (int, float))
-                            and isinstance(m.get("t1"), (int, float)) and m["t1"] > m["t0"]): return self._err(400, "motion inválido")
-                if not (isinstance(body.get("order", []), list) and all(isinstance(i, int) for i in body.get("order", []))):
-                    return self._err(400, "ordem inválida")
-                for b in body.get("broll", []):
-                    if not (isinstance(b, dict) and isinstance(b.get("media"), int) and all(isinstance(b.get(k), (int, float)) for k in ("t0", "t1", "ss"))
-                            and b["t1"] > b["t0"] and b["ss"] >= 0 and b.get("mode", "full") in ("full", "card")): return self._err(400, "b-roll inválido")
-                for s_ in body.get("sfx", []):
-                    if not (isinstance(s_, dict) and isinstance(s_.get("t"), (int, float)) and isinstance(s_.get("cat"), str)):
-                        return self._err(400, "som inválido")
-                if "segments" in body:
-                    for g in body["segments"]: g.pop("off", None)        # the editor's cut-timeline offset: not state
-                    for g in body["segments"]:
-                        if not (isinstance(g.get("s"), (int, float)) and isinstance(g.get("e"), (int, float)) and isinstance(g.get("keep"), bool)
-                                and g.get("speed", 1) in (1, .5, .35, .25) and isinstance(g.get("mudo", False), bool)
-                                and isinstance(g.get("retrato", False), bool)
-                                and (g.get("quadro") is None or (isinstance(g["quadro"], dict) and 1 <= g["quadro"].get("z", 0) <= 3
-                                     and all(isinstance(g["quadro"].get(k), (int, float)) and 0 <= g["quadro"][k] <= 1 for k in ("cx", "cy"))))):
-                            return self._err(400, "segmento inválido")
-                if "music" in body:                    # licensed track only (viral songs go in Instagram's editor)
-                    mu = body["music"]
-                    if mu is not None and not (isinstance(mu, dict) and Path(str(mu.get("src", ""))).is_file()
-                                               and Path(mu["src"]).suffix.lower() in AUDIO_EXT and isinstance(mu.get("db", -18), (int, float))
-                                               and -40 <= mu.get("db", -18) <= 0 and isinstance(mu.get("duck", True), bool)):
-                        return self._err(400, "música inválida")
-                st = P.update(name, lambda s: s.update(body))
+            if sub == "state":                         # only EDITABLE fields, validated (the chat reuses P.validate_patch)
+                st = P.update(name, lambda s: s.update(P.validate_patch(self._json())))
                 return self._send(200, {"rev": st["rev"]})
             if sub == "revisao":                       # instant review of the project state (scripts/revisao.py)
                 self._json(); import revisao
