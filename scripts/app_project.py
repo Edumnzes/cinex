@@ -350,6 +350,37 @@ def claim(name, mode, limit=None):
     update(name, fn); return got
 
 
+def unclaim(name, idx):
+    """Put user messages back in the queue (recoverable failure, "Tentar de novo"). Cancelled ones stay cancelled."""
+    def fn(st):
+        c = st["chat"]
+        for i in idx:
+            if 0 <= i < len(c) and c[i]["who"] == "user" and not c[i].get("cancelada"): c[i].update(seen=False, by=None)
+    update(name, fn)
+
+
+def cancel(name, idx=None):
+    """Cancel waiting user messages (idx, or all of them): never answered. -> how many changed."""
+    got = []
+    def fn(st):
+        c = st["chat"]
+        for i in (range(len(c)) if idx is None else idx):
+            if 0 <= i < len(c) and c[i]["who"] == "user" and not c[i].get("seen"):
+                c[i].update(cancelada=True, seen=True, by="cancelada"); got.append(i)
+    update(name, fn); return len(got)
+
+
+def mark_done(name, i):
+    """Use-once "Tentar de novo": check and mark in one update (two clicks never requeue twice).
+    -> the ref of the message to answer again, or None if chat[i] isn't a pending retry."""
+    got = []
+    def fn(st):
+        m = st["chat"][i] if 0 <= i < len(st["chat"]) else {}
+        if m.get("acao") == "tentar" and not m.get("feita") and type(m.get("ref")) is int:
+            m["feita"] = True; got.append(m["ref"])
+    update(name, fn); return got[0] if got else None
+
+
 def snapshot(name):
     """Saved point before the AI's first change of an answer (D-03): a new file by tmp+replace, never hard-linked."""
     _write_json(folder(name) / "ponto_salvo.json", load(name))

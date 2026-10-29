@@ -4,7 +4,7 @@
 The AI has no built-in tool at all (no Bash, Read, Edit, WebFetch): its only hands are the MCP server's tools.
 The user's text goes through stdin, never argv.
 """
-import datetime, json, os, re, shutil, signal, subprocess, sys, threading
+import datetime, json, os, re, shutil, signal, socket, subprocess, sys, threading, time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -20,7 +20,15 @@ PROMPT_FILE = HERE / "chat_prompt.md"
 TXT_FALHA = "Não consegui responder agora. Nada se perdeu: o que eu já tinha mudado ficou no projeto."
 TXT_PARADO = ("Parei por aqui. O que eu já tinha mudado ficou no projeto. "
               "Se quiser voltar como estava antes, é só pedir: “volta como estava”.")
-_CHAT, _CHAT_LOCK = {}, threading.Lock()   # name -> {"proc": Popen | None, "stop": False}: one worker per project
+TXT_TEMPO = ("Este pedido passou de 10 minutos e eu parei para não gastar seu uso à toa. "
+             "O que eu já tinha mudado ficou no projeto.")
+TXT_SETUP = {"missing": "Falta instalar o Claude Code", "login": "Falta entrar na sua conta do Claude Code"}   # card title
+TIMEOUT, NET_RETRY, LIMIT_RETRY, LIMIT_MAX = 600, 30, 300, 1800   # seconds (D-06, D-13); the tests shrink them
+_CHAT, _CHAT_LOCK = {}, threading.Lock()   # name -> {"proc": Popen | None, "stop": False, "ev": Event}: one worker per project
+# ponytail: one pause for the whole server on purpose: the usage limit belongs to the account and "no internet" to the
+# machine, so while it lasts no project may spend a call. Lost on restart, which is fine: the messages stay unseen.
+_PAUSA = {"erro": None, "ate": 0, "conhecido": False, "n": 0}   # erro: "sem_rede" | "limite"; n: limits in a row
+MODEL_BLOCK = set()                        # aliases the account can't use (Pro plan: opus) -> MODEL_SAFE from now on
 _USO_LOCK = threading.Lock()               # daily counter: only the server process writes it
 
 # status line (D-08): what the AI is doing, in plain Portuguese. Shown with textContent only.
@@ -54,9 +62,11 @@ def child_env():
     return e
 
 
-def pick_model(text, passo):
-    """D-05 by keywords + page: creativity and analysis get the capable model, simple edits the fast one."""
-    return MODEL_SMART if SMART.search(text or "") or passo == "revisao" else MODEL_FAST
+def pick_model(text, passo, livre=False):
+    """D-05 by keywords + page: creativity and analysis get the capable model, simple edits the fast one.
+    A model the account refused (MODEL_BLOCK) becomes MODEL_SAFE, unless livre (what was asked, for `reserva`)."""
+    m = MODEL_SMART if SMART.search(text or "") or passo == "revisao" else MODEL_FAST
+    return MODEL_SAFE if m in MODEL_BLOCK and not livre else m
 
 
 def command(base, name, model):
@@ -107,7 +117,14 @@ def on_event(name, ev, S):
             if b.get("type") == "tool_use" and str(b.get("name", "")).startswith("mcp__cinex__"):
                 step = label(b["name"].removeprefix("mcp__cinex__"), b.get("input"))
             elif b.get("type") == "text": step = "Escrevendo a resposta…"
+        if ev.get("error"): S["erro_assist"] = ev["error"]   # "authentication_failed", "rate_limit", ...
     elif t == "result": S["result"] = ev
+    elif t == "rate_limit_event" and isinstance(ev.get("rate_limit_info"), dict) and ev["rate_limit_info"].get("status") == "rejected":
+        S["limite"] = ev
+    elif t == "system" and ev.get("subtype") == "api_retry":   # the CLI would retry for minutes: give up now
+        if ev.get("error_status") == 429 or ev.get("error") == "rate_limit": S.setdefault("limite", ev)
+        elif ev.get("error_status") is None: S["offline"] = True     # no HTTP answer at all
+        if S.get("proc") and (S.get("limite") or S.get("offline")): kill_tree(S["proc"])
     kw = {}
     if step and step != S.get("step"): S["step"] = kw["step"] = step
     if isinstance(model, str) and model and model != S.get("modelo"):   # Pro plan: sonnet may answer for opus
@@ -147,51 +164,162 @@ def _contar():
 
 
 def kick(name):
-    """Start the project's worker unless one is already draining its queue."""
+    """Start the project's worker unless one is already draining its queue (then just wake it up)."""
     with _CHAT_LOCK:
-        if name in _CHAT: return
-        _CHAT[name] = {"proc": None, "stop": False}
+        if name in _CHAT: _CHAT[name]["ev"].set(); return
+        _CHAT[name] = {"proc": None, "stop": False, "ev": threading.Event()}
     threading.Thread(target=_worker, args=(name,), daemon=True).start()
 
 
 def _worker(name):
     try:
         while True:
+            _esperar(name)
             with _CHAT_LOCK:                   # claim + pop under kick's lock: no message stranded between them
                 got = P.claim(name, "auto", 1)
                 if not got: _CHAT.pop(name, None); return
-            try: run_ai(name, *got[0])
-            except Exception: P.say(name, TXT_FALHA, kind="warn")   # never leave the chat silent
+            i = got[0][0]
+            try: r = run_ai(name, *got[0])
+            except Exception: r = P.say(name, TXT_FALHA, kind="warn", acao="tentar", ref=i)   # never leave the chat silent
+            if r == "sair":                    # Claude Code missing / not logged in: wait for "Testar de novo"
+                with _CHAT_LOCK: _CHAT.pop(name, None)
+                return
     except BaseException:
         with _CHAT_LOCK: _CHAT.pop(name, None)  # claim/say failed: don't leave the project marked busy
         raise
 
 
-def run_ai(name, i, m):
-    """One answer. The worker is the only writer of chat.json (busy, step, desde, idx, erro, modelo, reserva)."""
-    model = pick_model(m["text"], m.get("passo"))
-    S = {"pedido": model, "step": "Lendo o projeto…", "modelo": None, "result": None}
-    P.job(name, "chat", busy=True, step=S["step"], desde=P._now(), idx=i, erro=None, modelo=None, reserva=False)
+def classify(S, rc):
+    """Why an answer didn't come -> None (it came) | nao_logado | limite | sem_rede | modelo | falha."""
+    r = S.get("result") or {}
+    txt = str(r.get("result") or "") if r.get("is_error") else ""   # an answer that talks about limits is still an answer
+    ea, st = S.get("erro_assist"), r.get("api_error_status")
+    if ea == "authentication_failed" or re.search(r"not logged in|/login|oauth|invalid api key", txt, re.I): return "nao_logado"
+    if S.get("limite") or ea == "rate_limit" or st == 429 or re.search(r"usage limit|limit reached|hit your limit|rate.?limit", txt, re.I):
+        return "limite"
+    if S.get("offline"): return "sem_rede"
+    if st == 404 or re.search(r"model.*(not (available|found|supported)|invalid|access)|(invalid|unknown) model", txt, re.I):
+        return "modelo"
+    ok = r and not r.get("is_error") and isinstance(r.get("result"), str) and r["result"].strip()
+    return None if ok else "falha"
+
+
+def ate_limite(S):
+    """When the usage limit lifts (epoch seconds), if the stream said so: resetsAt, or "...|1700000000" in the text."""
+    info = (S.get("limite") or {}).get("rate_limit_info") or {}
+    r = info.get("resetsAt")
+    if isinstance(r, (int, float)) and not isinstance(r, bool) and r > 0: return r / 1000 if r > 1e12 else float(r)
+    m = re.search(r"\|(\d{10})", str((S.get("result") or {}).get("result") or ""))
+    return float(m.group(1)) if m else None
+
+
+def _pausar(erro, ate=None):
+    """Pause every project: until `ate` when known, else NET_RETRY (no internet) or a limit wait that doubles up to LIMIT_MAX."""
+    with _CHAT_LOCK:
+        n = _PAUSA["n"]
+        _PAUSA.update(erro=erro, conhecido=bool(ate), n=n + (erro == "limite"),
+                      ate=ate or time.time() + (NET_RETRY if erro == "sem_rede" else min(LIMIT_MAX, LIMIT_RETRY * 2 ** n)))
+
+
+def _esperar(name):
+    """Before each claim: while the account/machine is paused, keep this project's messages waiting (D-13)."""
+    ev, waited = _CHAT[name]["ev"], False
+    while _PAUSA["erro"]:
+        k = len([m for m in P.load(name)["chat"] if m["who"] == "user" and not m.get("seen")])   # cancelled ones are seen
+        if not k: break
+        waited = True
+        P.job(name, "chat", busy=False, step=None, erro=_PAUSA["erro"], k=k,
+              ate=time.strftime("%H:%M", time.localtime(_PAUSA["ate"])) if _PAUSA["conhecido"] else None)
+        ev.wait(max(.05, min(2, _PAUSA["ate"] - time.time()))); ev.clear()   # woken by a new message or "cancelar"
+        if _PAUSA["erro"] and time.time() >= _PAUSA["ate"]:
+            # a call refused by the limit costs nothing, so the next call decides; offline waits for the socket
+            if _PAUSA["erro"] == "limite" or rede_ok(): _PAUSA["erro"] = None
+            else: _PAUSA["ate"] = time.time() + NET_RETRY
+    if waited: P.job(name, "chat", erro=None, k=0)
+
+
+def rede_ok():
+    try: socket.create_connection(("api.anthropic.com", 443), 3).close(); return True
+    except OSError: return False
+
+
+def health():
+    """ "Testar de novo" (D-12) without spending usage: installed? `claude auth status` logged in? network? Never the model."""
+    base, logado = base_cmd(), False
+    if base:
+        try:
+            r = subprocess.run(base + ["auth", "status"], capture_output=True, env=child_env(), creationflags=NO_WINDOW, timeout=20)
+            logado = json.loads(r.stdout.decode("utf-8", "replace")).get("loggedIn") is True
+        except OSError: base = None            # the executable vanished
+        except (subprocess.TimeoutExpired, ValueError, AttributeError): pass
+    return dict(instalado=bool(base), logado=logado, rede=rede_ok())
+
+
+def retomar(name):
+    """After a good "Testar de novo": clear the setup warning, lift a network pause if the network is back, answer."""
+    P.job(name, "chat", erro=None)
+    if _PAUSA["erro"] == "sem_rede" and rede_ok(): _PAUSA["erro"] = None
+    kick(name)
+
+
+def cancelar(name):
+    """Messages were cancelled: wake the waiting worker so it sees the queue now."""
+    with _CHAT_LOCK:
+        if name in _CHAT: _CHAT[name]["ev"].set()
+
+
+def _setup(name, i, reason):
+    """Claude Code missing or not logged in: the message waits, one guide card (A-05), the worker stops."""
+    P.unclaim(name, [i])
+    last = next((m for m in reversed(P.load(name)["chat"]) if m["who"] == "cinex"), {})
+    if (last.get("kind"), last.get("reason")) != ("setup", reason): P.say(name, TXT_SETUP[reason], kind="setup", reason=reason)
+    P.job(name, "chat", busy=False, step=None, erro="nao_instalado" if reason == "missing" else "nao_logado")
+    return "sair"
+
+
+def run_ai(name, i, m, modelo=None):
+    """One answer; every way out ends in an answer, a problem message or the guide card (never a silent chat).
+    The worker is the only writer of chat.json (busy, step, desde, idx, erro, k, ate, modelo, reserva)."""
+    model = modelo or pick_model(m["text"], m.get("passo"))
+    S = {"pedido": pick_model(m["text"], m.get("passo"), livre=True), "step": "Lendo o projeto…", "modelo": None,
+         "result": None, "proc": None, "outras": []}
+    P.job(name, "chat", busy=True, step=S["step"], desde=P._now(), idx=i, erro=None, k=0, ate=None, modelo=None, reserva=False)
+    timer = None
     try:
         base = base_cmd()
-        if base is None: return P.say(name, TXT_FALHA, kind="warn")
+        if base is None: return _setup(name, i, "missing")
         prompt = build_prompt(name, i, m)
-        proc = subprocess.Popen(command(base, name, model), cwd=str(P.folder(name)),
-                                env=child_env(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                creationflags=NO_WINDOW, start_new_session=(os.name != "nt"))
+        try:
+            proc = subprocess.Popen(command(base, name, model), cwd=str(P.folder(name)),
+                                    env=child_env(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                    creationflags=NO_WINDOW, start_new_session=(os.name != "nt"))
+        except FileNotFoundError: return _setup(name, i, "missing")
+        S["proc"] = proc
         with _CHAT_LOCK: _CHAT[name].update(proc=proc, stop=False)
+        timer = threading.Timer(TIMEOUT, lambda: (S.update(tempo=True), kill_tree(proc)))   # D-06
+        timer.daemon = True; timer.start()
         try: proc.stdin.write(prompt.encode("utf-8")); proc.stdin.close()
         except OSError: pass                   # died before reading: no result below -> failure message
         with proc.stdout:
             for raw in proc.stdout:            # one JSON event per line
-                try: on_event(name, json.loads(raw.decode("utf-8", "replace")), S)
-                except ValueError: continue
-        proc.wait()
+                line = raw.decode("utf-8", "replace")
+                try: on_event(name, json.loads(line), S)
+                except ValueError:
+                    if line.strip(): S["outras"] = (S["outras"] + [line.strip()])[-5:]   # technical detail, never shown
+        rc = proc.wait()
         with _CHAT_LOCK:
             stopped, _CHAT[name]["stop"] = _CHAT[name]["stop"], False
         if stopped: return P.say(name, TXT_PARADO)    # stopped by the user: not counted
-        result = S["result"]; text = (result or {}).get("result")
-        if result and not result.get("is_error") and isinstance(text, str) and text.strip():
-            P.say(name, text.strip()); _contar()
-        else: P.say(name, TXT_FALHA, kind="warn")    # decided by is_error: "Not logged in" comes with subtype "success"
-    finally: P.job(name, "chat", busy=False, step=None)
+        if S.get("tempo"): return P.say(name, TXT_TEMPO, kind="warn", acao="tentar", ref=i)
+        why = classify(S, rc)                  # decided by is_error: "Not logged in" comes with subtype "success"
+        if why is None:
+            P.say(name, S["result"]["result"].strip()); _contar(); _PAUSA["n"] = 0
+        elif why == "nao_logado": return _setup(name, i, "login")
+        elif why in ("sem_rede", "limite"):
+            P.unclaim(name, [i]); _pausar(why, ate_limite(S) if why == "limite" else None)
+        elif why == "modelo" and model != MODEL_SAFE:   # Pro plan: no opus -> same message again with sonnet
+            MODEL_BLOCK.add(model); return run_ai(name, i, m, MODEL_SAFE)
+        else: P.say(name, TXT_FALHA, kind="warn", acao="tentar", ref=i, detalhe="\n".join(S["outras"])[-300:])
+    finally:
+        if timer: timer.cancel()
+        P.job(name, "chat", busy=False, step=None)

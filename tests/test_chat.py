@@ -312,7 +312,8 @@ class TestRetry(FailCase):
         self.assertEqual(self.ia({"acao": "tentar", "msg": j}), (200, {"ok": True}))
         self.wait_for(lambda: len(self.cinex()) == 2); self.wait_idle("t1")
         st = self.starts()
-        self.assertEqual(len(st), 2); self.assertEqual(st[0]["stdin"], st[1]["stdin"])
+        self.assertEqual(len(st), 2)
+        for e in st: self.assertTrue(e["stdin"].endswith("Pedido do usuário:\ncorta o trecho 2"))   # the same request
         c = P.load("t1")["chat"]
         self.assertEqual(len([m for m in c if m["who"] == "user"]), 1)   # A-07: no new user bubble
         self.assertIs(c[j]["feita"], True); self.assertEqual(c[-1]["text"], "Pronto.")

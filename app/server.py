@@ -26,7 +26,7 @@ MAX_BODY = 25 * 1024 * 1024                     # font uploads
 MAX_REF = 600 * 1024 * 1024                     # niche reference videos (streamed to disk)
 MAX_MEDIA = 8 * 1024 * 1024 * 1024              # B-roll clips sent from the browser (4K phone clips are big)
 MAX_VOICE = 12 * 1024 * 1024                    # one voice command (~1 min of opus)
-IA_ACOES = {"parar"}                            # POST /api/p/<n>/ia: what the app may ask of the automatic chat
+IA_ACOES = {"parar", "testar", "tentar", "cancelar"}   # POST /api/p/<n>/ia: what the app may ask of the automatic chat
 _VOICE = {}                                     # faster-whisper model for voice commands, loaded on first use
 _VOICE_LOCK = threading.Lock()
 
@@ -373,9 +373,24 @@ class H(BaseHTTPRequestHandler):
                 passo = str(b.get("passo", ""))[:20] or None    # the guided-mode step the user is on (context for Claude)
                 P.say(name, text, who="user", passo=passo); C.kick(name)   # automatic answer: Claude Code in the background
                 return self._send(200, {"ok": True})
-            if sub == "ia":                            # automatic chat controls (D-09: stop the current answer)
-                acao = self._json().get("acao")
+            if sub == "ia":                            # automatic chat controls (D-09 stop, D-12 test, A-07 retry, D-13 cancel)
+                b = self._json(); b = b if isinstance(b, dict) else {}
+                acao = b.get("acao")
                 if not isinstance(acao, str) or acao not in IA_ACOES: return self._err(400, "ação inválida")
+                if acao == "testar":                   # auth status + socket only: never spends usage
+                    h = C.health(); ok = all(h.values())
+                    if ok: C.retomar(name)
+                    return self._send(200, dict(h, ok=ok))
+                if acao == "tentar":                   # the SAME message again, once (mark_done checks and marks atomically)
+                    j = b.get("msg")
+                    ref = P.mark_done(name, j) if type(j) is int else None
+                    if ref is None: return self._err(400, "mensagem inválida")
+                    P.unclaim(name, [ref]); C.kick(name); return self._send(200, {"ok": True})
+                if acao == "cancelar":
+                    msgs = b.get("msgs")
+                    if msgs is not None and not (isinstance(msgs, list) and all(type(x) is int for x in msgs)):
+                        return self._err(400, "mensagem inválida")
+                    n = P.cancel(name, msgs); C.cancelar(name); return self._send(200, {"ok": True, "n": n})
                 C.stop(name); return self._send(200, {"ok": True})
             if sub == "mostrar":                       # show the exported file in Explorer / Finder
                 self._json(); out = (P.read_job(name, "export") or {}).get("out")
