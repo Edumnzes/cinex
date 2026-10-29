@@ -192,7 +192,8 @@ details.toggle > summary:hover { background: var(--hover); }
 /* problem messages, guide card, action rows (D-06, D-12, D-13) */
 .msg.warn .txt { background: var(--yellow-soft); color: var(--text); }
 .msg.cancelada { opacity: .6; }
-.acts { display: flex; gap: 8px; align-items: center; margin-top: 8px; order: 3; }
+.acts { display: flex; flex-wrap: wrap; gap: 0 8px; align-items: center; margin-top: 8px; order: 3; }   /* one button per row: no row gap, .disclose sits 4px under it */
+.disclose { width: 100%; font-size: 13px; color: var(--muted); margin-top: 4px; }   /* Adobe privacy line, fixed copy */
 .acts .btn { font-size: 13px; font-weight: 600; padding: 8px 16px; display: inline-flex; align-items: center; gap: 4px; }
 .acts .sym svg { width: 14px; height: 14px; }
 .actres, .acterr { display: flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); margin-top: 4px; order: 4; }
