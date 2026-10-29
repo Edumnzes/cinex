@@ -121,6 +121,9 @@ class _H(BaseHTTPRequestHandler):
         type(self).got = self.rfile.read(int(self.headers["Content-Length"]))
         self.send_response(200); self.send_header("Content-Length", "0"); self.end_headers()
     def do_GET(self):
+        if self.path == "/r":                    # redirect off the allowed hosts: refused before any connection
+            self.send_response(302); self.send_header("Location", "https://evil.com/x"); self.send_header("Content-Length", "0")
+            return self.end_headers()
         self.send_response(200); self.send_header("Content-Length", str(len(self.body))); self.end_headers()
         self.wfile.write(self.body)
 
@@ -158,6 +161,8 @@ class TestVozMcp(ProjectCase):
             _H.body = b"limpa" * 1000; dest = Path(self._tmp.name) / "fala.wav"; dest.write_bytes(b"velho")
             M._get(url, dest); self.assertEqual(dest.read_bytes(), _H.body)
             self.assertEqual([p.name for p in dest.parent.glob("*.tmp")], [])
+            with self.assertRaises(ValueError): M._get(url[:-2] + "/r", dest)
+            self.assertEqual(dest.read_bytes(), _H.body)
         finally: srv.shutdown(); srv.server_close()
 
     def test_one_shot(self):

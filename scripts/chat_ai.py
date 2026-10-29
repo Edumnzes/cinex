@@ -35,7 +35,10 @@ _USO_LOCK = threading.Lock()               # daily counter: only the server proc
 RESERVA = "Trabalhando no seu pedido…"
 LABEL = {"ver_projeto": "Lendo o projeto…", "revisar": "Olhando o vídeo e as legendas…",
          "corrigir_texto": "Corrigindo o texto da legenda…", "ressincronizar": "Acertando o tempo das legendas…"}
-ACOES = {"exportar": "export"}             # confirmar(acao) -> the button in the answer (D-01); anything else: no button
+ACOES = {"exportar": "export", "adobe": "adobe"}   # confirmar(acao) -> the button in the answer (D-01/D-02); else no button
+ADOBE_HEADLESS = True        # set False if the plan 08 checkpoint shows the Adobe connector can't finish headless
+ADOBE_TIMEOUT = 900          # seconds for the whole Adobe call (upload + job + download)
+ADOBE_PROMPT_FILE = HERE / "adobe_prompt.md"
 
 
 def claude_exe():
@@ -367,3 +370,66 @@ def run_ai(name, i, m, modelo=None):
     finally:
         if timer: timer.cancel()
         P.job(name, "chat", busy=False, step=None)
+
+
+# ------------------------------------------------------------ Adobe Podcast Enhance Speech (D-02), only after the click
+def adobe_server():
+    """Normalized name of the connected claude.ai Adobe connector, from `claude mcp list` (spends no usage) -> str | None."""
+    base = base_cmd()
+    if not base: return None
+    try:
+        r = subprocess.run(base + ["mcp", "list"], capture_output=True, env=child_env(), creationflags=NO_WINDOW, timeout=120)
+    except (OSError, subprocess.TimeoutExpired): return None
+    for line in r.stdout.decode("utf-8", "replace").splitlines():
+        m = re.match(r"(claude\.ai [^:]*adobe[^:]*):.*✔", line.strip(), re.I)
+        if m: return re.sub(r"[^A-Za-z0-9_-]", "_", m.group(1))
+    return None
+
+
+def adobe_command(base, name, server):
+    """The Adobe call: fixed prompt, the Adobe connector + cinex_mcp.py --voz (enviar_audio / baixar_voz), nothing else.
+    No --strict-mcp-config: the claude.ai connector has to load. Any other server of the user that loads is denied by
+    dontAsk (not in allowedTools), and --tools "" takes away every built-in tool."""
+    mcp = {"mcpServers": {"cinex": {"type": "stdio", "command": sys.executable, "args": [str(HERE / "cinex_mcp.py"), name, "--voz"]}}}
+    return (base + ["-p", "--output-format", "stream-json", "--verbose", "--model", MODEL_FAST, "--fallback-model", MODEL_SAFE,
+                    "--max-turns", "30", "--tools", "", "--mcp-config", json.dumps(mcp),
+                    "--allowedTools", f"mcp__cinex,mcp__{server}", "--permission-mode", "dontAsk", "--setting-sources", "",
+                    "--disable-slash-commands", "--no-session-persistence", "--system-prompt-file", str(ADOBE_PROMPT_FILE)])
+
+
+def adobe_voice(name):
+    """Send voz/voice.wav to Adobe and fetch the clean voice. Called only by the export the click started.
+    -> {"estado": "ok" | "indisponivel" (nothing left the computer) | "falhou" (the audio left, no voice back),
+        "fala", "fundo", "detalhe"}. The stdin is fixed: no text of the user goes in."""
+    vd = P.folder(name) / "voz"; wav = vd / "voice.wav"
+    def out(estado, detalhe=None, fala=None, fundo=None): return dict(estado=estado, fala=fala, fundo=fundo, detalhe=detalhe)
+    if not ADOBE_HEADLESS: return out("indisponivel", "desligado")
+    if not wav.is_file(): return out("indisponivel", "sem voice.wav")
+    base = base_cmd()
+    if not base: return out("indisponivel", "Claude Code não encontrado")
+    server = adobe_server()
+    if not server: return out("indisponivel", "conector Adobe não conectado")
+    detalhe = None
+    try:
+        proc = subprocess.Popen(adobe_command(base, name, server), cwd=str(P.folder(name)), env=child_env(), stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=NO_WINDOW,
+                                start_new_session=(os.name != "nt"))
+    except OSError as e: return out("indisponivel", str(e))
+    timer = threading.Timer(ADOBE_TIMEOUT, kill_tree, [proc]); timer.daemon = True; timer.start()
+    try:
+        try:
+            proc.stdin.write(f"Arquivo: {wav}\nTamanho: {wav.stat().st_size}\nTipo: audio/wav\nSiga as instruções.".encode("utf-8"))
+            proc.stdin.close()
+        except OSError: pass
+        with proc.stdout, open(vd / "adobe.log", "w", encoding="utf-8") as log:   # local diagnosis (plan 08), never sent
+            for raw in proc.stdout:
+                line = raw.decode("utf-8", "replace"); log.write(line)
+                try: ev = json.loads(line)
+                except ValueError: continue
+                if isinstance(ev, dict) and ev.get("type") == "result": detalhe = str(ev.get("result") or "")[:300]
+        proc.wait()
+    finally: timer.cancel()
+    def audio(k): return next((f for f in sorted(vd.glob(k + ".*")) if f.suffix != ".tmp" and P._has_audio(f)), None)
+    fala = audio("fala")
+    if fala: return out("ok", detalhe, fala, audio("fundo"))
+    return out("falhou" if (vd / "enviado").exists() else "indisponivel", detalhe)
