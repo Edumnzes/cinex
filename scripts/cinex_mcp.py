@@ -101,6 +101,16 @@ def t_resync(name, a): P.resync_words(name); return P.show_text(name)
 def t_restore(name, a): P.restore(name); return "Voltei ao ponto salvo.\n" + P.show_text(name)
 
 
+ACOES_CONFIRMAR = ("exportar",)
+
+
+def t_confirm(name, a):
+    """D-01: does nothing. chat_ai sees the call in the stream and puts the confirmation button in the answer;
+    the action itself only runs when the user clicks it (the AI has no tool that exports)."""
+    if a.get("acao") not in ACOES_CONFIRMAR: raise ValueError("ação desconhecida")
+    return "Ok: o botão de confirmação vai aparecer na sua resposta. Não diga que já foi feito."
+
+
 S, N, B, I = {"type": "string"}, {"type": "number"}, {"type": "boolean"}, {"type": "integer"}
 TOOLS = {   # name: (fn, description, properties, required)
     "ver_projeto": (t_show, "Lê o projeto agora: trechos (id, início-fim em segundos, KEEP/cut, texto), legenda, motions, sons, B-roll.", {}, []),
@@ -117,6 +127,9 @@ TOOLS = {   # name: (fn, description, properties, required)
     "revisar": (t_review, "Revisão do projeto: ritmo, duração, motions, legenda, com sugestões.", {}, []),
     "ressincronizar": (t_resync, "Reajusta o tempo das palavras ao áudio (legenda fora de sincronia).", {}, []),
     "voltar_como_estava": (t_restore, "Volta o projeto ao ponto salvo antes da sua última resposta que mudou algo. A conversa fica.", {}, []),
+    "confirmar": (t_confirm, "Mostra à pessoa, na sua resposta, um botão para ela confirmar a ação (exportar = gerar o vídeo final). "
+                             "NÃO executa nada: a ação só começa quando ela tocar no botão.",
+                  {"acao": {"type": "string", "enum": list(ACOES_CONFIRMAR)}}, ["acao"]),
 }
 
 
