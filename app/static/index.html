@@ -215,12 +215,14 @@
   <section class="panel comments">
     <div class="rz x l only-desktop" data-var="--c-chat" data-sign="-1" data-min="220" data-max="560" title="Arraste para redimensionar · duplo clique: padrão"></div>
     <div class="phead"><span class="ptitle">Conversa</span><span class="muted small">com o Cinex</span></div>
+    <div id="chatbar" class="chatbar"><span id="uso" class="usage"></span></div>
     <div id="msgs" class="msgs"></div>
+    <div id="cstatus" class="cstatus" role="status" aria-live="polite" aria-atomic="true" hidden></div>
     <form id="chatform" class="composer">
       <input id="chatin" placeholder="Peça um ajuste…" autocomplete="off" aria-label="Mensagem">
       <button class="primary small-btn" aria-label="Enviar">↑</button>
     </form>
-    <small class="muted hint">As respostas vêm do Claude Code: deixe a conversa do Cinex aberta lá.</small>
+    <small class="muted hint">O Cinex responde sozinho, usando a sua conta do Claude Code.</small>
   </section>
 
   <!-- timeline -->

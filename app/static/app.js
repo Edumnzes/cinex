@@ -99,7 +99,7 @@ async function poll() {
     const p = await api(`/api/p/${name}/poll`);
     if (!st && p.rev >= 0) await reloadState();
     else if (st && p.rev > st.rev && !pending) await reloadState();
-    showJobs(p.prep, p.export);
+    showJobs(p.prep, p.export); showChat(p.chat || {}, p.uso || 0);
   } catch {}
 }
 
@@ -576,9 +576,9 @@ function bindMusic() {
 }
 
 // ------------------------------------------------------------ chat
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 function renderChat() {
   const box = $("#msgs"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
-  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const msgs = (st.chat || []).map((m) => {
     const user = m.who === "user", d = el("div", "msg" + (user ? " user" : ""));
     const who = el("div", "who", user ? "Você" : "Cinex"); who.append(el("small", "", (m.t || "").slice(11, 16)));
@@ -586,6 +586,38 @@ function renderChat() {
   });
   box.replaceChildren(...(msgs.length ? msgs : [el("div", "empty", "Nenhuma mensagem ainda. Peça um ajuste: “corta a parte em que eu gaguejo”, “legenda maior”…")]));
   if (atEnd) box.scrollTop = box.scrollHeight;
+}
+
+// automatic answer: status line (D-08), "Parar resposta" (D-09), today's counter (D-07). Text only via textContent.
+let sentAt = 0, chatJob = {}, uso = 0;
+function stopReset(b) { if (b.disabled) { b.disabled = false; b.textContent = "Parar resposta"; } }
+function showChat(job, n) {
+  chatJob = job; uso = n;
+  const u = $("#uso"); u.textContent = `${n} hoje`;
+  u.title = "Respostas automáticas de hoje. Cada uma usa um pouco do seu limite do Claude Code.";
+  u.setAttribute("aria-label", n === 1 ? "1 resposta automática hoje" : `${n} respostas automáticas hoje`);
+  const c = $("#cstatus"), busy = !!job.busy;
+  const pend = ((st && st.chat) || []).some((m) => m.who === "user" && !m.seen && !m.cancelada);
+  let b = c.querySelector(".stopbtn");
+  if (b && (!busy || b.dataset.idx !== String(job.idx))) stopReset(b);     // that answer ended (or the next one began)
+  if (!busy && !pend && Date.now() - sentAt > 2000) { c.hidden = true; return; }
+  if (!b) {                                                   // fixed structure: only text changes, the dots keep animating
+    b = el("button", "secondary stopbtn", "Parar resposta"); b.type = "button"; b.setAttribute("aria-label", "Parar a resposta do Cinex");
+    b.onclick = async () => {
+      b.disabled = true; b.dataset.idx = String(chatJob.idx); b.textContent = "Parando…";
+      try { await api(`/api/p/${name}/ia`, { method: "POST", body: JSON.stringify({ acao: "parar" }) }); } catch { stopReset(b); }
+    };
+    const dots = el("span", "dots"); dots.append(el("i"), el("i"), el("i"));
+    const suf = el("span", "stsuf"); suf.setAttribute("aria-hidden", "true");
+    c.replaceChildren(dots, el("span", "sttxt"), suf, b);
+  }
+  const txt = busy ? (job.step || "Trabalhando no seu pedido…") : "Lendo o seu pedido…";
+  const secs = busy && job.desde ? (Date.now() - Date.parse(job.desde)) / 1000 : 0;
+  const suf = secs >= 60 ? ` · ${Math.floor(secs / 60)} min` : "";
+  const t = c.querySelector(".sttxt"), s = c.querySelector(".stsuf");
+  if (t.textContent !== txt) t.textContent = txt;
+  if (s.textContent !== suf) s.textContent = suf;
+  c.hidden = false;
 }
 
 // ------------------------------------------------------------ player
@@ -676,7 +708,7 @@ async function init() {
   $("#lockbtn").onclick = () => { st.cut_locked = !st.cut_locked; renderTimeline(); save({ cut_locked: st.cut_locked }); };
   $("#chatform").onsubmit = async (e) => {
     e.preventDefault(); const t = $("#chatin").value.trim(); if (!t || !name) return;
-    $("#chatin").value = "";
+    $("#chatin").value = ""; sentAt = Date.now(); showChat(chatJob, uso);     // "Lendo o seu pedido…" right away
     try { await api(`/api/p/${name}/chat`, { method: "POST", body: JSON.stringify({ text: t }) }); await reloadState(); }
     catch (err) { alert(err.message); }
   };
