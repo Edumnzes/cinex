@@ -17,6 +17,7 @@ APP = Path(__file__).resolve().parent
 SCRIPTS = APP.parent / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 import app_project as P  # noqa: E402
+import chat_ai as C  # noqa: E402
 
 STATIC = APP / "static"
 PORT = 8765
@@ -368,7 +369,8 @@ class H(BaseHTTPRequestHandler):
                 b = self._json(); text = str(b.get("text", "")).strip()[:4000]
                 if not text: return self._err(400, "mensagem vazia")
                 passo = str(b.get("passo", ""))[:20] or None    # the guided-mode step the user is on (context for Claude)
-                P.say(name, text, who="user", passo=passo); return self._send(200, {"ok": True})
+                P.say(name, text, who="user", passo=passo); C.kick(name)   # automatic answer: Claude Code in the background
+                return self._send(200, {"ok": True})
             if sub == "mostrar":                       # show the exported file in Explorer / Finder
                 self._json(); out = (P.read_job(name, "export") or {}).get("out")
                 if not out or not Path(out).is_file(): return self._err(404, "nenhum vídeo exportado ainda")
