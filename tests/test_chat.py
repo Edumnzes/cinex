@@ -413,7 +413,7 @@ class TestQueue(FailCase):
 
     def test_two_projects(self):
         self.use("pausa"); self.make_project("t2")
-        with mock.patch.dict(os.environ, {"FAKE_SLEEP": "1"}):
+        with mock.patch.dict(os.environ, {"FAKE_SLEEP": "2"}):
             for n in ("t1", "t2"): self.req("POST", f"/api/p/{n}/chat", {"text": "oi"})
             self.wait_for(lambda: self.cinex("t1") and self.cinex("t2"), 20); self.wait_idle("t1"); self.wait_idle("t2")
         (_, s1, e1), (_, s2, e2) = self.spans()
