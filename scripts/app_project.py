@@ -324,8 +324,8 @@ def projects():
 
 
 # ------------------------------------------------------------ chat + edits (used by Claude through the CLI)
-def say(name, text, who="cinex", passo=None):
-    m = dict(who=who, text=text, t=_now(), seen=who != "user")
+def say(name, text, who="cinex", passo=None, **extra):
+    m = dict(who=who, text=text, t=_now(), seen=who != "user", **extra)   # extra: kind, reason, acao, ref
     if passo: m["passo"] = passo                     # guided-mode page the user was on when writing
     update(name, lambda s: s["chat"].append(m))
 
@@ -336,6 +336,34 @@ def unread(name):
 
 def mark_seen(name):
     update(name, lambda s: [m.update(seen=True) for m in s["chat"] if m["who"] == "user"])
+
+
+def claim(name, mode, limit=None):
+    """Atomically take unread user messages for `mode` ("auto" = the server's worker): [(index, msg)].
+    Lock-free check first, so an idle chat never bumps rev."""
+    if not unread(name): return []
+    got = []
+    def fn(st):
+        for i, m in enumerate(st["chat"]):
+            if m["who"] == "user" and not m.get("seen") and (limit is None or len(got) < limit):
+                m.update(seen=True, by=mode); got.append((i, dict(m)))
+    update(name, fn); return got
+
+
+def snapshot(name):
+    """Saved point before the AI's first change of an answer (D-03): a new file by tmp+replace, never hard-linked."""
+    _write_json(folder(name) / "ponto_salvo.json", load(name))
+
+
+def restore(name):
+    """Back to the saved point, keeping the conversation; rev still goes up (the editor reloads only on a bigger rev)."""
+    p = folder(name) / "ponto_salvo.json"
+    if not p.exists(): raise FileNotFoundError("não há ponto salvo")
+    snap = _read_json(p)
+    def fn(st):
+        chat, rev = st["chat"], st.get("rev", 0)
+        st.clear(); st.update(snap); st.update(chat=chat, rev=rev)
+    return update(name, fn)
 
 
 def set_seg(name, ref, keep, reason=None):
@@ -663,11 +691,14 @@ def _link_tree(src, dst):
         except OSError: shutil.copy2(p, q)
 
 
+def version_name(name, target): return re.sub(r"[^A-Za-z0-9_.-]", "_", f"{name}_{int(target)}s")[:64]
+
+
 def make_version(name, target):
     """New project <name>_<target>s with only the chosen phrases kept (same order, captions, motion, B-roll)."""
     st = load(name); chosen, total = pick_version(st, float(target))
     keep_ids = {g["id"] for p in chosen for g in p}
-    new = re.sub(r"[^A-Za-z0-9_.-]", "_", f"{name}_{int(target)}s")[:64]
+    new = version_name(name, target)
     d, nd = folder(name), folder(new)
     if nd.exists(): shutil.rmtree(nd)
     nd.mkdir(parents=True)
@@ -985,20 +1016,26 @@ def export(name):
 
 
 # ------------------------------------------------------------ CLI
-def _show(name):
-    st = load(name)
+def show_text(name):
+    """The project as text: segments with text, captions, motions, SFX, media, B-roll, unread chat."""
+    st = load(name); out = []
     po = [g["id"] for g in play_order(st)]
-    if po != [g["id"] for g in st["segments"] if g["keep"]]: print("ordem de reprodução:", " ".join(map(str, po)))
+    if po != [g["id"] for g in st["segments"] if g["keep"]]: out.append("ordem de reprodução: " + " ".join(map(str, po)))
     kept = sum(g["e"] - g["s"] for g in st["segments"] if g["keep"])
-    print(f"{name}: {st['duration']:.1f} s -> {kept:.1f} s mantidos · corte {'TRAVADO' if st['cut_locked'] else 'aberto'} · rev {st['rev']}")
+    out.append(f"{name}: {st['duration']:.1f} s -> {kept:.1f} s mantidos · corte {'TRAVADO' if st['cut_locked'] else 'aberto'} · rev {st['rev']}")
     for g in st["segments"]:
-        print(f"  #{g['id']:<3} {g['s']:7.2f}-{g['e']:7.2f}  {'KEEP' if g['keep'] else 'cut '}  {g['reason'][:30]:30}  {g['text'][:90]}")
-    print("legendas:", json.dumps(st["captions"], ensure_ascii=False))
-    for m in st.get("motions", []): print(f"  motion #{m['id']} {m['t0']:.2f}-{m['t1']:.2f} {m['type']}: {m.get('text', '')} {m.get('text2', '')} sfx={m.get('sfx') or '-'}")
-    for s in st.get("sfx", []): print(f"  sfx #{s['id']} {s['t']:.2f} {s['cat']} {s.get('gain', -12)} dB")
-    for m in st.get("media", []): print(f"  mídia #{m['id']} {m['name']} {m.get('dur', 0):.1f}s {'pronta' if m.get('ready') else m.get('error') or 'preparando'}")
-    for b in st.get("broll", []): print(f"  b-roll #{b['id']} {b['t0']:.2f}-{b['t1']:.2f} mídia {b['media']} a partir de {b.get('ss', 0)}s {b.get('mode', 'full')}")
-    for m in unread(name): print(f"  [não lida] {m['t']} {m['text']}")
+        out.append(f"  #{g['id']:<3} {g['s']:7.2f}-{g['e']:7.2f}  {'KEEP' if g['keep'] else 'cut '}  {g['reason'][:30]:30}  {g['text'][:90]}")
+    out.append("legendas: " + json.dumps(st["captions"], ensure_ascii=False))
+    for m in st.get("motions", []): out.append(f"  motion #{m['id']} {m['t0']:.2f}-{m['t1']:.2f} {m['type']}: {m.get('text', '')} {m.get('text2', '')} sfx={m.get('sfx') or '-'}")
+    for s in st.get("sfx", []): out.append(f"  sfx #{s['id']} {s['t']:.2f} {s['cat']} {s.get('gain', -12)} dB")
+    for m in st.get("media", []): out.append(f"  mídia #{m['id']} {m['name']} {m.get('dur', 0):.1f}s {'pronta' if m.get('ready') else m.get('error') or 'preparando'}")
+    for b in st.get("broll", []): out.append(f"  b-roll #{b['id']} {b['t0']:.2f}-{b['t1']:.2f} mídia {b['media']} a partir de {b.get('ss', 0)}s {b.get('mode', 'full')}")
+    for m in st["chat"]:
+        if m["who"] == "user" and not m.get("seen"): out.append(f"  [não lida] {m['t']} {m['text']}")
+    return "\n".join(out)
+
+
+def _show(name): print(show_text(name))
 
 
 if __name__ == "__main__":
