@@ -2,11 +2,12 @@
 the Adobe connector + the two network tools of `cinex_mcp.py --voz`, and the local fallback.
 No test touches the real `claude`, Adobe or the internet: `mcp list` and `-p` come from tests/fake_claude.py and
 upload/download go to a local http.server."""
-import json, os, subprocess, threading
+import json, os, shutil, subprocess, tempfile, threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from unittest import mock
 
-from tests.base import C, FAKE, P, PY, REPO, ProjectCase
+from tests.base import C, FAKE, P, PY, REPO, ProjectCase, ServerCase
 
 import cinex_mcp as M  # noqa: E402  (scripts/ is on sys.path through tests.base)
 
@@ -182,3 +183,141 @@ class TestVozMcp(ProjectCase):
         r = self.call(("t1",), "confirmar", acao="adobe")
         self.assertFalse(r["isError"], r)
         self.assertFalse((P.folder("t1") / "voz").exists())
+
+
+def lavfi(out, src, *extra):
+    subprocess.run([P._ff(), "-loglevel", "error", "-y", "-f", "lavfi", "-i", src, *extra, str(out)], check=True, capture_output=True)
+
+
+class TestAudioFinal(ProjectCase):
+    """The export's audio step with chat_ai.adobe_voice mocked: Adobe voice, local fallback (announced), failure."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._media = tempfile.TemporaryDirectory(); cls.media = Path(cls._media.name) / "m.mp4"
+        subprocess.run([P._ff(), "-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc=size=180x320:rate=30:duration=2",
+                        "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=48000:duration=2", "-c:v", "libx264", "-preset",
+                        "ultrafast", "-pix_fmt", "yuv420p", "-c:a", "aac", "-shortest", str(cls.media)], check=True, capture_output=True)
+
+    @classmethod
+    def tearDownClass(cls): cls._media.cleanup()
+
+    def setUp(self):
+        super().setUp(); self.d = self.make_project("t1")
+        for f in ("render.mp4", "cut.mp4"): shutil.copy(self.media, self.d / f)
+
+    def run_final(self, voz, estado=None, fundo=True):
+        vd, seen = self.d / "voz", {}
+        def fake(name):
+            seen["voice"] = (vd / "voice.wav").is_file() and P._has_audio(vd / "voice.wav")
+            r = dict(estado=estado, fala=None, fundo=None, detalhe=None)
+            if estado == "ok":
+                lavfi(vd / "fala.wav", "sine=frequency=300:sample_rate=48000:duration=2"); r["fala"] = vd / "fala.wav"
+                if fundo: lavfi(vd / "fundo.wav", "anoisesrc=d=2:a=0.05:r=48000"); r["fundo"] = vd / "fundo.wav"
+            return r
+        with mock.patch.object(C, "adobe_voice", side_effect=fake) as av, \
+                mock.patch.object(P.subprocess, "run", wraps=subprocess.run) as spy:
+            got = P._audio_final("t1", self.d, voz, [])
+        mix = [c.args[0] for c in spy.call_args_list if len(c.args[0]) > 1 and str(c.args[0][1]).endswith("mix_audio.py")]
+        self.assertEqual(len(mix), 1, mix)
+        self.assertTrue(P._has_audio(self.d / "final.mp4"))
+        if voz: av.assert_called_once_with("t1"); self.assertTrue(seen["voice"])
+        else: av.assert_not_called()
+        return got, mix[0]
+
+    def test_ok(self):
+        got, cmd = self.run_final("adobe", "ok")
+        self.assertEqual(got, (P.TXT_ADOBE_OK, {}))
+        self.assertEqual((cmd[2], Path(cmd[3]), cmd[4]), ("render.mp4", self.d / "voz" / "fala.wav", "final.mp4"))
+        self.assertEqual((Path(arg(cmd, "--bg")), arg(cmd, "--bg-level")), (self.d / "voz" / "fundo.wav", "0.35"))
+        self.assertNotIn("--clean", cmd); self.assertNotIn("--sfx", cmd)
+
+    def test_local(self):
+        vd = self.d / "voz"; vd.mkdir(); (vd / "enviado").write_text("1"); (vd / "fala.wav").write_bytes(b"velho")   # last try
+        got, cmd = self.run_final("adobe", "indisponivel")
+        self.assertEqual(got, (P.TXT_ADOBE_LOCAL, {}))
+        self.assertEqual(cmd[2:5], ["render.mp4", "cut.mp4", "final.mp4"]); self.assertIn("--clean", cmd)
+        self.assertEqual(sorted(p.name for p in vd.iterdir()), ["voice.wav"])     # every try starts clean
+
+    def test_falhou(self):
+        got, cmd = self.run_final("adobe", "falhou")
+        self.assertEqual(got, (P.TXT_ADOBE_FALHOU, {"kind": "warn", "acao": "adobe"}))
+        self.assertEqual(cmd[2:], ["render.mp4", "render.mp4", "final.mp4"])
+
+    def test_plain(self):
+        got, cmd = self.run_final(None)
+        self.assertIsNone(got); self.assertEqual(cmd[2:], ["render.mp4", "render.mp4", "final.mp4"])
+        self.assertFalse((self.d / "voz").exists())
+
+    def test_sfx(self):
+        lavfi(self.d / "sfx.wav", "sine=frequency=900:sample_rate=48000:duration=1")
+        for estado in ("ok", "indisponivel"):
+            with self.subTest(estado=estado):
+                _, cmd = self.run_final("adobe", estado, fundo=False)
+                self.assertEqual(arg(cmd, "--sfx"), "sfx.wav"); self.assertNotIn("--bg", cmd)
+
+
+class RouteCase(ServerCase):
+    def setUp(self):
+        super().setUp(); self.make_project("t1")
+
+    def export(self, body): return self.req("POST", "/api/p/t1/export", body)
+
+    def offer(self, acao, **kw):
+        P.say("t1", "Posso limpar sua voz com o Adobe Podcast.", acao=acao, **kw); return len(P.load("t1")["chat"]) - 1
+
+    def wait_export(self):           # the export the click starts fails fast (no video), before the audio step
+        self.wait_for(lambda: P.read_job("t1", "export").get("done"), 60, "a exportação não terminou")
+
+    def started(self, spy): return [c.args[0] for c in spy.call_args_list if "app_project.py" in str(c.args[0])][0]
+
+
+class TestAdobeRoute(RouteCase):
+    def test_bad_voz(self):
+        for voz in ("x", "", 1, True, ["adobe"]):
+            with self.subTest(voz=voz): self.assertEqual(self.export({"voz": voz}), (400, {"error": "opção inválida"}))
+        self.assertFalse((P.folder("t1") / "export.json").exists())
+
+    def test_click(self):
+        j = self.offer("adobe")
+        with mock.patch.object(self.server.subprocess, "Popen", wraps=subprocess.Popen) as spy:
+            self.assertEqual(self.export({"voz": "adobe", "msg": j}), (200, {"ok": True}))
+        self.assertEqual(self.started(spy)[-4:], ["export", "t1", "--voz", "adobe"])
+        self.assertEqual(P.read_job("t1", "export")["voz"], "adobe")
+        self.assertIs(P.load("t1")["chat"][j]["feita"], True)
+        self.assertEqual(self.export({"voz": "adobe", "msg": j})[0], 400)    # use-once
+        self.wait_export()
+
+    def test_retry_after_failure(self):
+        j = self.offer("adobe", kind="warn")                                  # TXT_ADOBE_FALHOU + "Tentar de novo"
+        self.assertEqual(self.export({"voz": "adobe", "msg": j}), (200, {"ok": True}))
+        self.wait_export()
+
+    def test_wrong_kind(self):
+        k, j = self.offer("export"), self.offer("adobe")
+        self.assertEqual(self.export({"voz": "adobe", "msg": k})[0], 400)    # a "Gerar agora" can't send audio
+        self.assertEqual(self.export({"msg": j})[0], 400)                     # and "Enviar ao Adobe" always sends voz
+        self.assertFalse((P.folder("t1") / "export.json").exists())
+
+    def test_running(self):
+        j = self.offer("adobe"); P.job("t1", "export", done=False)
+        self.assertEqual(self.export({"voz": "adobe", "msg": j})[0], 409)
+        self.assertNotIn("feita", P.load("t1")["chat"][j])
+
+    def test_plain_no_voz(self):
+        P.job("t1", "export", done=True, voz="adobe")                         # the last export used Adobe
+        with mock.patch.object(self.server.subprocess, "Popen", wraps=subprocess.Popen) as spy:
+            self.assertEqual(self.export({}), (200, {"ok": True}))
+        self.assertNotIn("--voz", self.started(spy)); self.assertIsNone(P.read_job("t1", "export").get("voz"))
+        self.wait_export()
+
+
+class TestNoEgressWithoutClick(RouteCase):
+    def test_offer_only(self):
+        C.CLAUDE_CMD = [PY, str(FAKE), "confirmar_adobe"]
+        P.say("t1", "limpa a minha voz", who="user"); C.kick("t1"); self.wait_idle("t1")
+        r = [m for m in P.load("t1")["chat"] if m["who"] == "cinex"][-1]
+        self.assertEqual((r["text"], r.get("acao")), ("Posso limpar sua voz com o Adobe Podcast.", "adobe"))
+        self.assertFalse((P.folder("t1") / "export.json").exists())
+        self.assertFalse((P.folder("t1") / "voz").exists())
+        self.assertNotIn("mcp", [e["ev"] for e in self.fake_log()])
