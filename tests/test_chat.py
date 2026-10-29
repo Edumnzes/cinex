@@ -456,3 +456,54 @@ class TestEnsure(FailCase):
         P.say("t1", "oi", who="user"); P.job("t1", "chat", erro="nao_logado")
         self.req("GET", "/api/p/t1/poll"); time.sleep(.3)
         self.assertNotIn("t1", C._CHAT); self.assertEqual(self.starts(), [])
+
+
+class TestConfirm(FailCase):
+    """D-01: "gera o vídeo" -> a "Gerar agora" button in the answer; the export only starts on the click, once.
+    The export the click starts is a real `app_project.py export` on the fake project: it fails fast (no video)."""
+
+    def ask(self, scen):
+        self.use(scen); P.say("t1", "gera o vídeo", who="user"); C.kick("t1"); self.wait_idle("t1")
+        return self.cinex()[-1]
+
+    def export(self, body): return self.req("POST", "/api/p/t1/export", body)
+
+    def offer(self):
+        P.say("t1", "Está tudo pronto. É só tocar em Gerar agora.", acao="export"); return len(P.load("t1")["chat"]) - 1
+
+    def wait_export(self):           # the export process must be done before tearDown removes the folder
+        self.wait_for(lambda: P.read_job("t1", "export").get("done"), 60, "a exportação não terminou")
+
+    def test_reply_has_action(self):
+        r = self.ask("confirmar_exportar")
+        self.assertEqual((r["text"], r.get("acao")), ("Está tudo pronto. É só tocar em Gerar agora.", "export"))
+        self.assertFalse((P.folder("t1") / "export.json").exists())
+
+    def test_unknown_action_ignored(self):
+        r = self.ask("confirmar_estranho")
+        self.assertEqual(r["text"], "Está tudo pronto. É só tocar em Gerar agora."); self.assertNotIn("acao", r)
+
+    def test_click(self):
+        j = self.offer()
+        self.assertEqual(self.export({"msg": j}), (200, {"ok": True}))
+        self.assertTrue((P.folder("t1") / "export.json").exists())
+        self.assertIs(P.load("t1")["chat"][j]["feita"], True)
+        self.assertEqual(self.export({"msg": j}), (400, {"error": "mensagem inválida"}))
+        self.wait_export()
+
+    def test_running(self):
+        j = self.offer(); P.job("t1", "export", done=False)
+        self.assertEqual(self.export({"msg": j})[0], 409)
+        self.assertNotIn("feita", P.load("t1")["chat"][j])
+
+    def test_bad_msg(self):
+        P.say("t1", "gera o vídeo", who="user"); self.offer()          # no kick: nobody answers it
+        P.say("t1", C.TXT_FALHA, kind="warn", acao="tentar", ref=0)
+        for msg in (0, 2, 3, -1, "1", "x", True, 1.0):
+            with self.subTest(msg=msg): self.assertEqual(self.export({"msg": msg})[0], 400)
+        self.assertEqual(self.export([1])[0], 400)
+        self.assertFalse((P.folder("t1") / "export.json").exists())
+
+    def test_plain_export(self):
+        self.assertEqual(self.export({}), (200, {"ok": True}))      # the Publicar page's button, as before
+        self.wait_export()

@@ -8,7 +8,8 @@ reserva (init reports sonnet: the fallback model answered), nao_logado ("Not log
 offline (api_retry with no HTTP status, then sleeps 30 s), limite (rate_limit_event with resetsAt = now + FAKE_RESET s,
 none when FAKE_RESET=0, then a 429 result), falha (is_error, exit 1), modelo (404 "model not available" with
 --model opus, else like ok), pausa (sleeps FAKE_SLEEP s, default 0.5, then answers "ok: <request>"),
-edita_lento (sleeps 1 s, then like edita). `auth status` prints FAKE_AUTH (default {"loggedIn": true}), exit 0 only if logged in.
+edita_lento (sleeps 1 s, then like edita), confirmar_exportar / confirmar_estranho (a confirmar call with acao
+exportar / apagar, then "Está tudo pronto..."). `auth status` prints FAKE_AUTH (default {"loggedIn": true}), exit 0 only if logged in.
 Log: FAKE_CLAUDE_LOG, one JSON event per line ({"ev": "start", argv, stdin, cwd}, {"ev": "end"}, {"ev": "auth", argv}).
 Unknown args are ignored. The init event reports model "claude-<alias>-test" from --model.
 """
@@ -72,6 +73,10 @@ def main(argv):
             emit(**tool("mcp__cinex__ajustar", campo="captions", valor=dict(size=70))); time.sleep(.8)
             emit(**text("Cortei o trecho 12 e aumentei a legenda."))
             emit(type="result", subtype="success", is_error=False, result="Cortei o trecho 12 e aumentei a legenda.")
+        elif scen in ("confirmar_exportar", "confirmar_estranho"):
+            emit(**tool("mcp__cinex__confirmar", acao="exportar" if scen == "confirmar_exportar" else "apagar"))
+            emit(**text("Está tudo pronto. É só tocar em Gerar agora."))
+            emit(type="result", subtype="success", is_error=False, result="Está tudo pronto. É só tocar em Gerar agora.")
         elif scen == "pausa":
             time.sleep(float(os.environ.get("FAKE_SLEEP", ".5")))
             ped = [x.strip() for x in stdin.split("Pedido do usuário:")[-1].splitlines() if x.strip()]
