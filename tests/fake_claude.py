@@ -7,7 +7,8 @@ lento (init, then sleeps 60 s: the test kills it), ferramentas (two tool calls 0
 reserva (init reports sonnet: the fallback model answered), nao_logado ("Not logged in", exit 1),
 offline (api_retry with no HTTP status, then sleeps 30 s), limite (rate_limit_event with resetsAt = now + FAKE_RESET s,
 none when FAKE_RESET=0, then a 429 result), falha (is_error, exit 1), modelo (404 "model not available" with
---model opus, else like ok). `auth status` prints FAKE_AUTH (default {"loggedIn": true}), exit 0 only if logged in.
+--model opus, else like ok), pausa (sleeps FAKE_SLEEP s, default 0.5, then answers "ok: <request>"),
+edita_lento (sleeps 1 s, then like edita). `auth status` prints FAKE_AUTH (default {"loggedIn": true}), exit 0 only if logged in.
 Log: FAKE_CLAUDE_LOG, one JSON event per line ({"ev": "start", argv, stdin, cwd}, {"ev": "end"}, {"ev": "auth", argv}).
 Unknown args are ignored. The init event reports model "claude-<alias>-test" from --model.
 """
@@ -71,7 +72,12 @@ def main(argv):
             emit(**tool("mcp__cinex__ajustar", campo="captions", valor=dict(size=70))); time.sleep(.8)
             emit(**text("Cortei o trecho 12 e aumentei a legenda."))
             emit(type="result", subtype="success", is_error=False, result="Cortei o trecho 12 e aumentei a legenda.")
-        elif scen == "edita":
+        elif scen == "pausa":
+            time.sleep(float(os.environ.get("FAKE_SLEEP", ".5")))
+            ped = [x.strip() for x in stdin.split("Pedido do usuário:")[-1].splitlines() if x.strip()]
+            emit(type="result", subtype="success", is_error=False, result="ok: " + (ped[-1] if ped else ""))
+        elif scen in ("edita", "edita_lento"):
+            if scen == "edita_lento": time.sleep(1)
             sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
             import app_project as P                  # CINEX_ROOT comes from the environment
             P.update(Path.cwd().name, lambda s: s["captions"].update(size=s["captions"]["size"] + 10))

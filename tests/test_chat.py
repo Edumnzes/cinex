@@ -1,6 +1,6 @@
 """scripts/chat_ai.py: the locked-down `claude -p` command, clean env, model choice and the auto worker (CHAT-01/02, D-05).
 Every worker run uses tests/fake_claude.py (C.CLAUDE_CMD): the real CLI is never called."""
-import json, os, time, unittest
+import json, os, subprocess, time, unittest
 from pathlib import Path
 from unittest import mock
 
@@ -351,3 +351,108 @@ class TestModelFallback(FailCase):
         self.assertIs(self.job()["reserva"], True); self.assertIn("opus", C.MODEL_BLOCK)
         P.say("t1", "escreve uma ideia de roteiro", who="user"); C.kick("t1"); self.wait_idle("t1")
         self.assertEqual(arg(self.starts()[-1]["argv"], "--model"), "sonnet")
+
+
+WAIT = [PY, str(REPO / "scripts" / "app_project.py"), "wait"]
+
+
+class TestMode(FailCase):
+    """CHAT-05 / D-14: Automático or Sessão aberta, global (A-02), and never an answer twice."""
+
+    def modo(self, m): return self.ia({"acao": "modo", "modo": m})
+
+    def test_sessao_no_worker(self):
+        self.assertEqual(self.modo("sessao"), (200, {"ok": True, "modo": "sessao"}))
+        self.assertEqual(self.req("POST", "/api/p/t1/chat", {"text": "oi"})[0], 200)
+        time.sleep(1)
+        self.assertEqual(self.starts(), []); self.assertNotIn("t1", C._CHAT)
+        self.assertEqual(self.req("GET", "/api/p/t1/poll")[1]["modo"], "sessao")
+        self.assertNotIn("t1", C._CHAT)                         # the poll doesn't start it either
+
+    def test_back_to_auto(self):
+        self.modo("sessao"); self.req("POST", "/api/p/t1/chat", {"text": "oi"})
+        self.assertEqual(self.modo("auto"), (200, {"ok": True, "modo": "auto"}))
+        self.wait_for(lambda: self.cinex()); self.wait_idle("t1")
+        self.assertEqual([m["text"] for m in self.cinex()], ["Pronto."])
+        self.assertEqual(len(self.starts()), 1)
+
+    def test_no_double(self):
+        self.modo("sessao")
+        for t in ("a", "b"): self.req("POST", "/api/p/t1/chat", {"text": t})
+        r = subprocess.run(WAIT + ["t1", "--timeout", "5"], capture_output=True, text=True, encoding="utf-8",
+                           timeout=30, stdin=subprocess.DEVNULL)
+        self.assertIn(": a", r.stdout); self.assertIn(": b", r.stdout)
+        self.modo("auto"); self.req("GET", "/api/p/t1/poll"); time.sleep(.5)
+        self.assertEqual(self.starts(), []); self.assertEqual(self.cinex(), [])
+        self.assertEqual([m["by"] for m in P.load("t1")["chat"]], ["sessao", "sessao"])
+
+    def test_invalid(self):
+        self.assertEqual(self.modo("x")[0], 400)
+        self.assertEqual(self.ia({"acao": "modo"})[0], 400)
+        self.assertEqual(P.chat_mode(), "auto")
+
+
+class TestQueue(FailCase):
+    """CHAT-04: in order, one at a time per project; projects don't block each other; manual edits stay (D-10)."""
+
+    def spans(self):
+        """pid -> [project, start t, end t] from the fake's log."""
+        out = {}
+        for e in self.fake_log():
+            if e["ev"] == "start": out[e["pid"]] = [Path(e["cwd"]).name, e["t"], None]
+            elif e["ev"] == "end" and e["pid"] in out: out[e["pid"]][2] = e["t"]
+        return sorted(out.values(), key=lambda x: x[1])
+
+    def test_order(self):
+        self.use("pausa")
+        for t in ("A", "B", "C"): self.assertEqual(self.req("POST", "/api/p/t1/chat", {"text": t})[0], 200)
+        self.wait_for(lambda: len(self.cinex()) == 3, 20); self.wait_idle("t1")
+        self.assertEqual([m["text"] for m in self.cinex()], ["ok: A", "ok: B", "ok: C"])
+        sp = self.spans(); self.assertEqual(len(sp), 3)
+        for a, b in zip(sp, sp[1:]): self.assertGreaterEqual(b[1], a[2])   # never two at once
+
+    def test_two_projects(self):
+        self.use("pausa"); self.make_project("t2")
+        with mock.patch.dict(os.environ, {"FAKE_SLEEP": "1"}):
+            for n in ("t1", "t2"): self.req("POST", f"/api/p/{n}/chat", {"text": "oi"})
+            self.wait_for(lambda: self.cinex("t1") and self.cinex("t2"), 20); self.wait_idle("t1"); self.wait_idle("t2")
+        (_, s1, e1), (_, s2, e2) = self.spans()
+        self.assertLess(max(s1, s2), min(e1, e2))                # the two ran at the same time
+
+    def test_manual_edit_preserved(self):
+        self.use("edita_lento")
+        self.req("POST", "/api/p/t1/chat", {"text": "aumenta a legenda"})
+        self.wait_for(self.starts)
+        self.assertEqual(self.req("PUT", "/api/p/t1/state", {"color": {"correct": True, "look": "moody"}})[0], 200)
+        self.wait_for(lambda: self.cinex(), 10); self.wait_idle("t1")
+        st = P.load("t1")
+        self.assertEqual((st["captions"]["size"], st["color"]["look"]), (P.CAPTIONS["size"] + 10, "moody"))
+
+
+class TestRecover(FailCase):
+    def test_restart(self):
+        def fn(s):
+            s["chat"] += [dict(who="user", text="velha", t="", seen=True, by="auto"), dict(who="cinex", text="Feito.", t="", seen=True),
+                          dict(who="user", text="da sessão", t="", seen=True, by="sessao"),
+                          dict(who="user", text="presa", t="", seen=True, by="auto")]
+        P.update("t1", fn); P.job("t1", "chat", busy=True, step="Lendo o projeto…")
+        C.recover()
+        self.wait_for(lambda: len(self.cinex()) == 2); self.wait_idle("t1")
+        c = P.load("t1")["chat"]
+        self.assertEqual(c[-1]["text"], "Pronto.")
+        self.assertEqual([e["stdin"].rsplit("\n", 1)[-1] for e in self.starts()], ["presa"])
+        self.assertEqual((c[0]["by"], c[2]["by"], c[3]["by"]), ("auto", "sessao", "auto"))
+        self.assertIs(self.job()["busy"], False)
+
+
+class TestEnsure(FailCase):
+    def test_poll_restarts(self):
+        P.say("t1", "oi", who="user")                           # no kick: as if the worker had vanished
+        self.req("GET", "/api/p/t1/poll")
+        self.wait_for(lambda: self.cinex()); self.wait_idle("t1")
+        self.assertEqual(self.cinex()[0]["text"], "Pronto.")
+
+    def test_setup_waits(self):
+        P.say("t1", "oi", who="user"); P.job("t1", "chat", erro="nao_logado")
+        self.req("GET", "/api/p/t1/poll"); time.sleep(.3)
+        self.assertNotIn("t1", C._CHAT); self.assertEqual(self.starts(), [])
