@@ -35,7 +35,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); import hdr as HDR    # HLG/PQ phone footage → SDR
-ROOT = Path.home() / "reels"
+ROOT = Path(os.environ.get("CINEX_ROOT") or Path.home() / "reels")   # CINEX_ROOT: tests (inherited by subprocesses)
 PY = sys.executable
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 # export formats: render size (W, H). LED panels are drawn at 2x (1024x768) and scaled down at the end (OUT_SIZE):
@@ -69,24 +69,39 @@ def _now(): return datetime.datetime.now().isoformat(timespec="seconds")
 
 
 # ------------------------------------------------------------ state file (read-modify-write under a lock)
+LOCK_TRIES, LOCK_WAIT, LOCK_STALE = 200, .05, 10   # update(): tries x wait (s); a lock older than LOCK_STALE s is dead
+
+
+def _read_json(p):
+    """json.loads with retries: on Windows reading fails with PermissionError while another process replaces the file."""
+    for i in range(50):
+        try: return json.loads(p.read_text(encoding="utf-8"))
+        except PermissionError:
+            if i == 49: raise
+            time.sleep(.02)
+
+
 def load(name):
-    return json.loads((folder(name) / "cinex.json").read_text(encoding="utf-8"))
+    return _read_json(folder(name) / "cinex.json")
 
 
 def _write_json(p, data):
+    # replace (new inode) keeps hard-linked short versions intact: never write into p itself
     tmp = p.with_suffix(p.suffix + ".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
-    os.replace(tmp, p)
+    _replace(tmp, p, 500, .01)
 
 
 def update(name, fn):
     """Apply fn(state) under a lock file so the app and Claude never overwrite each other."""
     d = folder(name); lock = d / ".cinex.lock"
-    for _ in range(200):
+    for _ in range(LOCK_TRIES):
         try: fd = os.open(lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY); break
         except FileExistsError:
-            if time.time() - lock.stat().st_mtime > 10: lock.unlink(missing_ok=True)   # stale lock
-            time.sleep(.05)
+            try:
+                if time.time() - lock.stat().st_mtime > LOCK_STALE: lock.unlink(missing_ok=True)   # stale lock
+            except FileNotFoundError: pass
+            time.sleep(LOCK_WAIT)
     else: raise TimeoutError("projeto ocupado")
     try:
         st = load(name); fn(st); st["rev"] = st.get("rev", 0) + 1; _write_json(d / "cinex.json", st); return st
@@ -97,13 +112,13 @@ def update(name, fn):
 def job(name, kind, **kw):
     """prep.json / export.json: progress of background jobs, written only by the job itself."""
     p = folder(name) / f"{kind}.json"
-    data = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    data = _read_json(p) if p.exists() else {}
     data.update(kw, t=_now()); _write_json(p, data)
 
 
 def read_job(name, kind):
     p = folder(name) / f"{kind}.json"
-    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    return _read_json(p) if p.exists() else {}
 
 
 # ------------------------------------------------------------ helpers
@@ -338,11 +353,11 @@ def _clip_proxy(src, out, canvas):
     return duration(out)
 
 
-def _replace(tmp, dst):
+def _replace(tmp, dst, tries=100, wait=.2):
     """os.replace with retries: on Windows the server may be streaming the old file to the browser."""
-    for _ in range(100):
+    for _ in range(tries):
         try: os.replace(tmp, dst); return
-        except PermissionError: time.sleep(.2)
+        except PermissionError: time.sleep(wait)
     raise PermissionError(f"não consegui substituir {dst.name} (arquivo em uso)")
 
 
