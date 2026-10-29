@@ -9,12 +9,18 @@ offline (api_retry with no HTTP status, then sleeps 30 s), limite (rate_limit_ev
 none when FAKE_RESET=0, then a 429 result), falha (is_error, exit 1), modelo (404 "model not available" with
 --model opus, else like ok), pausa (sleeps FAKE_SLEEP s, default 0.5, then answers "ok: <request>"),
 edita_lento (sleeps 1 s, then like edita), confirmar_exportar / confirmar_estranho (a confirmar call with acao
-exportar / apagar, then "Está tudo pronto..."). `auth status` prints FAKE_AUTH (default {"loggedIn": true}), exit 0 only if logged in.
-Log: FAKE_CLAUDE_LOG, one JSON event per line ({"ev": "start", argv, stdin, cwd}, {"ev": "end"}, {"ev": "auth", argv}).
-Unknown args are ignored. The init event reports model "claude-<alias>-test" from --model.
+exportar / apagar, then "Está tudo pronto..."), confirmar_adobe (confirmar acao adobe), adobe_ok (writes voz/enviado and a
+valid voz/fala.wav in the cwd, like the Cinex --voz tools would), adobe_meio (only voz/enviado, then "job failed").
+`auth status` prints FAKE_AUTH (default {"loggedIn": true}), exit 0 only if logged in. `mcp list` prints FAKE_MCP
+(default: the real Adobe connector line + another connector), exit 0.
+Log: FAKE_CLAUDE_LOG, one JSON event per line ({"ev": "start", argv, stdin, cwd}, {"ev": "end"}, {"ev": "auth", argv},
+{"ev": "mcp"}). Unknown args are ignored. The init event reports model "claude-<alias>-test" from --model.
 """
-import json, os, sys, time
+import json, os, sys, time, wave
 from pathlib import Path
+
+MCP_LIST = ("claude.ai Gmail: https://gmail.mcp.claude.com/mcp - ! Needs authentication\n"
+            "claude.ai Adobe for creativity: https://adobe-creativity.adobe.io/mcp - ✔ Connected\n")
 
 
 def log(**ev):
@@ -47,6 +53,8 @@ def main(argv):
         log(ev="auth", argv=args)
         out = os.environ.get("FAKE_AUTH", '{"loggedIn": true}'); print(out)
         return 0 if json.loads(out).get("loggedIn") else 1
+    if args[:2] == ["mcp", "list"]:
+        log(ev="mcp", argv=args); sys.stdout.write(os.environ.get("FAKE_MCP", MCP_LIST)); return 0
     if "-p" not in args: return 0
     stdin = sys.stdin.buffer.read().decode("utf-8", "replace")
     log(ev="start", argv=args, stdin=stdin, cwd=os.getcwd())
@@ -77,6 +85,15 @@ def main(argv):
             emit(**tool("mcp__cinex__confirmar", acao="exportar" if scen == "confirmar_exportar" else "apagar"))
             emit(**text("Está tudo pronto. É só tocar em Gerar agora."))
             emit(type="result", subtype="success", is_error=False, result="Está tudo pronto. É só tocar em Gerar agora.")
+        elif scen == "confirmar_adobe":
+            emit(**tool("mcp__cinex__confirmar", acao="adobe"))
+            emit(type="result", subtype="success", is_error=False, result="Posso limpar sua voz com o Adobe Podcast.")
+        elif scen in ("adobe_ok", "adobe_meio"):
+            vd = Path.cwd() / "voz"; vd.mkdir(exist_ok=True); (vd / "enviado").write_text("1")
+            if scen == "adobe_meio": return erro("job failed")
+            with wave.open(str(vd / "fala.wav"), "wb") as w:       # 0.5 s of silence, 48 kHz mono
+                w.setnchannels(1); w.setsampwidth(2); w.setframerate(48000); w.writeframes(b"\0\0" * 24000)
+            emit(type="result", subtype="success", is_error=False, result="ok")
         elif scen == "pausa":
             time.sleep(float(os.environ.get("FAKE_SLEEP", ".5")))
             ped = [x.strip() for x in stdin.split("Pedido do usuário:")[-1].splitlines() if x.strip()]
