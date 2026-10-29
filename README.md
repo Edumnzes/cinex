@@ -163,14 +163,41 @@ Abre em http://127.0.0.1:8765 (só no seu computador), no **modo guiado**, feito
 - **Corte:** clique no texto de uma frase para corrigir o que a transcrição errou (nomes, marcas, números). A
   legenda passa a usar o texto corrigido, no mesmo tempo da fala.
 
+#### Chat automático
+
+O chat responde sozinho: não precisa deixar nenhuma conversa do Claude Code aberta.
+
+- **O que acontece quando você escreve:** o Cinex lê o pedido, mexe no projeto e responde em português curto,
+  dizendo o que mudou. A mudança aparece na prévia. Enquanto trabalha, a linha embaixo do chat mostra a etapa
+  ("Lendo o seu pedido…", "Lendo o projeto…", "Ajustando a legenda…").
+- **Precisa do Claude Code instalado e logado.** Rode `claude auth login` (ou abra `claude` e siga o login) e
+  confira com `claude auth status`. Se faltar algo, o chat mostra um cartão com o passo a passo e o botão
+  **Testar de novo**.
+- **O uso sai do seu plano do Claude.** Cada resposta gasta uso da sua conta (no plano Pro o limite é menor). O
+  contador **"{n} hoje"**, no topo do chat, mostra quantas respostas saíram no dia. Pedidos simples usam um modelo
+  mais leve; pedidos criativos (gancho, roteiro, revisão) usam um mais capaz.
+- **Parar resposta:** interrompe na hora. O que já tinha mudado fica no projeto.
+- **"volta como estava":** antes de cada resposta que muda algo, o Cinex guarda um ponto salvo. Peça "volta como
+  estava" e o vídeo volta ao que era antes; a conversa continua lá.
+- **Vários pedidos seguidos:** entram na fila ("Na fila · Cancelar") e são respondidos em ordem, um por vez.
+- **Sem internet ou no limite do plano:** a mensagem fica guardada e é reenviada sozinha quando der (dá para
+  cancelar o envio).
+- **Gerar o vídeo e limpar a voz pedem o seu clique.** A IA não exporta nem envia áudio: ela responde com o botão
+  **Gerar agora** ou **Enviar ao Adobe**, e só o clique faz a ação.
+- **Só mexe neste vídeo.** A IA do chat não tem terminal, não abre arquivos do computador e não mexe em outros
+  projetos. Um pedido fora disso é recusado.
+- **Automático / Sessão aberta:** o seletor no topo do chat escolhe quem responde. **Automático** é o padrão.
+  **Sessão aberta** é para quando você está numa conversa do Claude Code e quer que ela responda; cada mensagem é
+  respondida por um lado só, nunca duas vezes.
+
 Para ajustes finos, **Editor completo ↗** abre o editor com linha do tempo (http://127.0.0.1:8765/editor):
 - **Linha do tempo:** cada trecho aparece sobre a onda do áudio. Laranja = mantido, listrado = cortado.
   Clique para ver o trecho e dê duplo clique (ou Delete) para manter ou cortar.
 - **Prévia 9:16:** já pula os cortes e mostra as legendas como vão sair.
 - **Legendas:** estilos prontos, fonte (inclusive do seu computador), cor, destaque, tamanho, contorno,
   posição, uma ou duas linhas, quantas palavras por vez.
-- **Conversa com o Cinex:** peça ajustes por escrito. Quem responde é o Claude Code, que precisa estar
-  com a conversa aberta.
+- **Conversa com o Cinex:** peça ajustes por escrito. O chat responde sozinho (veja **Chat automático**
+  acima), ou uma conversa aberta do Claude Code, no modo **Sessão aberta**.
 - **Formato:** escolha no monitor — 9:16 (Reels, Stories), 4:5 (feed), 1:1, 16:9 (YouTube, site), 4:3
   (apresentação) ou LED 512×384 (painel de feira). Nos formatos em pé a prévia fica à esquerda e as ferramentas
   ocupam o resto; nos largos a prévia fica no centro. Vídeo gravado em pé num formato largo fica inteiro, com fundo
@@ -296,6 +323,15 @@ no Windows, `~/reelsenv/bin/python` no macOS/Linux). `<skill>` é `~/.claude/ski
 | `python <skill>/scripts/decisions.py check` / `report` | Registro completo? Tabela de notas para a entrega |
 | `python <skill>/scripts/export_ig.py final.mp4 --name X --cover 4.3` | Arquivos para o Instagram em Downloads |
 
+Comandos do app (rodados na pasta do Cinex):
+
+| Comando | Para quê |
+|---|---|
+| `python scripts/app_project.py modo auto` / `modo sessao` | Quem responde o chat: o Cinex sozinho (padrão) ou uma conversa aberta do Claude Code |
+| `python scripts/app_project.py wait <nome>` | Na Sessão aberta: espera a próxima mensagem do chat (`say <nome> "..."` responde) |
+| `python scripts/app_project.py export <nome> --voz adobe` | Exporta com a voz limpa pelo Adobe (o mesmo que o botão **Enviar ao Adobe**) |
+| `~/reelsenv/Scripts/python -m unittest discover -s tests -t . -v` | Roda todos os testes automáticos (não usa a sua conta do Claude nem a internet) |
+
 ## Formatos
 
 Depois do perfil da marca, a skill recomenda **3 formatos** para o vídeo (e mostra os 13 se você quiser).
@@ -397,6 +433,11 @@ Com o conector **Adobe for creativity** ativo no Claude, só a trilha de voz é 
 reverb) e é mixado localmente. Sem o conector, a skill limpa a voz com o próprio ffmpeg
 (`mix_audio.py --clean`: corta graves, reduz ruído e comprime de leve) e normaliza.
 
+**No app Cinex:** peça no chat ("limpa a minha voz com o Adobe"). A resposta vem com o botão **Enviar ao Adobe** e
+o aviso de que só o áudio sai do computador. Nada é enviado antes do clique. Se o Adobe não estiver disponível, o
+Cinex limpa a voz no próprio computador e avisa no chat. Se o áudio saiu mas a voz limpa não voltou, o vídeo sai
+com o áudio normal e aparece **Tentar de novo**.
+
 > No app desktop (aba Code), o resultado do Adobe chega por um painel que pode demorar a aparecer.
 > Alternativa manual: enviar `voice.wav` em podcast.adobe.com/enhance e devolver o arquivo tratado.
 
@@ -404,13 +445,16 @@ reverb) e é mixado localmente. Sem o conector, a skill limpa a voz com o própr
 
 - **Tudo roda no seu computador.** Vídeo, transcrição, rostos e render ficam locais. Só a trilha de voz sai,
   e só se você usar o conector Adobe.
+- **A IA do chat só mexe no vídeo daquela conversa.** Ela não tem terminal, não abre arquivos do computador e
+  não mexe em outros projetos. O áudio só vai ao Adobe depois do clique em **Enviar ao Adobe**.
 - **Nada de dados de clientes no Git.** O `.gitignore` bloqueia vídeos, áudios e imagens. O perfil das marcas
   (`~/instagram-legendas`), o banco (`~/reels-banco`) e os projetos (`~/reels`) ficam fora do repositório.
 - **Instagram só leitura.** O login é seu; a skill nunca digita senha nem código e não curte, comenta ou
   altera nada.
 - **Sem downloads por conta própria.** A skill não baixa sons, motions ou vídeos sem o seu OK.
-- **Sem telemetria.** Os scripts não fazem nenhuma chamada de rede; os comandos externos (ffmpeg) são
-  chamados sem shell, com os argumentos em lista.
+- **Sem telemetria.** Os scripts não mandam dados para fora por conta própria: a rede só é usada pelo
+  Claude Code do chat (a sua conta) e pelo envio ao Adobe que você confirmou. Os comandos externos (ffmpeg,
+  claude) são chamados sem shell, com os argumentos em lista.
 - As dependências Python têm versões delimitadas em [requirements.txt](requirements.txt).
 
 Detalhes em [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
@@ -434,6 +478,8 @@ Detalhes em [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
 | Legenda com texto errado | Corrigir no `FIX` do projeto ou direto no `words.json` |
 | Imagem lavada, cor errada (iPhone) | Vídeo HDR (HLG). O Cinex converte sozinho; confira com `python scripts/hdr.py <vídeo>` |
 | Timeline mais curta que o esperado | Trecho pedido passa do fim do clipe; o aviso mostra qual e o tempo foi encurtado |
+| O chat diz que falta entrar na conta | Rode `claude auth login` (confira com `claude auth status`) e toque em **Testar de novo** |
+| O Claude Code está instalado mas o Cinex não acha | Defina a variável `CINEX_CLAUDE` com o caminho completo do `claude.exe` (ex.: `C:\Users\<você>\.local\bin\claude.exe`) e reinicie o app |
 
 ## Documentação detalhada
 

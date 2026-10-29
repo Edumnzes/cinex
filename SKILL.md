@@ -111,17 +111,39 @@ seconds over the speech, ss = entry point in the clip, mode "full"|"card", zoom}
 <media_id> <t0> <t1> [ss] [full|card]`). The picture changes, the voice keeps playing; a window entirely over
 removed stretches is skipped. Use it to show what the speaker describes or to hide a problem in the A-roll (a cable,
 someone in the background, a scene without PPE). The app has a live preview: export only when the user asks for the file.
+
+**Automatic chat (default).** In the "Automático" mode the server answers each chat message by itself, with no open
+Claude Code session: `scripts/chat_ai.py` runs a headless `claude -p` call (model `haiku` for simple edits; `opus` for
+creative/analysis requests or the Revisão page, with `--fallback-model sonnet` — on the Pro plan sonnet answers when
+opus isn't available). That AI's only tools are `scripts/cinex_mcp.py <name>`, bound to that one project:
+`ver_projeto`, `cortar_ou_manter`, `corrigir_texto`, `ajustar`, `camera_lenta`, `versao_curta`, `revisar`,
+`ressincronizar`, `voltar_como_estava`, `confirmar`. It has no shell, no file access and no other project (`--tools ""`,
+`--strict-mcp-config`, `--permission-mode dontAsk`). One message at a time per project, in order; the step status
+("Lendo o projeto…", "Ajustando a legenda…") is in `~/reels/<name>/chat.json` and the daily counter ("{n} hoje") in
+`~/reels/_chat_uso.json`; the mode lives in `~/reels/_chat_modo.json`. Before the first change of each answer the
+project is saved to `ponto_salvo.json`; `voltar_como_estava` ("volta como estava") restores it and keeps the
+conversation. The AI never exports nor sends audio: `confirmar(acao)` only adds a button to its answer. Export starts
+after the user clicks "Gerar agora"; Adobe only after "Enviar ao Adobe" (`app_project.py export <name> --voz adobe`: a
+separate headless call with a fixed prompt, `scripts/adobe_prompt.md`, that only sees the Adobe connector and
+`cinex_mcp.py <name> --voz`; when Adobe isn't available it falls back to a local `mix_audio.py --clean`, and the user is
+told). Failures (not installed, not logged in, offline, usage limit, 10 min timeout) show a notice in the chat and the
+message is kept and resent.
 1. Start the server once, in the background: `python app/server.py` → http://127.0.0.1:8765 (local only).
 2. Create the project: `python scripts/app_project.py new <video> --name <name> --prompt "<marca.json termos>"`
    (proxy, transcription, waveform and an automatic pause cut). The user can also create it from the app.
 3. Editorial pass with the same rules as steps 1b–2 (manual §2–3): `app_project.py show <name>` lists every
    segment with its text; cut false starts, repetitions and filler with `seg <name> <id|s-e> cut "motivo"`, keep
    functional pauses, then summarise the plan in the app's chat with `say <name> "..."` and give the link.
-4. Listen to the chat: run `app_project.py wait <name>` in the background; when it returns, do what was asked
-   (`seg`, caption changes by editing `captions` in `~/reels/<name>/cinex.json` through `app_project.update`),
-   answer with `say`, and start `wait` again. The user's edits in the app land in the same file — re-read with
-   `show` before changing anything, never overwrite their choices without saying so.
-5. Export is the app's button (or `app_project.py export <name>`): cut → captions with the engine → −14 LUFS →
+4. Answer from this session only in "Sessão aberta": switch the app to it (selector in the chat header) or run
+   `app_project.py modo sessao`, then run `app_project.py wait <name>` in the background. `wait` uses the same atomic
+   `claim(name, "sessao")` as the server, so each message is delivered to exactly one side. In "Automático" this
+   session must NOT answer: `wait` prints a hint and keeps waiting, and the server replies by itself. When `wait`
+   returns, do what was asked (`seg`, caption changes by editing `captions` in `~/reels/<name>/cinex.json` through
+   `app_project.update`), answer with `say`, and start `wait` again. The user's edits in the app land in the same
+   file — re-read with `show` before changing anything, never overwrite their choices without saying so. Switch
+   back with `app_project.py modo auto` when done.
+5. Export is the app's button — in the chat, the "Gerar agora" button under the answer (or `app_project.py export
+   <name>`, `--voz adobe` for the Adobe voice): cut → captions with the engine → −14 LUFS →
    `Downloads/<name>_cinex<suffix>.mp4`. `format`: "vertical" 9:16 (Reels/Stories, no suffix), "feed" 4:5 (`_4x5`),
    "quadrado" 1:1 (`_1x1`), "horizontal" 16:9 (`_16x9`), "4x3" (`_4x3`), "led" 512x384 trade-show panel (drawn at
    1024x768, scaled down at the end; `_led512x384`). Vertical footage in a wide format is fitted over a blurred
@@ -250,6 +272,7 @@ words.json by hand — wrong caption text is worse than no caption.
 ## 3. Audio — Adobe Podcast Enhance Speech
 
 Only the audio goes to Adobe (smaller, and the picture never leaves the machine):
+From the app: the "Enviar ao Adobe" button runs this flow headless (see §D); in a session, keep using the connector as below.
 1. `<FFMPEG> -i cut_1080.mp4 -vn -ac 1 -ar 48000 voice.wav` (the ffmpeg path printed by setup_env.py)
 2. Adobe connector: `adobe_mandatory_init` → `asset_initialize_file_upload` (path, size, `audio/wav`)
    → `curl -L -X PUT <transfer href> -H "Content-Type: audio/wav" --data-binary @voice.wav`

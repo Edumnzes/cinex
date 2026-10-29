@@ -139,6 +139,25 @@
 - Motor: legenda em duas linhas quando não cabe em uma, cor do texto configurável, `Reel.render()` com progresso.
 - `cut.py` recorta para 9:16 em vez de esticar vídeos com outra proporção.
 - `requirements.txt` com faixas de versão; `setup_env.py` passa a instalar a partir dele.
+- **Chat que responde sozinho**, sem nenhuma sessão do Claude Code aberta: o servidor chama o `claude -p` da conta
+  do usuário (`scripts/chat_ai.py`), com `haiku` para pedidos simples e `opus` para os criativos e de análise.
+- A IA do chat só usa as ferramentas do Cinex presas ao projeto da conversa (`scripts/cinex_mcp.py <nome>`): sem
+  shell, sem acesso a arquivos e sem outros projetos.
+- Status em etapas na linha do chat ("Lendo o projeto…", "Ajustando a legenda…"), botão **Parar resposta** e
+  contador **"{n} hoje"** com as respostas do dia (`~/reels/_chat_uso.json`).
+- Avisos claros quando o Claude Code não está instalado, falta entrar na conta, não há conexão, o limite do plano
+  foi atingido, o pedido passou do tempo ou falhou. A mensagem não se perde: é reenviada sozinha ou com
+  **Tentar de novo**.
+- Fila por projeto (um pedido por vez, em ordem, com **Cancelar**) e seletor **Automático / Sessão aberta**
+  (`app_project.py modo auto|sessao`, `~/reels/_chat_modo.json`). O servidor e o `wait` pegam cada mensagem pelo
+  mesmo `claim` atômico: nunca há resposta dupla.
+- Ponto salvo (`ponto_salvo.json`) antes de cada resposta que muda algo, e o pedido **"volta como estava"**.
+- **Gerar agora** e **Enviar ao Adobe** só depois do clique na resposta. O Adobe roda numa chamada separada
+  (`app_project.py export <nome> --voz adobe`); sem Adobe, a voz é limpa no próprio computador, com aviso.
+- Reserva `sonnet` quando o `opus` não está disponível no plano (Pro).
+- Testes automáticos (`tests/`, um comando: `python -m unittest discover -s tests -t .`) do lock, da gravação
+  atômica, da segurança do servidor e do chat, sem usar a conta do Claude nem a internet.
+- Correção: `PermissionError` no Windows ao gravar e ler o estado do projeto ao mesmo tempo (nova tentativa curta).
 
 ## 2.0.0 — 2026-10-25
 - **Perfil da marca como primeiro passo**: briefing curto + análise somente leitura dos Reels e Insights
