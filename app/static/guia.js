@@ -599,7 +599,8 @@ function renderChat() {
   const chat = (st && st.chat) || [], erro = chatJob.erro || "";
   if (actsFor !== name) { acts = {}; actsFor = name; }            // button states belong to one project
   const marks = chat.map((m) => +!!m.seen + 2 * !!m.feita + 4 * !!m.cancelada).join("");   // metas and buttons follow these
-  const key = (name || "") + "|" + chat.length + "|" + ((chat.at(-1) || {}).t || "") + "|" + marks + "|" + erro;
+  const fila = modo === "auto" && chatJob.busy && !WAIT_ERR.includes(erro);   // unseen messages wait behind the current answer
+  const key = (name || "") + "|" + chat.length + "|" + ((chat.at(-1) || {}).t || "") + "|" + marks + "|" + erro + "|" + fila;
   if (key !== chatKey) {                                  // rebuild only when a message arrived (polling runs every 1.5 s)
   const fresh = key.split("|")[0] === chatKey.split("|")[0] ? chatShown : chat.length;   // animate only the new ones
   chatKey = key; chatShown = chat.length;
@@ -612,10 +613,10 @@ function renderChat() {
       const u = m.who === "user", cls = (u ? " user" : "") + (m.kind === "warn" ? " warn" : "") + (m.cancelada ? " cancelada" : "");
       const d = el("div", "msg" + cls + (i >= fresh ? " new" : "")), hm = (m.t || "").slice(11, 16), meta = el("small", "", hm);
       if (u && m.cancelada) meta.textContent = `${hm} · Cancelada`;
-      else if (u && !m.seen && WAIT_ERR.includes(erro)) {
+      else if (u && !m.seen && (fila || WAIT_ERR.includes(erro))) {
         const c = el("button", "whobtn", "Cancelar"); c.type = "button"; c.setAttribute("aria-label", "Cancelar esta mensagem");
         c.onclick = async () => { c.disabled = true; try { await ia({ acao: "cancelar", msgs: [i] }); } catch {} await refresh(); };
-        meta.textContent = `${hm} · Aguardando · `; meta.append(c);
+        meta.textContent = `${hm} · ${fila ? "Na fila" : "Aguardando"} · `; meta.append(c);
       }
       const who = el("div", "who", u ? "Você" : "Cinex"); who.append(meta);
       const body = el("div"); body.append(who, el("div", "txt", m.text));
@@ -633,7 +634,42 @@ function renderChat() {
 }
 
 // status line of the automatic answer (D-08) + "Parar resposta" (D-09) + today's counter (D-07); data from poll
-let chatJob = {}, uso = 0, uploading = false;
+let chatJob = {}, uso = 0, uploading = false, modo = "auto", modoPend = false;
+// who answers (D-14), for the whole app (A-02): kept by the server, same value here and in the editor
+const MODOS = [["auto", "Automático", "O Cinex responde sozinho, usando a sua conta do Claude Code."],
+  ["sessao", "Sessão aberta", "Quem responde é o Claude Code que você deixou aberto no terminal."]];
+function renderModo() {
+  let g = $("#gbar .modeseg");
+  if (!g) {                                                // built once; afterwards only aria-checked / tabindex change
+    g = el("div", "modeseg"); g.setAttribute("role", "radiogroup"); g.setAttribute("aria-label", "Quem responde");
+    for (const [v, t, title] of MODOS) {
+      const b = el("button", "", t); b.type = "button"; b.dataset.v = v; b.title = title; b.setAttribute("role", "radio");
+      b.onclick = () => setModo(v); g.append(b);
+    }
+    g.onkeydown = (e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setModo(modo === "auto" ? "sessao" : "auto", true); } };
+    $("#gbar").insertBefore(g, $("#guso"));
+  }
+  for (const b of g.children) { const on = b.dataset.v === modo; b.setAttribute("aria-checked", String(on)); b.tabIndex = on ? 0 : -1; }
+}
+async function setModo(v, focus) {                         // optimistic, no confirmation; a running answer goes on
+  if (!name || v === modo) return;
+  const old = modo; modo = v; modoPend = true; renderModo(); renderStatus();
+  if (focus) $(`#gbar .modeseg [data-v="${v}"]`).focus();
+  try { modo = (await ia({ acao: "modo", modo: v })).modo || v; } catch { modo = old; }
+  modoPend = false; renderModo(); chatKey = ""; renderChat();
+}
+function renderSessao(stt, chat) {                         // Sessão aberta: waiting for the Claude Code left open (45 s warning)
+  const i = chat.findLastIndex((m) => m.who === "user");
+  if (i < 0 || chat[i].cancelada || chat.slice(i + 1).some((m) => m.who === "cinex")) { stt.hidden = true; return; }
+  const late = (Date.now() - Date.parse(chat[i].t)) / 1000 >= 45, mode = late ? "sessao45" : "sessao";
+  if (stt.dataset.mode !== mode) {
+    stt.className = late ? "status warn" : "status"; stt.dataset.mode = mode;
+    stt.replaceChildren(late ? sym("clock", "warnico") : Object.assign(el("span", "dots"), { innerHTML: "<i></i><i></i><i></i>" }),
+      el("span", "sttxt", late ? "Sem resposta ainda. No modo Sessão aberta, o Claude Code precisa estar aberto no terminal com o Cinex ouvindo esta conversa. Para eu responder sozinho, escolha Automático aqui em cima."
+        : "Esperando o Claude Code aberto responder…"));
+  }
+  stt.hidden = false;
+}
 function stopReset(b) { if (b.disabled) { b.disabled = false; b.lastChild.textContent = "Parar resposta"; } }
 function renderAviso(stt, erro, k) {                      // no internet / usage limit (D-13): resent by itself, or cancel
   if (stt.dataset.mode !== erro) {
@@ -653,6 +689,9 @@ function renderAviso(stt, erro, k) {                      // no internet / usage
 function renderStatus() {
   if (uploading) return;                                   // file upload progress owns #gstatus meanwhile
   const stt = $("#gstatus"), chat = (name && st && st.chat) || [], busy = !!(name && chatJob.busy), erro = name && chatJob.erro;
+  const gin = $("#gin"), ph = busy ? "Pode pedir mais: entra na fila…" : "Peça qualquer ajuste…";   // never disabled
+  if (gin.placeholder !== ph) gin.placeholder = ph;
+  if (name && modo === "sessao" && !busy) return renderSessao(stt, chat);      // no "Parar resposta" in this mode
   if (SETUP_ERR.includes(erro)) { stt.hidden = true; return; }                  // the guide card says it all
   if (WAIT_ERR.includes(erro) && chatJob.k > 0) return renderAviso(stt, erro, chatJob.k);
   const pend = chat.filter((m) => m.who === "user" && !m.seen && !m.cancelada);
@@ -672,7 +711,7 @@ function renderStatus() {
   }
   const txt = busy ? (chatJob.step || "Trabalhando no seu pedido…") : "Lendo o seu pedido…";
   const secs = busy && chatJob.desde ? (Date.now() - Date.parse(chatJob.desde)) / 1000 : 0;
-  const suf = secs >= 60 ? ` · ${Math.floor(secs / 60)} min` : "";
+  const suf = (secs >= 60 ? ` · ${Math.floor(secs / 60)} min` : "") + (busy && pend.length ? ` · mais ${pend.length} na fila` : "");
   const t = stt.querySelector(".sttxt"), s = stt.querySelector(".stsuf");
   if (t.textContent !== txt) t.textContent = txt;
   if (s.textContent !== suf) s.textContent = suf;
@@ -768,6 +807,8 @@ async function poll() {
     const p = await api(`/api/p/${name}/poll`);
     const changed = p.rev !== pollRev || JSON.stringify(p.prep) !== JSON.stringify(prep) || JSON.stringify(p.export) !== JSON.stringify(exp);
     prep = p.prep; exp = p.export; chatJob = p.chat || {}; uso = p.uso || 0;
+    if (!modoPend) modo = p.modo || "auto";
+    renderModo();
     if (p.rev !== pollRev) { pollRev = p.rev; const j = await api(`/api/p/${name}`); st = j.state; }
     if (changed) render(); else renderChat();
   } catch {}

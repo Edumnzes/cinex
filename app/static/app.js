@@ -99,7 +99,8 @@ async function poll() {
     const p = await api(`/api/p/${name}/poll`);
     if (!st && p.rev >= 0) await reloadState();
     else if (st && p.rev > st.rev && !pending) await reloadState();
-    showJobs(p.prep, p.export); showChat(p.chat || {}, p.uso || 0);
+    if (!modoPend) modo = p.modo || "auto";
+    renderModo(); showJobs(p.prep, p.export); showChat(p.chat || {}, p.uso || 0);
   } catch {}
 }
 
@@ -590,7 +591,8 @@ const SETUP = {
 const SETUP_ERR = ["nao_instalado", "nao_logado"], WAIT_ERR = ["sem_rede", "limite"];
 const NOSTART = "Não consegui começar agora. Tente de novo em instantes.";
 let acts = {}, actsFor = null, chatSig0 = "";             // message index -> {busy} | {res: [ok, text]} | {err}: survives rebuilds
-const chatSig = () => ((st && st.chat) || []).map((m) => +!!m.seen + 2 * !!m.feita + 4 * !!m.cancelada).join("") + "|" + (chatJob.erro || "");
+const chatSig = () => ((st && st.chat) || []).map((m) => +!!m.seen + 2 * !!m.feita + 4 * !!m.cancelada).join("") + "|" + (chatJob.erro || "") + "|" + naFila();
+const naFila = () => modo === "auto" && !!chatJob.busy && !WAIT_ERR.includes(chatJob.erro);   // unseen ones wait behind the current answer
 const ia = (body) => api(`/api/p/${name}/ia`, { method: "POST", body: JSON.stringify(body), timeout: 60000 });
 function actBtn(i, label, busyLabel, run) {
   const row = el("div", "acts"), busy = !!(acts[i] || {}).busy, b = el("button", "primary", busy ? busyLabel : label);
@@ -628,7 +630,7 @@ function setupCard(m, i, active) {
 }
 function renderChat() {
   const box = $("#msgs"), atEnd = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
-  const chat = st.chat || [], erro = chatJob.erro || "", lastSetup = chat.findLastIndex((m) => m.kind === "setup");
+  const chat = st.chat || [], erro = chatJob.erro || "", lastSetup = chat.findLastIndex((m) => m.kind === "setup"), fila = naFila();
   if (actsFor !== name) { acts = {}; actsFor = name; }        // button states belong to one project
   chatSig0 = chatSig();
   const msgs = chat.map((m, i) => {
@@ -636,10 +638,10 @@ function renderChat() {
     const user = m.who === "user", d = el("div", "msg" + (user ? " user" : "") + (m.kind === "warn" ? " warn" : "") + (m.cancelada ? " cancelada" : ""));
     const hm = (m.t || "").slice(11, 16), meta = el("small", "", hm);
     if (user && m.cancelada) meta.textContent = `${hm} · Cancelada`;
-    else if (user && !m.seen && WAIT_ERR.includes(erro)) {
+    else if (user && !m.seen && (fila || WAIT_ERR.includes(erro))) {
       const c = el("button", "whobtn", "Cancelar"); c.type = "button"; c.setAttribute("aria-label", "Cancelar esta mensagem");
       c.onclick = async () => { c.disabled = true; try { await ia({ acao: "cancelar", msgs: [i] }); } catch {} await reloadState(); };
-      meta.textContent = `${hm} · Aguardando · `; meta.append(c);
+      meta.textContent = `${hm} · ${fila ? "Na fila" : "Aguardando"} · `; meta.append(c);
     }
     const who = el("div", "who", user ? "Você" : "Cinex"); who.append(meta);
     d.append(el("div", "av", user ? "V" : "C"), who, el("div", "txt", m.text));
@@ -654,7 +656,45 @@ function renderChat() {
 }
 
 // automatic answer: status line (D-08), "Parar resposta" (D-09), today's counter (D-07). Text only via textContent.
-let sentAt = 0, chatJob = {}, uso = 0;
+let sentAt = 0, chatJob = {}, uso = 0, modo = "auto", modoPend = false;
+// who answers (D-14), for the whole app (A-02): kept by the server, same value here and in the guided mode
+const MODOS = [["auto", "Automático", "O Cinex responde sozinho, usando a sua conta do Claude Code."],
+  ["sessao", "Sessão aberta", "Quem responde é o Claude Code que você deixou aberto no terminal."]];
+function renderModo() {
+  let g = $("#chatbar .seg");
+  if (!g) {                                                   // built once; afterwards only the chosen one changes
+    g = el("div", "seg"); g.setAttribute("role", "radiogroup"); g.setAttribute("aria-label", "Quem responde");
+    for (const [v, t, title] of MODOS) {
+      const b = el("button", "", t); b.type = "button"; b.dataset.v = v; b.title = title; b.setAttribute("role", "radio");
+      b.onclick = () => setModo(v); g.append(b);
+    }
+    g.onkeydown = (e) => { if (e.key === "ArrowLeft" || e.key === "ArrowRight") { e.preventDefault(); setModo(modo === "auto" ? "sessao" : "auto", true); } };
+    $("#chatbar").insertBefore(g, $("#uso"));
+  }
+  for (const b of g.children) { const on = b.dataset.v === modo; b.classList.toggle("on", on); b.setAttribute("aria-checked", String(on)); b.tabIndex = on ? 0 : -1; }
+  const h = $(".comments .hint"), ht = modo === "auto" ? "O Cinex responde sozinho, usando a sua conta do Claude Code." : "As respostas vêm do Claude Code: deixe a conversa do Cinex aberta lá.";
+  if (h && h.textContent !== ht) h.textContent = ht;
+}
+async function setModo(v, focus) {                            // optimistic, no confirmation; a running answer goes on
+  if (!name || v === modo) return;
+  const old = modo; modo = v; modoPend = true; renderModo(); showChat(chatJob, uso);
+  if (focus) $(`#chatbar .seg [data-v="${v}"]`).focus();
+  try { modo = (await ia({ acao: "modo", modo: v })).modo || v; } catch { modo = old; }
+  modoPend = false; renderModo(); showChat(chatJob, uso);
+}
+function sessao(c) {                                          // Sessão aberta: waiting for the Claude Code left open (45 s warning)
+  const chat = (st && st.chat) || [], i = chat.findLastIndex((m) => m.who === "user");
+  const waiting = i >= 0 && !chat[i].cancelada && !chat.slice(i + 1).some((m) => m.who === "cinex");
+  if (!waiting && Date.now() - sentAt > 2000) { c.hidden = true; return; }     // sentAt: right after sending, before the reload
+  const late = waiting && (Date.now() - Date.parse(chat[i].t)) / 1000 >= 45, mode = late ? "sessao45" : "sessao";
+  if (c.dataset.mode !== mode) {
+    c.className = late ? "cstatus warn" : "cstatus"; c.dataset.mode = mode;
+    const dots = el("span", "dots"); dots.append(el("i"), el("i"), el("i"));
+    c.replaceChildren(...(late ? [] : [dots]), el("span", "sttxt", late ? "Sem resposta ainda. No modo Sessão aberta, o Claude Code precisa estar aberto no terminal com o Cinex ouvindo esta conversa. Para eu responder sozinho, escolha Automático aqui em cima."
+      : "Esperando o Claude Code aberto responder…"));
+  }
+  c.hidden = false;
+}
 function stopReset(b) { if (b.disabled) { b.disabled = false; b.textContent = "Parar resposta"; } }
 function aviso(c, erro, k) {                                // no internet / usage limit (D-13): resent by itself, or cancel
   if (c.dataset.mode !== erro) {
@@ -676,10 +716,12 @@ function showChat(job, n) {
   const u = $("#uso"); u.textContent = `${n} hoje`;
   u.title = "Respostas automáticas de hoje. Cada uma usa um pouco do seu limite do Claude Code.";
   u.setAttribute("aria-label", n === 1 ? "1 resposta automática hoje" : `${n} respostas automáticas hoje`);
-  const c = $("#cstatus"), busy = !!job.busy;
+  const c = $("#cstatus"), busy = !!job.busy, inp = $("#chatin"), ph = busy ? "Pode pedir mais: entra na fila…" : "Peça um ajuste…";
+  if (inp.placeholder !== ph) inp.placeholder = ph;                          // never disabled
+  if (modo === "sessao" && !busy) return sessao(c);                          // no "Parar resposta" in this mode
   if (SETUP_ERR.includes(job.erro)) { c.hidden = true; return; }               // the guide card says it all
   if (WAIT_ERR.includes(job.erro) && job.k > 0) return aviso(c, job.erro, job.k);
-  const pend = ((st && st.chat) || []).some((m) => m.who === "user" && !m.seen && !m.cancelada);
+  const fila = ((st && st.chat) || []).filter((m) => m.who === "user" && !m.seen && !m.cancelada).length, pend = fila > 0;
   let b = c.dataset.mode === "work" && c.querySelector(".stopbtn");
   if (b && (!busy || b.dataset.idx !== String(job.idx))) stopReset(b);     // that answer ended (or the next one began)
   if (!busy && !pend && Date.now() - sentAt > 2000) { c.hidden = true; return; }
@@ -695,7 +737,7 @@ function showChat(job, n) {
   }
   const txt = busy ? (job.step || "Trabalhando no seu pedido…") : "Lendo o seu pedido…";
   const secs = busy && job.desde ? (Date.now() - Date.parse(job.desde)) / 1000 : 0;
-  const suf = secs >= 60 ? ` · ${Math.floor(secs / 60)} min` : "";
+  const suf = (secs >= 60 ? ` · ${Math.floor(secs / 60)} min` : "") + (busy && fila ? ` · mais ${fila} na fila` : "");
   const t = c.querySelector(".sttxt"), s = c.querySelector(".stsuf");
   if (t.textContent !== txt) t.textContent = txt;
   if (s.textContent !== suf) s.textContent = suf;
