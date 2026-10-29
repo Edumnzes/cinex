@@ -22,7 +22,7 @@ class TestGuards(ServerCase):
         self.assertEqual(chat(**{"X-Cinex": None}), 403)
         self.assertEqual(chat(**{"X-Cinex": "0"}), 403)
         self.assertEqual(chat({"text": "oi"}), 200)
-        self.assertEqual(P.load("t1")["chat"][-1]["text"], "oi")
+        self.assertEqual([m["text"] for m in P.load("t1")["chat"] if m["who"] == "user"], ["oi"])   # the worker may answer
 
 
 class TestNames(ServerCase):

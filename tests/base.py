@@ -2,7 +2,7 @@
 
 Run from the repository root:  ~/reelsenv/Scripts/python -m unittest discover -s tests -t . -v
 """
-import http.client, json, os, sys, tempfile, threading, unittest
+import http.client, json, os, sys, tempfile, threading, time, unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
@@ -10,6 +10,9 @@ REPO = Path(__file__).resolve().parent.parent
 PY = sys.executable
 sys.path[:0] = [str(REPO / "scripts"), str(REPO / "app")]
 import app_project as P  # noqa: E402
+FAKE = REPO / "tests" / "fake_claude.py"      # fake `claude` CLI: no test may ever call the real one (user's Pro account)
+try: import chat_ai as C  # noqa: E402
+except ImportError: C = None                  # before scripts/chat_ai.py exists
 
 
 class ProjectCase(unittest.TestCase):
@@ -39,10 +42,14 @@ class ProjectCase(unittest.TestCase):
 
 
 class ServerCase(ProjectCase):
-    """ProjectCase + app/server.py listening on 127.0.0.1:<free port> (never the user's 8765)."""
+    """ProjectCase + app/server.py listening on 127.0.0.1:<free port> (never the user's 8765).
+    The chat worker runs the fake CLI (scenario "ok"); tearDown waits for every worker to finish."""
 
     def setUp(self):
         super().setUp()
+        self._log = os.environ.get("FAKE_CLAUDE_LOG")
+        os.environ["FAKE_CLAUDE_LOG"] = str(Path(self._tmp.name) / "fake_claude.log")
+        if C: C.CLAUDE_CMD = [PY, str(FAKE), "ok"]; C._CHAT.clear()
         import server
         self.server = server
         self.srv = ThreadingHTTPServer(("127.0.0.1", 0), server.H)
@@ -51,7 +58,29 @@ class ServerCase(ProjectCase):
 
     def tearDown(self):
         self.srv.shutdown(); self.srv.server_close(); self.server.PORT = self._port
-        super().tearDown()
+        try:
+            if C: self.wait_for(lambda: not C._CHAT, 10, "worker do chat ainda rodando")
+        finally:
+            if self._log is None: os.environ.pop("FAKE_CLAUDE_LOG", None)
+            else: os.environ["FAKE_CLAUDE_LOG"] = self._log
+            super().tearDown()
+
+    def wait_for(self, cond, timeout=10, msg="tempo esgotado"):
+        """Poll cond() every 0.05 s; return its first truthy value or fail the test."""
+        t0 = time.time()
+        while time.time() - t0 < timeout:
+            v = cond()
+            if v: return v
+            time.sleep(.05)
+        self.fail(msg)
+
+    def wait_idle(self, name, timeout=10):
+        self.wait_for(lambda: name not in C._CHAT, timeout, f"worker de {name} não terminou")
+
+    def fake_log(self):
+        """Events written by tests/fake_claude.py: [{"ev": "start"|"end", "pid", "t", ...}]."""
+        p = Path(os.environ["FAKE_CLAUDE_LOG"])
+        return [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines() if x] if p.exists() else []
 
     def req(self, method, path, body=None, headers=None):
         """-> (status, json or None). Default headers are those of the app; a header set to None is removed."""
