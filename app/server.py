@@ -407,18 +407,22 @@ class H(BaseHTTPRequestHandler):
                 elif sys.platform == "darwin": subprocess.Popen(["open", "-R", out])
                 else: subprocess.Popen(["xdg-open", str(Path(out).parent)])
                 return self._send(200, {"ok": True})
-            if sub == "export":                        # Publicar's button ({}) or "Gerar agora" in an answer ({msg: i}, D-01)
-                b = self._json(); j = b.get("msg") if isinstance(b, dict) else []
+            if sub == "export":                        # Publicar's button ({}), "Gerar agora" ({msg: i}, D-01) or
+                b = self._json()                       # "Enviar ao Adobe" ({voz: "adobe", msg: i}, D-02): only on a click
+                b = b if isinstance(b, dict) else {"msg": []}
+                j, voz = b.get("msg"), b.get("voz")
+                if not (voz is None or voz == "adobe"): return self._err(400, "opção inválida")
+                acao = "adobe" if voz else "export"
                 with _EXPORT_LOCK:                     # two clicks at once: one export, one use of the button
                     c = P.load(name)["chat"]
                     if j is not None and not (type(j) is int and 0 <= j < len(c) and c[j]["who"] == "cinex"
-                                              and c[j].get("acao") == "export" and not c[j].get("feita")):
+                                              and c[j].get("acao") == acao and not c[j].get("feita")):
                         return self._err(400, "mensagem inválida")
                     if running(name): return self._err(409, "exportação já em andamento")
-                    P.job(name, "export", step="Começando", pct=1, done=False, error=None, out=None)
-                    subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "export", name],
+                    P.job(name, "export", step="Começando", pct=1, done=False, error=None, out=None, voz=voz)
+                    subprocess.Popen([sys.executable, str(SCRIPTS / "app_project.py"), "export", name, *(["--voz", "adobe"] if voz else [])],
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=NO_WINDOW)
-                    if j is not None: P.mark_done(name, j, "export")
+                    if j is not None: P.mark_done(name, j, acao)
                 return self._send(200, {"ok": True})
             if sub == "font":
                 fn = Path(self.headers.get("X-Filename", "")).name

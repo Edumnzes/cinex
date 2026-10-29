@@ -941,8 +941,43 @@ def rgba(h, a=255):
     h = h.lstrip("#"); return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) + (a,)
 
 
-def export(name):
-    """Runs in its own process (the app starts `app_project.py export <name>`); progress goes to export.json."""
+TXT_ADOBE_OK = "A voz limpa está pronta e já está no vídeo."
+TXT_ADOBE_LOCAL = "Não consegui enviar ao Adobe agora. Limpei a voz aqui no computador mesmo, e o áudio não saiu daqui."
+TXT_ADOBE_FALHOU = "O Adobe não devolveu a voz limpa. Nada mudou no vídeo."
+
+
+def _audio_final(name, d, voz, extra):
+    """The export's audio step (render.mp4 -> final.mp4, -14 LUFS). -> None, or (text, fields) for one more Cinex message.
+    voz "adobe" (only from the "Enviar ao Adobe" click, D-02): only the speech (cut.mp4, no SFX) goes to Adobe Podcast;
+    Adobe unavailable -> the voice is cleaned here (--clean), nothing left the computer; the audio left but no clean voice
+    came back -> the normal audio and "Tentar de novo"."""
+    def mix(speech, *a):
+        subprocess.run([PY, str(HERE / "mix_audio.py"), "render.mp4", str(speech), "final.mp4", *a, *extra],
+                       check=True, capture_output=True, cwd=str(d))
+    if voz != "adobe": mix("render.mp4"); return None
+    vd = d / "voz"
+    if vd.exists(): shutil.rmtree(vd)                    # every try starts clean: no old voice, no "enviado" mark
+    vd.mkdir()
+    subprocess.run([_ff(), "-loglevel", "error", "-y", "-i", "cut.mp4", "-vn", "-ac", "1", "-ar", "48000", str(vd / "voice.wav")],
+                   check=True, capture_output=True, cwd=str(d))
+    job(name, "export", step="Enviando o áudio ao Adobe", pct=93)
+    import chat_ai
+    try: r = chat_ai.adobe_voice(name)
+    except Exception: r = dict(estado="falhou" if (vd / "enviado").exists() else "indisponivel")
+    sfx = ["--sfx", "sfx.wav"] if (d / "sfx.wav").exists() else []    # the render's SFX timeline, back on top
+    if r["estado"] == "ok":
+        mix(r["fala"], *(["--bg", str(r["fundo"]), "--bg-level", "0.35"] if r.get("fundo") else []), *sfx)
+        return TXT_ADOBE_OK, {}
+    if r["estado"] == "indisponivel":
+        job(name, "export", step="Limpando a voz aqui no computador", pct=95)
+        mix("cut.mp4", "--clean", *sfx)
+        return TXT_ADOBE_LOCAL, {}
+    mix("render.mp4")
+    return TXT_ADOBE_FALHOU, {"kind": "warn", "acao": "adobe"}
+
+
+def export(name, voz=None):
+    """Runs in its own process (the app starts `app_project.py export <name> [--voz adobe]`); progress goes to export.json."""
     d = folder(name); st = load(name); c = st["captions"]; os.chdir(d)
     fmt = st.get("format", "vertical"); FW, FH = FORMATS[fmt]
     try:
@@ -1038,13 +1073,14 @@ def export(name):
                       look=col["look"] if col["look"] in R.GRADES else "none", jumpcuts="auto" if cam["punch"] else [], cuts=cuts,
                       correct=bool(col["correct"]), cap_y=int(c["y"] / 1920 * FH))     # y is stored on the 9:16 scale; same relative height
         if not c["enabled"]: reel.groups = []
+        (d / "sfx.wav").unlink(missing_ok=True)          # an old sfx.wav must not come back through --sfx
         reel.render("render.mp4", lambda f: job(name, "export", step="Renderizando", pct=25 + int(f * 65)))
         job(name, "export", step="Ajustando o volume (-14 LUFS)", pct=92)
         mus = st.get("music") or {}
         extra = (["--music", mus["src"], "--music-db", str(float(mus.get("db", -18)))] + ([] if mus.get("duck", True) else ["--no-duck"])
                  if mus.get("src") and Path(mus["src"]).is_file() else [])
         if extra: job(name, "export", step="Música (abaixa na fala) e volume (-14 LUFS)", pct=92)
-        subprocess.run([PY, str(HERE / "mix_audio.py"), "render.mp4", "render.mp4", "final.mp4", *extra], check=True, capture_output=True)
+        aviso = _audio_final(name, d, voz, extra)
         out = Path.home() / "Downloads" / f"{name}_cinex{SUFFIX.get(fmt, '_' + fmt)}.mp4"
         if fmt in OUT_SIZE:                              # drawn at 2x, delivered at the panel's native size
             ow, oh = OUT_SIZE[fmt]
@@ -1054,6 +1090,7 @@ def export(name):
         else: shutil.copy2(d / "final.mp4", out)
         job(name, "export", step="Pronto", pct=100, done=True, out=str(out))
         say(name, f"Vídeo exportado: {out.name} ({dur:.1f} s), na pasta Downloads.")
+        if aviso: say(name, aviso[0], **aviso[1])
     except subprocess.CalledProcessError as e:
         msg = (e.stderr or b"").decode("utf-8", "replace")[-400:] if isinstance(e.stderr, bytes) else str(e.stderr)[-400:]
         job(name, "export", step="Erro", done=True, error=f"{Path(e.cmd[1]).name}: {msg}"); raise
@@ -1089,7 +1126,7 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser(); ap.add_argument("cmd"); ap.add_argument("args", nargs="*")
     ap.add_argument("--name"); ap.add_argument("--prompt"); ap.add_argument("--timeout", type=float, default=900)
-    ap.add_argument("--marca"); ap.add_argument("--formato")
+    ap.add_argument("--marca"); ap.add_argument("--formato"); ap.add_argument("--voz", choices=["adobe"])
     a = ap.parse_args()
     if a.cmd == "new": n = new(a.args[0], a.name, a.prompt, a.marca, a.formato); _show(n)
     elif a.cmd == "novo":                              # one video from one or more files (talks, events)
@@ -1119,7 +1156,7 @@ if __name__ == "__main__":
     elif a.cmd == "lock": update(a.args[0], lambda s: s.update(cut_locked=a.args[1] == "on"))
     elif a.cmd == "order":                             # play order of kept segment ids (missing ones follow the source)
         update(a.args[0], lambda s: s.update(order=[int(x) for x in a.args[1:]])); _show(a.args[0])
-    elif a.cmd == "export": export(a.args[0])
+    elif a.cmd == "export": export(a.args[0], a.voz)
     elif a.cmd == "media": print("mídia", add_media(a.args[0], a.args[1]))
     elif a.cmd == "ressincronizar": resync_words(a.args[0]); _show(a.args[0])
     elif a.cmd == "texto": edit_text(a.args[0], float(a.args[1]), float(a.args[2]), " ".join(a.args[3:])); _show(a.args[0])
