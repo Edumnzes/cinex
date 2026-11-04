@@ -60,12 +60,13 @@ def render(src, segs, out, fit, w, h):
 
 
 runs = []                                     # consecutive segments of the same source render together
-for s_, e_, src, o in K:
-    if runs and runs[-1][0] == src: runs[-1][1].append((s_, e_, o))
+for s_, e_, src, o in K:                      # ...while going forward in time: a jump back (reordered phrase) would make
+    if runs and runs[-1][0] == src and s_ >= runs[-1][1][-1][1]:   # ffmpeg buffer every frame in between (out of memory)
+        runs[-1][1].append((s_, e_, o))
     else: runs.append((src, [(s_, e_, o)]))
 if len(runs) == 1:
     render(runs[0][0], runs[0][1], a.out, a.fit, w, h)
-else:                                         # several clips: render each run, then join them (same codec settings)
+else:                                         # several runs: render each one, then join them (same codec settings)
     tmp = tempfile.mkdtemp(prefix="cinex_cut_"); parts = []; w0 = h0 = None
     for i, (src, segs) in enumerate(runs):
         p = os.path.join(tmp, f"p{i:04d}.mp4")
@@ -81,6 +82,13 @@ else:                                         # several clips: render each run, 
                     "-movflags", "+faststart", a.out], check=True)
     for p in parts + [lst]: os.remove(p)
     os.rmdir(tmp)
+# ffmpeg 7.1's concat filter copies the phone's rotation flag onto frames it already rotated: players would turn the
+# result sideways. Remux with the flag cleared (stream copy, instant).
+if "displaymatrix" in subprocess.run([FF, "-hide_banner", "-i", a.out], capture_output=True, text=True, encoding="utf-8", errors="replace").stderr:
+    fixed = a.out + ".rot.mp4"
+    subprocess.run([FF, "-hide_banner", "-loglevel", "error", "-y", "-display_rotation", "0", "-i", a.out, "-c", "copy",
+                    "-movflags", "+faststart", fixed], check=True)
+    os.replace(fixed, a.out)
 K = [(s_, s_ + (e_ - s_) / float(o.get("speed", 1))) for s_, e_, _, o in K]     # lengths on the cut timeline
 print("total", round(sum(e - s for s, e in K), 2), "s")
 # cuts.json: start of every segment in the CUT timeline (frame-accurate: each segment is rounded to whole
