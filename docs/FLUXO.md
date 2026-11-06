@@ -216,7 +216,7 @@ O motor corrige cada plano antes de aplicar o look (`correct=True`): balanço de
    áudio, cor, motion com função, SFX, erros a rejeitar) e dá a **nota 0–5** nas 10 dimensões do manual
    (narrativa, ritmo, áudio, texto, motion, cor, composição, plataforma, acessibilidade, objetivo).
    `decisions.py check` precisa dizer COMPLETAS; `decisions.py archive` guarda uma cópia na pasta da marca.
-5. **Instagram** — `export_ig.py`: Reel em Downloads, capa, prévia do recorte 3:4 da grade do perfil e,
+5. **Instagram** — `export_ig.py`: Reel na pasta de entrega (`saida.py`, nome `AAAA-MM-DD Marca - Tema (Reels 9x16)`), capa, prévia do recorte 3:4 da grade do perfil e,
    se passar de 60 s, partes para Stories cortadas nos pontos de corte.
 6. `brand.py log <arroba> "..."` registra a entrega no histórico da marca.
 7. Resposta ao usuário (inclui a tabela de notas e o veredito do QA): onde está o arquivo e a duração; tabela tempo | o que foi adicionado;

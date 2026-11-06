@@ -144,9 +144,9 @@ message is kept and resent.
    back with `app_project.py modo auto` when done.
 5. Export is the app's button — in the chat, the "Gerar agora" button under the answer (or `app_project.py export
    <name>`, `--voz adobe` for the Adobe voice): cut → captions with the engine → −14 LUFS →
-   `Downloads/<name>_cinex<suffix>.mp4`. `format`: "vertical" 9:16 (Reels/Stories, no suffix), "feed" 4:5 (`_4x5`),
-   "quadrado" 1:1 (`_1x1`), "horizontal" 16:9 (`_16x9`), "4x3" (`_4x3`), "led" 512x384 trade-show panel (drawn at
-   1024x768, scaled down at the end; `_led512x384`). Vertical footage in a wide format is fitted over a blurred
+   `<delivery folder>/AAAA-MM-DD <titulo or name> (<format label>).mp4` (section H). `format`: "vertical" 9:16 (Reels/Stories),
+   "feed" 4:5, "quadrado" 1:1, "horizontal" 16:9, "4x3", "led" 512x384 trade-show panel (drawn at 1024x768, scaled down at
+   the end). Vertical footage in a wide format is fitted over a blurred
    fill; safe area = Instagram UI only in 9:16, a 6% margin elsewhere. Then run `qa.py` on the delivered file
    (`--platform reels|desktop|feed|quadrado|4x3|led`) and report it in the chat.
 
@@ -200,10 +200,22 @@ structures and hashtag rules; `references/legendas-perfil-template.md` is the vo
 - For a reel edited here, take the speech from the project's `words.json` and only claim what the video says (numbers included).
 - Check every caption: `python scripts/checar_legenda.py legenda.txt --formato reels|carrossel|foto` (preview before "mais",
   length, hashtags ≤ 5, AI clichés).
-- Deliver as Word, not .txt: `python scripts/legenda_docx.py legendas.json ~/Downloads/<name>_legendas.docx` (JSON format in
+- Deliver as Word, not .txt: `python scripts/legenda_docx.py legendas.json "<delivery folder>/<video name> - legendas.docx"` (JSON format in
   the script docstring; 2+ posts get the posting-order table). Confirm the file exists, then summarise the strategy and paste the
   caption in the reply.
 - Log it in `historico.md`; any voice correction ("eu não falo assim") goes into `perfil.md` right away.
+
+## H. Delivery folder and file names
+
+Every finished file (video, cover, Stories parts, captions .docx, a horizontal/LED version) goes to ONE folder, read by
+`scripts/saida.py` from `~/reels/_config.json → saida` (falls back to `~/Downloads`). Show it with `python scripts/saida.py`,
+set it once per machine with `python scripts/saida.py pasta "<folder>"`. Names must read at a glance, sorted by day:
+**`AAAA-MM-DD Marca - Tema (Formato)`** — e.g. `2026-11-06 Ynvest - Entrega Euroville (Reels 9x16).mp4`; companions add a
+suffix to the same name (` - capa.jpg`, ` - capa grade.jpg`, ` - story 1.mp4`, ` - legendas.docx`). The theme is what the video
+says in 2–5 words (never IMG_xxxx, project ids or `final`); a series adds its number (`Ynvest - Série Segurança 03 - RSD 700 V
+viram 50 V`). Use `saida.nome(titulo, formato)` for any file you write by hand (horizontal cut-only edits, re-exports), and an
+app project's `titulo` (falls back to its name) names its export. Never overwrite a delivered file silently: a new version of the
+same video replaces it only when the user asked for the change.
 
 ## 0. Environment (once per machine, ~2 min)
 
@@ -416,9 +428,9 @@ would raise it. `python scripts/decisions.py check` must say COMPLETAS; `report`
 ## 7. Deliver
 
 Instagram only for now:
-`python scripts/export_ig.py final.mp4 --name <name> --cover <t>` → Downloads: `<name>_reels_final.mp4`,
-`<name>_capa.jpg` (cover), `<name>_capa_grade.jpg` (3:4 profile-grid crop — check the title/face fit inside it),
-and `<name>_story_N.mp4` only if the video is longer than 60 s. Reply with:
+`python scripts/export_ig.py final.mp4 --name "<Marca> - <Tema>" --cover <t>` → delivery folder (section H):
+`AAAA-MM-DD Marca - Tema (Reels 9x16).mp4`, `… - capa.jpg` (cover), `… - capa grade.jpg` (3:4 profile-grid crop — check the
+title/face fit inside it), and `… - story N.mp4` only if the video is longer than 60 s. Reply with:
 - where the file is and its duration;
 - a table: time | what was added (captions style, zooms, each motion);
 - what was cut;
@@ -426,7 +438,7 @@ and `<name>_story_N.mp4` only if the video is longer than 60 s. Reply with:
 - when relevant, what the engine can't do that would lift the video (text behind the subject, 3D-tracked text, a reshoot angle) — see visual-references §8;
 - the scorecard (`decisions.py report`: 10 dimensions, average, lowest) and the QA verdict;
 - a one-line offer for adjustments.
-When the user wants the post text too, write it with section G (`<name>_legendas.docx` next to the video in Downloads).
+When the user wants the post text too, write it with section G (`… - legendas.docx` next to the video, same name).
 Archive the log: `python scripts/decisions.py archive <handle> <name>`. Then log it: `python scripts/brand.py log <handle> "<name> · <duration> · <topic>"`, and write any preference the
 user expressed during this edit back to `marca.json` / `video.md`.
 Keep the project folder — the user may ask for tweaks, and re-rendering from project.py is cheap.

@@ -125,7 +125,7 @@ No Claude Code, anexe o vídeo e chame a skill:
 
 Ou simplesmente peça em linguagem natural: *"edita esse vídeo para Reels, corta as pausas e
 coloca legenda"*. A skill também é acionada por pedidos parciais (só legendas, só o corte, só o áudio).
-Para o texto do post, peça *"faz a legenda desse Reels"*: sai um arquivo Word em `Downloads` (a antiga skill
+Para o texto do post, peça *"faz a legenda desse Reels"*: sai um arquivo Word na pasta de entrega (a antiga skill
 `legendas-instagram` agora faz parte do Cinex; se ela ainda estiver instalada em `~/.claude/skills`, pode apagar).
 
 O Claude vai:
@@ -135,7 +135,11 @@ O Claude vai:
 3. analisar o vídeo e mostrar o mapa (tempo | plano | fala | tratamento sugerido) com o plano editorial;
 4. perguntar o que só você sabe (nome do evento, @, dados na tela);
 5. cortar, montar o projeto, conferir prévias, renderizar e passar no controle de qualidade;
-6. entregar o arquivo final em `Downloads` com um resumo e a nota de cada dimensão.
+6. entregar o arquivo final na pasta de entrega com um resumo e a nota de cada dimensão.
+
+**Pasta de entrega e nomes:** tudo o que fica pronto vai para uma pasta só (padrão: `Downloads`). Para escolher outra, uma vez
+por computador: `python scripts/saida.py pasta "C:\caminho\da\pasta"`. Os arquivos saem com nome fácil de ler, em ordem de data:
+`2026-11-06 Ynvest - Entrega Euroville (Reels 9x16).mp4`, e ao lado `… - capa.jpg` e `… - legendas.docx`.
 
 Cada vídeo ganha uma pasta de trabalho em `~/reels/<nome-do-video>/`. Ela é mantida para que
 ajustes (texto, cor, tempo) sejam rápidos — basta pedir.
@@ -206,7 +210,7 @@ Para ajustes finos, **Editor completo ↗** abre o editor com linha do tempo (ht
   ocupam o resto; nos largos a prévia fica no centro. Vídeo gravado em pé num formato largo fica inteiro, com fundo
   desfocado. O LED é desenhado em 1024×768 e reduzido no final, para o texto ficar nítido no painel.
 - **Tamanho dos painéis:** arraste as bordas para aumentar ou diminuir cada bloco (duplo clique volta ao padrão).
-- **Aprovar e travar corte** e **Exportar:** o vídeo final vai para `Downloads/<nome>_cinex.mp4` (ou com o formato no nome: `_4x5`, `_1x1`, `_16x9`, `_4x3`, `_led512x384`).
+- **Aprovar e travar corte** e **Exportar:** o vídeo final vai para a pasta de entrega como `AAAA-MM-DD <título> (Reels 9x16).mp4` (ou o formato escolhido: Feed 4x5, Quadrado 1x1, Horizontal 16x9, 4x3, Painel LED 512x384).
 
 O app faz corte, legendas, enquadramento (seguir rosto, zoom, zoom nos cortes), cor (correção automática e looks),
 motion (títulos, tópicos, nome, citação, frase grande, chamadas), efeitos sonoros do seu banco e a ordem das frases
@@ -324,7 +328,8 @@ no Windows, `~/reelsenv/bin/python` no macOS/Linux). `<skill>` é `~/.claude/ski
 | `python project.py full render.mp4` | Render final (+ `final_sheet.jpg` para conferência) |
 | `python <skill>/scripts/qa.py final.mp4 --project project.py` | Controle de qualidade — qualquer FALHA bloqueia a entrega |
 | `python <skill>/scripts/decisions.py check` / `report` | Registro completo? Tabela de notas para a entrega |
-| `python <skill>/scripts/export_ig.py final.mp4 --name X --cover 4.3` | Arquivos para o Instagram em Downloads |
+| `python <skill>/scripts/export_ig.py final.mp4 --name "Marca - Tema" --cover 4.3` | Arquivos para o Instagram na pasta de entrega |
+| `python <skill>/scripts/saida.py pasta "<pasta>"` | Escolhe a pasta de entrega deste computador |
 
 Comandos do app (rodados na pasta do Cinex):
 

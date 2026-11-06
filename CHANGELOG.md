@@ -1,6 +1,9 @@
 # Changelog
 
 ## 3.0.0 — em desenvolvimento (branch `v3`)
+- **Pasta de entrega e nomes legíveis** (`scripts/saida.py`): vídeos, capas e legendas vão para uma pasta só,
+  escolhida por computador (`saida.py pasta "..."`, padrão Downloads), com nome `AAAA-MM-DD Marca - Tema (Formato)`.
+  Vale para o `export_ig.py` e para o Exportar do app.
 - **Legendas do post dentro do Cinex**: a skill `legendas-instagram` virou a seção G do SKILL.md
   (`references/legendas.md`, `legendas-tecnicas.md`, `legendas-perfil-template.md`, `scripts/checar_legenda.py`).
   A entrega passa a ser um arquivo Word (`scripts/legenda_docx.py`, só biblioteca padrão), com a tabela da ordem de

@@ -29,13 +29,14 @@ Claude Code is the brain: it reads the state, answers the chat and edits the cut
     python app_project.py lenta <name> <seg_id> [2.0] [0.35]   slow motion on the action peak of a kept segment
     python app_project.py media <name> <video>           add a clip to the project's media (B-roll): proxy + filmstrip
     python app_project.py broll <name> <media_id> <t0> <t1> [ss] [full|card]   B-roll over the speech (raw seconds)
-    python app_project.py export <name>                  cut + captions + loudness -> Downloads
+    python app_project.py export <name>                  cut + captions + loudness -> delivery folder (saida.py)
 """
 import json, os, re, shutil, subprocess, sys, time, datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); import hdr as HDR    # HLG/PQ phone footage → SDR
+import saida as S                                   # delivery folder + readable file names
 ROOT = Path(os.environ.get("CINEX_ROOT") or Path.home() / "reels")   # CINEX_ROOT: tests (inherited by subprocesses)
 PY = sys.executable
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
@@ -44,7 +45,6 @@ NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 FORMATS = {"vertical": (1080, 1920), "feed": (1080, 1350), "quadrado": (1080, 1080), "horizontal": (1920, 1080),
            "4x3": (1440, 1080), "led": (1024, 768)}
 OUT_SIZE = {"led": (512, 384)}
-SUFFIX = {"vertical": "", "feed": "_4x5", "quadrado": "_1x1", "horizontal": "_16x9", "4x3": "_4x3", "led": "_led512x384"}
 CAMERA = {"follow": True, "zoom": 1.0, "punch": True}     # follow the face, base zoom, zoom step on jump cuts
 COLOR = {"correct": True, "look": "natural"}              # automatic correction per shot, then a look
 CAPTIONS = {"enabled": True, "font": "sans", "weight": "Black", "color": "#FFFFFF", "accent": "#FFD400", "size": 62,
@@ -843,7 +843,7 @@ def broll_windows(st, kept, FH):
     return out
 
 
-# ------------------------------------------------------------ export: cut -> captions -> loudness -> Downloads
+# ------------------------------------------------------------ export: cut -> captions -> loudness -> delivery folder
 def play_order(st):
     """Kept segments in PLAY order. `order` lists segment ids (set by the app when phrases are reordered);
     a kept segment missing from it (new cut, range edit) goes right after its kept predecessor in the source."""
@@ -1081,7 +1081,7 @@ def export(name, voz=None):
                  if mus.get("src") and Path(mus["src"]).is_file() else [])
         if extra: job(name, "export", step="Música (abaixa na fala) e volume (-14 LUFS)", pct=92)
         aviso = _audio_final(name, d, voz, extra)
-        out = Path.home() / "Downloads" / f"{name}_cinex{SUFFIX.get(fmt, '_' + fmt)}.mp4"
+        out = S.pasta() / f"{S.nome(st.get('titulo') or name, fmt)}.mp4"   # "AAAA-MM-DD Título (Reels 9x16).mp4"
         if fmt in OUT_SIZE:                              # drawn at 2x, delivered at the panel's native size
             ow, oh = OUT_SIZE[fmt]
             subprocess.run([_ff(), "-loglevel", "error", "-y", "-i", str(d / "final.mp4"), "-vf", f"scale={ow}:{oh}:flags=lanczos",
@@ -1089,7 +1089,7 @@ def export(name, voz=None):
                             "-movflags", "+faststart", str(out)], check=True, capture_output=True)
         else: shutil.copy2(d / "final.mp4", out)
         job(name, "export", step="Pronto", pct=100, done=True, out=str(out))
-        say(name, f"Vídeo exportado: {out.name} ({dur:.1f} s), na pasta Downloads.")
+        say(name, f"Vídeo exportado: {out.name} ({dur:.1f} s), na pasta {out.parent.name}.")
         if aviso: say(name, aviso[0], **aviso[1])
     except subprocess.CalledProcessError as e:
         msg = (e.stderr or b"").decode("utf-8", "replace")[-400:] if isinstance(e.stderr, bytes) else str(e.stderr)[-400:]

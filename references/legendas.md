@@ -177,7 +177,7 @@ não clicável, frases típicas de IA). Corrija os alertas que fizerem sentido.
 O dono quer as legendas num documento que abre no Word / Google Docs. Monte um JSON com os posts e gere:
 
 ```
-python scripts/legenda_docx.py legendas.json ~/Downloads/<nome>_legendas.docx
+python scripts/legenda_docx.py legendas.json "<pasta de entrega>/<nome do vídeo> - legendas.docx"
 ```
 
 `legendas.json` = `{"titulo": "...", "intro": ["parágrafo", ...], "posts": [{"tema", "txt", "kw", "sinal", "ganchos": [...],
