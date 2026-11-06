@@ -26,3 +26,6 @@ docs/*.pdf
 # GSD planning (local only)
 .planning/
 .claude/CLAUDE.md
+
+# skills antigas guardadas só neste computador (a do reels-editor e a legendas-instagram, já dentro do Cinex)
+_antigas/
