@@ -1,6 +1,6 @@
 ---
 name: cinex
-description: Cinex (formerly reels-editor) — edit raw phone videos into dynamic Instagram Reels / TikTok / Shorts (9:16) — cut pauses, breaths, stumbles and repeated takes; add Hormozi-style word-by-word captions; face-tracked smooth zooms/punch-ins; explanatory motion graphics (hook, product cards, charts, counters, CTA); colour-grade looks; sound effects; and studio-clean voice via Adobe Podcast Enhance Speech. Starts with a one-time brand onboarding (short briefing + read-only analysis of the user's Instagram Reels and insights, saved on disk and reused), then the user picks one of 13 format templates (talking head + pop-ups, quick tips, story, testimonial, react split-screen, clone, identification phrase, content-in-caption, voiceover, series, strong visual hook / Day X, multitask, and a pure motion-graphics explainer with no footage — kinetic text plus an animated system diagram built from a script or a reference explanation). Knows reference styles (Hormozi, minimal/authority, flash cut, moody, cinematic text) and asset banks (Motion Array, Envato, Artlist, Mixkit, Pixabay). Use this whenever the user shares a .MOV/.MP4 and mentions reels, stories, shorts, TikTok, "legendas dinâmicas", "cortar pausas", "zoom", "motion", "editar vídeo para o Instagram", or wants another video "como aquele" — even if they only ask for one part (just captions, just the cut, just the audio) — and also when they mention Cinex, or ask for a "vídeo em motion" / "motion explicativo" / animated explainer from a script, a text or a reference reel, with no footage of their own.
+description: Cinex (formerly reels-editor) — edit raw phone videos into dynamic Instagram Reels / TikTok / Shorts (9:16) — cut pauses, breaths, stumbles and repeated takes; add Hormozi-style word-by-word captions; face-tracked smooth zooms/punch-ins; explanatory motion graphics (hook, product cards, charts, counters, CTA); colour-grade looks; sound effects; and studio-clean voice via Adobe Podcast Enhance Speech. Starts with a one-time brand onboarding (short briefing + read-only analysis of the user's Instagram Reels and insights, saved on disk and reused), then the user picks one of 13 format templates (talking head + pop-ups, quick tips, story, testimonial, react split-screen, clone, identification phrase, content-in-caption, voiceover, series, strong visual hook / Day X, multitask, and a pure motion-graphics explainer with no footage — kinetic text plus an animated system diagram built from a script or a reference explanation). Knows reference styles (Hormozi, minimal/authority, flash cut, moody, cinematic text) and asset banks (Motion Array, Envato, Artlist, Mixkit, Pixabay). Use this whenever the user shares a .MOV/.MP4 and mentions reels, stories, shorts, TikTok, "legendas dinâmicas", "cortar pausas", "zoom", "motion", "editar vídeo para o Instagram", or wants another video "como aquele" — even if they only ask for one part (just captions, just the cut, just the audio) — and also when they mention Cinex, or ask for a "vídeo em motion" / "motion explicativo" / animated explainer from a script, a text or a reference reel, with no footage of their own. Also writes the Instagram post text (legenda / caption) in the brand's own voice — for the reels it edits and for any carousel, photo or Reels post: hook, search keywords, CTA and hashtags, delivered as a Word (.docx) file. Use it whenever the user asks for a legenda, caption, texto do post, "copy do carrossel", "o que escrevo nesse Reels", hashtags or CTA, or wants an Instagram caption improved or rewritten — even if they only send the image/video and say "faz o texto".
 ---
 
 # Cinex
@@ -188,6 +188,22 @@ Every brand learns from its own results. Data sits with the brand profile in `~/
 - **Niche references**: the user adds links or uploads videos per brand in the app (`brand.py refs <handle>`).
   Uploaded videos are measured automatically into the style profile `nicho_<handle>`; read its sheets and fill the
   visual rules (section E). Links: open read-only in the browser, sample frames, and describe what to copy.
+
+## G. Instagram captions (legendas do post)
+
+The post text is part of the job (it used to be the separate `legendas-instagram` skill). Full procedure, in Portuguese:
+**`references/legendas.md`** — read it before writing any caption; `references/legendas-tecnicas.md` holds sizes, hook models,
+structures and hashtag rules; `references/legendas-perfil-template.md` is the voice-profile template.
+- Same brand folder as section A: `~/instagram-legendas/<handle>/perfil.md` (voice, audience, insights) and `historico.md`
+  (captions already delivered: never repeat a hook or CTA). If `perfil.md` has a **"Modelo aprovado pelo dono"** section, write
+  in that format; it overrides the generic tips.
+- For a reel edited here, take the speech from the project's `words.json` and only claim what the video says (numbers included).
+- Check every caption: `python scripts/checar_legenda.py legenda.txt --formato reels|carrossel|foto` (preview before "mais",
+  length, hashtags ≤ 5, AI clichés).
+- Deliver as Word, not .txt: `python scripts/legenda_docx.py legendas.json ~/Downloads/<name>_legendas.docx` (JSON format in
+  the script docstring; 2+ posts get the posting-order table). Confirm the file exists, then summarise the strategy and paste the
+  caption in the reply.
+- Log it in `historico.md`; any voice correction ("eu não falo assim") goes into `perfil.md` right away.
 
 ## 0. Environment (once per machine, ~2 min)
 
@@ -410,6 +426,7 @@ and `<name>_story_N.mp4` only if the video is longer than 60 s. Reply with:
 - when relevant, what the engine can't do that would lift the video (text behind the subject, 3D-tracked text, a reshoot angle) — see visual-references §8;
 - the scorecard (`decisions.py report`: 10 dimensions, average, lowest) and the QA verdict;
 - a one-line offer for adjustments.
+When the user wants the post text too, write it with section G (`<name>_legendas.docx` next to the video in Downloads).
 Archive the log: `python scripts/decisions.py archive <handle> <name>`. Then log it: `python scripts/brand.py log <handle> "<name> · <duration> · <topic>"`, and write any preference the
 user expressed during this edit back to `marca.json` / `video.md`.
 Keep the project folder — the user may ask for tweaks, and re-rendering from project.py is cheap.

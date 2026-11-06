@@ -49,6 +49,7 @@ com o Adobe Podcast Enhance Speech.
 | Controle de qualidade | Resolução, fps, volume, pico, distorção, quadros pretos, imagem congelada, safe zones, excesso de SFX |
 | Nota e registro | Nota 0–5 em 10 dimensões + `decisoes.json` com cada decisão e o motivo |
 | Entrega (Instagram) | Reel, capa, prévia do recorte da grade do perfil e partes para Stories se passar de 60 s |
+| Legenda do post | Texto do post na voz da marca (gancho, palavra-chave, lista, CTA e hashtags), conferido e entregue em Word (.docx); vale também para carrossel e foto |
 
 O fluxo completo, passo a passo, está em [docs/FLUXO.md](docs/FLUXO.md). Os critérios de edição seguem o
 *Manual Técnico de Edição Profissional para Social Media* do autor, transformado em regras em
@@ -124,6 +125,8 @@ No Claude Code, anexe o vídeo e chame a skill:
 
 Ou simplesmente peça em linguagem natural: *"edita esse vídeo para Reels, corta as pausas e
 coloca legenda"*. A skill também é acionada por pedidos parciais (só legendas, só o corte, só o áudio).
+Para o texto do post, peça *"faz a legenda desse Reels"*: sai um arquivo Word em `Downloads` (a antiga skill
+`legendas-instagram` agora faz parte do Cinex; se ela ainda estiver instalada em `~/.claude/skills`, pode apagar).
 
 O Claude vai:
 1. **na primeira vez com uma marca**: fazer um briefing curto e analisar os Reels e Insights
@@ -487,6 +490,7 @@ Detalhes em [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
 - [SKILL.md](SKILL.md) — as instruções que o Claude segue
 - [references/style-guide.md](references/style-guide.md) — regras de ritmo, zoom, proporção e legendas
 - [references/visual-references.md](references/visual-references.md) — estilos, cor, SFX e bancos de assets
+- [references/legendas.md](references/legendas.md) — como o Cinex escreve a legenda do post (antes a skill `legendas-instagram`)
 - [CHANGELOG.md](CHANGELOG.md) — o que mudou em cada versão
 
 ## Licença

@@ -1,6 +1,10 @@
 # Changelog
 
 ## 3.0.0 — em desenvolvimento (branch `v3`)
+- **Legendas do post dentro do Cinex**: a skill `legendas-instagram` virou a seção G do SKILL.md
+  (`references/legendas.md`, `legendas-tecnicas.md`, `legendas-perfil-template.md`, `scripts/checar_legenda.py`).
+  A entrega passa a ser um arquivo Word (`scripts/legenda_docx.py`, só biblioteca padrão), com a tabela da ordem de
+  postagem quando são vários posts. O "Modelo aprovado pelo dono" no `perfil.md` da marca manda no formato.
 - A ferramenta passa a se chamar **Cinex** (antes reels-editor): skill `cinex`, repositório `Edumnzes/cinex`
   (o link antigo redireciona), desenvolvimento na pasta `PROGRAMACAO/CINEX`, instalada em `~/.claude/skills/cinex`
   por uma junção (link de pasta) que aponta para ela.
