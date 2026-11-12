@@ -1,4 +1,4 @@
-"""Worked example (v2): one speaker to camera, format `fala_popups`, brand loaded from the saved profile.
+"""Worked example (v2): one speaker to camera, format `talking_head`, brand loaded from the saved profile.
 
 Copy this file next to base_1440.mp4 / words.json / faces.json / cuts.json as project.py, set HANDLE and FORMAT,
 then rewrite CONFIG (timings come from cuts.json and words.json of YOUR cut) and the MOTIONS.
@@ -6,7 +6,7 @@ then rewrite CONFIG (timings come from cuts.json and words.json of YOUR cut) and
     python project.py check                           graphics over the face / safe area / SFX density
     python project.py cuts | motion | color           zoom decision per cut, camera QA, colour correction per shot
     python project.py full render.mp4                 then mix_audio.py -> qa.py -> decisions.py -> export_ig.py
-For a video with no footage at all (format `motion_explicativo`) start from example_motion.py instead.
+For a video with no footage at all (format `visualization_3d`) start from example_motion.py instead.
 """
 import sys, math, json
 from pathlib import Path
@@ -20,7 +20,7 @@ from brand import load_brand, rgba
 # ============================================================ BRAND + FORMAT (steps A and B of the skill)
 HANDLE = "suamarca"                                       # folder ~/instagram-legendas/<handle>/ (marca.json)
 B = load_brand(HANDLE)                                    # every key has a default, so this works before onboarding
-F = fmt("fala_popups")                                    # structure, cap_y, zoom policy, SFX budget of the format
+F = fmt("talking_head")                                   # structure, cap_y, zoom policy, SFX budget of the format
 ACCENT = rgba(B["cores"]["destaque"]); CARD = rgba(B["cores"]["card"], 232); TEXT = rgba(B["cores"]["texto"])
 NOME = B["nome"] or "Sua Marca"
 STYLE, LOOK = B["edicao"]["caption_style"], B["edicao"]["look"]   # from what already works on the brand's Instagram

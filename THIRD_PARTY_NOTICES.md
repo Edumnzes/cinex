@@ -29,7 +29,6 @@ vendidas isoladamente.
 | imageio-ffmpeg | BSD 2-Clause; o binário do **FFmpeg** baixado é LGPL/GPL conforme a build |
 | truststore | MIT |
 | mediapipe (Google) e modelo selfie_multiclass_256x256 | Apache 2.0 |
-| hyperframes (HeyGen, instalado à parte em ~/cinex-hf) + GSAP incluído nele | Apache 2.0 / licença do GSAP |
 
 ## Serviços e referências (não incluídos)
 

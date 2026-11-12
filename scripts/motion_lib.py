@@ -1,4 +1,4 @@
-"""Pure motion-graphics videos (format `motion_explicativo`): no footage underneath, a light background, one brand
+"""Pure motion-graphics videos (format `visualization_3d`, 2D energy-flow explainer): no footage underneath, a light background, one brand
 accent, kinetic typography, app-like cards and an animated SYSTEM DIAGRAM (nodes, wires, energy flowing, states).
 Style distilled from the user's references (clean SaaS/Apple-like motion; solar system diagrams with DC/AC flows).
 

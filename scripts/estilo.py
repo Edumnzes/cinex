@@ -1,6 +1,6 @@
 """Style profiles from reference videos — copy editing DECISIONS (rhythm, look, caption style), never content.
 
-    python estilo.py analisar <video> [<video> ...] --nome <id> [--formato fala_popups] [--link URL] [--sem-fala]
+    python estilo.py analisar <video> [<video> ...] --nome <id> [--formato talking_head] [--link URL] [--sem-fala]
     python estilo.py list
     python estilo.py show <id>
     python estilo.py set <id> <regra> '<json>'      fill a rule after looking at the sheets (legenda, camera, motion, sfx, gancho, notas)

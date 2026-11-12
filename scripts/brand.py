@@ -19,10 +19,10 @@ In project.py:
     from brand import load_brand
     B = load_brand("suamarca")              # dict with every key of the template filled in
 """
-import json, sys, datetime
+import json, os, sys, datetime
 from pathlib import Path
 
-ROOT = Path.home() / "instagram-legendas"
+ROOT = Path(os.environ.get("CINEX_MARCAS") or Path.home() / "instagram-legendas")   # brand folders (env: tests)
 TEMPLATE = Path(__file__).resolve().parent.parent / "assets" / "marca_template.json"
 FILES = ("perfil.md", "video.md", "marca.json", "historico.md", "videos.md")
 

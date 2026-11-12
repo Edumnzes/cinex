@@ -1,7 +1,10 @@
 """Format templates (references/formatos.md) — defaults + the motion pieces each format uses.
 
     from formats import *            # after `from reels_lib import *`
-    F = fmt("dicas_rapidas")         # defaults from assets/formatos.json (duration, cap_y, zoom policy, sfx budget...)
+    F = fmt("lists_rankings")        # official profile from conhecimento/formatos.json (duration, cap_y, zoom, sfx budget...)
+
+The 8 profiles are versioned and change only through an approved proposal (scripts/aprendizado.py). For the rules
+that apply to one video (brand and project preferences on top of the profile) use `aprendizado.py regras`.
 
 Every helper draws one element for the window [t0, t1) with the standard enter/exit (life()), sizes from ts(),
 placement with slot() when it can collide with a face. Call them from the project's mg_* functions, e.g.
@@ -15,11 +18,11 @@ from PIL import ImageDraw
 from reels_lib import (W, H, CAP_Y, YEL, GRN, RED, WHITE, BLACK, NAVY, GRAY, T, RR, paste, pill, text_w, ts,
                        stroke_for, life, prog, eo, eback, slot, glyph_mid, baseline_for)
 
-CATALOG = Path(__file__).resolve().parent.parent / "assets" / "formatos.json"
+CATALOG = Path(__file__).resolve().parent.parent / "conhecimento" / "formatos.json"
 
 
 def formats():
-    return {k: v for k, v in json.loads(CATALOG.read_text(encoding="utf-8")).items() if not k.startswith("_")}
+    return json.loads(CATALOG.read_text(encoding="utf-8"))["formatos"]
 
 
 def fmt(fid):

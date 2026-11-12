@@ -1,6 +1,7 @@
 # Cinex — edição de Reels com o Claude Code
 
-_Antigo **reels-editor**. A partir da v3 a ferramenta se chama Cinex._
+_Antigo **reels-editor**. A partir da v3 a ferramenta se chama Cinex. Na v4 voltou a ser só uma skill do Claude Code
+(sem o app no navegador), mais leve, e ganhou o aprendizado contínuo com aprovação do dono._
 
 Transforma vídeos brutos gravados no celular em **Reels / TikTok / Shorts prontos (1080×1920)**:
 corta pausas e respirações, coloca legendas dinâmicas palavra por palavra, faz zooms suaves
@@ -20,15 +21,16 @@ com o Adobe Podcast Enhance Speech.
 5. [Estrutura do repositório](#estrutura-do-repositório)
 6. [Comandos do projeto](#comandos-do-projeto)
 7. [Formatos](#formatos)
-8. [Perfil da marca](#perfil-da-marca)
-9. [Banco (referências, fontes, motions, efeitos)](#banco-referências-fontes-motions-efeitos)
-10. [Efeitos sonoros](#efeitos-sonoros)
-11. [Áudio com Adobe Podcast](#áudio-com-adobe-podcast)
-12. [Privacidade e segurança](#privacidade-e-segurança)
-13. [Limitações](#limitações)
-14. [Solução de problemas](#solução-de-problemas)
-15. [Documentação detalhada](#documentação-detalhada)
-16. [Licença](#licença)
+8. [Aprendizado contínuo](#aprendizado-contínuo)
+9. [Perfil da marca](#perfil-da-marca)
+10. [Banco (referências, fontes, motions, efeitos)](#banco-referências-fontes-motions-efeitos)
+11. [Efeitos sonoros](#efeitos-sonoros)
+12. [Áudio com Adobe Podcast](#áudio-com-adobe-podcast)
+13. [Privacidade e segurança](#privacidade-e-segurança)
+14. [Limitações](#limitações)
+15. [Solução de problemas](#solução-de-problemas)
+16. [Documentação detalhada](#documentação-detalhada)
+17. [Licença](#licença)
 
 ---
 
@@ -36,7 +38,7 @@ com o Adobe Podcast Enhance Speech.
 
 | Etapa | Resultado |
 |---|---|
-| Formato (template) | Você escolhe 1 de 13 formatos (fala + pop-ups, dicas, história, depoimento, react, clone, frase, conteúdo na legenda, voiceover, série, gancho visual, multitarefa e motion explicativo, sem vídeo gravado) |
+| Formato (perfil) | Você escolhe 1 dos 8 formatos oficiais (talking head, tela dividida, listas e rankings, antes e depois, bastidores e dia de obra, mitos e verdades, fluxo de energia animado sem vídeo gravado, depoimento de cliente), que podem ser combinados |
 | Plano editorial | Objetivo, mensagem central, estrutura (problema→solução, antes→depois…) e sequência gancho→CTA antes de cortar |
 | Perfil da marca (1ª vez) | Briefing curto + análise dos Reels e Insights do Instagram; salvo no computador e reaproveitado |
 | Análise | Transcrição com tempo de cada palavra, mapa de pausas, detecção de rostos, resumo do vídeo |
@@ -49,6 +51,7 @@ com o Adobe Podcast Enhance Speech.
 | Controle de qualidade | Resolução, fps, volume, pico, distorção, quadros pretos, imagem congelada, safe zones, excesso de SFX |
 | Nota e registro | Nota 0–5 em 10 dimensões + `decisoes.json` com cada decisão e o motivo |
 | Entrega (Instagram) | Reel, capa, prévia do recorte da grade do perfil e partes para Stories se passar de 60 s |
+| Aprendizado | Regras vigentes com a origem (projeto > marca > formato > global), correções classificadas, avaliação, métricas, pesquisa e experimentos; melhorias só mudam o oficial depois que você aprova |
 | Legenda do post | Texto do post na voz da marca (gancho, palavra-chave, lista, CTA e hashtags), conferido e entregue em Word (.docx); vale também para carrossel e foto |
 
 O fluxo completo, passo a passo, está em [docs/FLUXO.md](docs/FLUXO.md). Os critérios de edição seguem o
@@ -68,10 +71,11 @@ Não é preciso instalar ffmpeg: a skill usa o binário do pacote `imageio-ffmpe
 
 ## Instalação
 
-Precisa de **Python 3.11+** e **Git**. A versão 3 (app com modo guiado) está na branch `v3`:
+Precisa de **Python 3.11+** e **Git**. A versão 4 (só a skill, com aprendizado) está na branch `v4`
+(a `v3` guarda a versão com o app no navegador):
 
 ```bash
-git clone -b v3 https://github.com/Edumnzes/cinex.git ~/.claude/skills/cinex
+git clone -b v4 https://github.com/Edumnzes/cinex.git ~/.claude/skills/cinex
 ```
 
 ```bash
@@ -82,31 +86,18 @@ O segundo comando cria o ambiente Python em `~/reelsenv` (caminho curto de prop�
 longos quebram o `venv` no Windows) e instala as dependências de [requirements.txt](requirements.txt).
 Ele imprime o caminho do Python e do ffmpeg que a skill vai usar.
 
-Abra o app (modo guiado) em http://127.0.0.1:8765:
+Na primeira transcrição o Whisper baixa o modelo sozinho (~1,5 GB, uma vez só).
 
+**Extra opcional — recorte da pessoa** (texto atrás da pessoa). Sem ele, esse efeito fica de fora e o vídeo sai do
+mesmo jeito. Baixe o modelo do MediaPipe (Google, ~16 MB):
 ```bash
-~/reelsenv/Scripts/python ~/.claude/skills/cinex/app/server.py --open
+mkdir -p ~/reels-banco/modelos && curl -L -o ~/reels-banco/modelos/selfie_multiclass_256x256.tflite https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite
 ```
-
-(no Mac/Linux o Python fica em `~/reelsenv/bin/python`). Na primeira transcrição e no primeiro comando de voz o
-Whisper baixa os modelos sozinho (~1,5 GB e ~0,5 GB, uma vez só).
-
-**Extras opcionais** — sem eles tudo funciona, com estas diferenças:
-
-- **Motion em HTML** (títulos com tipografia e animação de designer). Sem ele, o Cinex usa o motion clássico.
-  Precisa do Node.js 22+ e do FFmpeg no PATH; numa pasta fora do OneDrive:
-  ```bash
-  mkdir ~/cinex-hf && cd ~/cinex-hf && npm install hyperframes && npx hyperframes browser ensure
-  ```
-- **Recorte da pessoa** (texto atrás da pessoa, efeito retrato, texto 3D passando por trás). Sem ele, esses efeitos
-  ficam de fora e o vídeo sai do mesmo jeito. Baixe o modelo do MediaPipe (Google, ~16 MB):
-  ```bash
-  mkdir -p ~/reels-banco/modelos && curl -L -o ~/reels-banco/modelos/selfie_multiclass_256x256.tflite https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_multiclass_256x256/float32/latest/selfie_multiclass_256x256.tflite
-  ```
 
 Os perfis de marca (`~/instagram-legendas`), o banco (`~/reels-banco`) e os projetos (`~/reels`) ficam fora do
 repositório: num computador novo eles começam vazios. Para levar um perfil, copie a pasta dele em
-`~/instagram-legendas/<arroba>`.
+`~/instagram-legendas/<arroba>` (inclui `aprendizado/`, a memória daquela marca). O aprendizado global que não é
+oficial (propostas, pesquisa, experimentos) fica em `~/cinex-aprendizado`.
 
 Para atualizar depois:
 
@@ -131,11 +122,13 @@ Para o texto do post, peça *"faz a legenda desse Reels"*: sai um arquivo Word n
 O Claude vai:
 1. **na primeira vez com uma marca**: fazer um briefing curto e analisar os Reels e Insights
    do Instagram (você faz o login; a skill só lê) — isso fica salvo e não é repetido;
-2. recomendar 3 formatos para o vídeo e deixar você escolher (ou ver os 13);
+2. recomendar 3 formatos para o vídeo e deixar você escolher (ou ver os 8), e ler as regras vigentes para esse vídeo;
 3. analisar o vídeo e mostrar o mapa (tempo | plano | fala | tratamento sugerido) com o plano editorial;
 4. perguntar o que só você sabe (nome do evento, @, dados na tela);
 5. cortar, montar o projeto, conferir prévias, renderizar e passar no controle de qualidade;
-6. entregar o arquivo final na pasta de entrega com um resumo e a nota de cada dimensão.
+6. entregar o arquivo final na pasta de entrega com um resumo e a nota de cada dimensão;
+7. registrar o que aprendeu com essa edição (correções classificadas e avaliação) e, quando algo se repete,
+   te mostrar uma proposta de melhoria para você aprovar ou recusar.
 
 **Pasta de entrega e nomes:** tudo o que fica pronto vai para uma pasta só (padrão: `Downloads`). Para escolher outra, uma vez
 por computador: `python scripts/saida.py pasta "C:\caminho\da\pasta"`. Os arquivos saem com nome fácil de ler, em ordem de data:
@@ -144,114 +137,12 @@ por computador: `python scripts/saida.py pasta "C:\caminho\da\pasta"`. Os arquiv
 Cada vídeo ganha uma pasta de trabalho em `~/reels/<nome-do-video>/`. Ela é mantida para que
 ajustes (texto, cor, tempo) sejam rápidos — basta pedir.
 
-### App Cinex (modo guiado + editor completo)
-
-Para ver e ajustar a edição você mesmo, peça ao Claude para abrir o vídeo no app, ou rode:
-
-```bash
-~/reelsenv/Scripts/python ~/.claude/skills/cinex/app/server.py --open
-```
-
-Abre em http://127.0.0.1:8765 (só no seu computador), no **modo guiado**, feito para quem não edita vídeo:
-
-- **Passo a passo à esquerda:** Começar → Upload → Corte → Estilo → Elementos → Revisão → Publicar. Cada passo é uma página,
-  no estilo do Notion, que explica o que está acontecendo e mostra o resultado na prévia.
-- **Chat sempre à direita:** é o jeito principal de mudar o vídeo. Escreva do seu jeito ("tira a parte em que eu
-  gaguejo", "coloca o preço na tela") ou toque numa das sugestões de cada página.
-- **Comando de voz:** toque em **Falar**, diga o pedido e toque de novo. A transcrição roda no seu computador
-  (Whisper), o áudio não vai para a internet. Comandos curtos navegam direto: "próximo passo", "voltar",
-  "ir para estilo", "tocar", "pausar"; o resto vai para o chat.
-- **Começar:** cadastro dos perfis. Escolha um perfil ou crie um novo: nome, o que faz, para quem, chamada para
-  ação, contato, cores, estilo de legenda, nomes que a transcrição deve acertar e palavras de destaque. Cada vídeo
-  novo já começa com isso.
-- **Upload:** escolha o formato e envie um ou mais vídeos (arrastando, escolhendo ou colando o caminho). Com mais de
-  um, escolha **Um vídeo só** (junta tudo e escolhe as melhores falas) ou **Sequência de vídeos** (cada arquivo vira
-  um vídeo da série, com a mesma marca e formato; a página mostra as partes).
-- **Corte:** clique no texto de uma frase para corrigir o que a transcrição errou (nomes, marcas, números). A
-  legenda passa a usar o texto corrigido, no mesmo tempo da fala.
-
-#### Chat automático
-
-O chat responde sozinho: não precisa deixar nenhuma conversa do Claude Code aberta.
-
-- **O que acontece quando você escreve:** o Cinex lê o pedido, mexe no projeto e responde em português curto,
-  dizendo o que mudou. A mudança aparece na prévia. Enquanto trabalha, a linha embaixo do chat mostra a etapa
-  ("Lendo o seu pedido…", "Lendo o projeto…", "Ajustando a legenda…").
-- **Precisa do Claude Code instalado e logado.** Rode `claude auth login` (ou abra `claude` e siga o login) e
-  confira com `claude auth status`. Se faltar algo, o chat mostra um cartão com o passo a passo e o botão
-  **Testar de novo**.
-- **O uso sai do seu plano do Claude.** Cada resposta gasta uso da sua conta (no plano Pro o limite é menor). O
-  contador **"{n} hoje"**, no topo do chat, mostra quantas respostas saíram no dia. Pedidos simples usam um modelo
-  mais leve; pedidos criativos (gancho, roteiro, revisão) usam um mais capaz.
-- **Parar resposta:** interrompe na hora. O que já tinha mudado fica no projeto.
-- **"volta como estava":** antes de cada resposta que muda algo, o Cinex guarda um ponto salvo. Peça "volta como
-  estava" e o vídeo volta ao que era antes; a conversa continua lá.
-- **Vários pedidos seguidos:** entram na fila ("Na fila · Cancelar") e são respondidos em ordem, um por vez.
-- **Sem internet ou no limite do plano:** a mensagem fica guardada e é reenviada sozinha quando der (dá para
-  cancelar o envio).
-- **Gerar o vídeo e limpar a voz pedem o seu clique.** A IA não exporta nem envia áudio: ela responde com o botão
-  **Gerar agora** ou **Enviar ao Adobe**, e só o clique faz a ação.
-- **Só mexe neste vídeo.** A IA do chat não tem terminal, não abre arquivos do computador e não mexe em outros
-  projetos. Um pedido fora disso é recusado.
-- **Automático / Sessão aberta:** o seletor no topo do chat escolhe quem responde. **Automático** é o padrão.
-  **Sessão aberta** é para quando você está numa conversa do Claude Code e quer que ela responda; cada mensagem é
-  respondida por um lado só, nunca duas vezes.
-
-Para ajustes finos, **Editor completo ↗** abre o editor com linha do tempo (http://127.0.0.1:8765/editor):
-- **Linha do tempo:** cada trecho aparece sobre a onda do áudio. Laranja = mantido, listrado = cortado.
-  Clique para ver o trecho e dê duplo clique (ou Delete) para manter ou cortar.
-- **Prévia 9:16:** já pula os cortes e mostra as legendas como vão sair.
-- **Legendas:** estilos prontos, fonte (inclusive do seu computador), cor, destaque, tamanho, contorno,
-  posição, uma ou duas linhas, quantas palavras por vez.
-- **Conversa com o Cinex:** peça ajustes por escrito. O chat responde sozinho (veja **Chat automático**
-  acima), ou uma conversa aberta do Claude Code, no modo **Sessão aberta**.
-- **Formato:** escolha no monitor — 9:16 (Reels, Stories), 4:5 (feed), 1:1, 16:9 (YouTube, site), 4:3
-  (apresentação) ou LED 512×384 (painel de feira). Nos formatos em pé a prévia fica à esquerda e as ferramentas
-  ocupam o resto; nos largos a prévia fica no centro. Vídeo gravado em pé num formato largo fica inteiro, com fundo
-  desfocado. O LED é desenhado em 1024×768 e reduzido no final, para o texto ficar nítido no painel.
-- **Tamanho dos painéis:** arraste as bordas para aumentar ou diminuir cada bloco (duplo clique volta ao padrão).
-- **Aprovar e travar corte** e **Exportar:** o vídeo final vai para a pasta de entrega como `AAAA-MM-DD <título> (Reels 9x16).mp4` (ou o formato escolhido: Feed 4x5, Quadrado 1x1, Horizontal 16x9, 4x3, Painel LED 512x384).
-
-O app faz corte, legendas, enquadramento (seguir rosto, zoom, zoom nos cortes), cor (correção automática e looks),
-motion (títulos, tópicos, nome, citação, frase grande, chamadas), efeitos sonoros do seu banco e a ordem das frases
-(arraste na aba Corte; dá para abrir o vídeo com uma frase forte do meio).
-
-**Vários clipes de fala (palestras, eventos):** na aba **Corte**, em **Clipes de fala**, cole o caminho de um vídeo
-ou de uma pasta inteira (os vídeos entram em ordem de nome) ou envie do computador. Cada clipe é transcrito, tem as
-pausas cortadas e entra no fim da sequência; a régua marca onde cada um começa. Depois é só escolher e reordenar as
-frases de qualquer clipe. A transcrição leva alguns minutos por clipe.
-
-**Câmera lenta e trechos sem som:** clique num trecho mantido na aba **Corte** e escolha a velocidade (1x, 0,5x,
-0,35x, 0,25x) ou marque **sem som** (fica só a imagem, sem legenda — bom para a música). **Câmera lenta no pico de
-ação** acha o momento de mais movimento e brilho do trecho (uma chama, um salto) e deixa 2 s em 0,35x. A câmera lenta
-sai interpolada (sem quadros repetidos) e sem som.
-
-**Versões curtas:** na aba **Corte**, **Versões curtas › 10 s / 15 s / 30 s** cria um projeto novo
-(`<nome>_15s`) com o gancho, o CTA final e as frases com mais prova (números, palavras de destaque, motion) que
-cabem no tempo. O original não muda; a versão abre no app para ajustar e exportar.
-
-**Limpar a imagem:** no mesmo trecho, **Fundo › desfocar** deixa só a pessoa da frente nítida (quem passa atrás
-fica desfocado; aparece no vídeo exportado). **Enquadrar** aproxima até 250% e **Escolher o centro na prévia** define
-o ponto que fica no meio — para tirar do quadro uma sacola, um cabo ou alguém no fundo. O recorte sai do vídeo
-original (4K), sem perder nitidez.
-
-**Trilha licenciada (opcional):** na aba **Sons**, em Música, escolha um arquivo que você licenciou (Artlist,
-Epidemic…). Ele abaixa sozinho quando alguém fala e volta nos trechos sem fala. Música viral continua indo pelo
-editor do Instagram.
-
-**B-roll (trilha V2):** na aba **B-roll**, adicione outros clipes (cole o caminho ou envie do computador; o original
-não sai do lugar e vídeo HDR é convertido). **+ Na agulha** cobre a fala a partir do ponto atual: a imagem troca e o
-áudio continua sendo a fala. Arraste o bloco na trilha V2, estique pela borda e clique na faixa de quadros para
-escolher de onde o clipe começa. Modo **Tela cheia** ou **Cartão**, com aproximação lenta opcional. Serve para
-mostrar o que a pessoa descreve ou esconder um problema da imagem (cabo, pessoa no fundo, cena sem EPI).
-
 **Música:** o Cinex não cria trilhas. Use músicas reais, de preferência as virais da biblioteca do Instagram,
 adicionadas no próprio editor do Instagram na hora de publicar (música colocada fora do Instagram costuma ser
 silenciada). O Claude sugere a música e o ponto de entrada. Contas comerciais só têm acesso à biblioteca livre.
 
-**Estilo e revisão:** mande vídeos de referência de um estilo que você quer seguir; o Claude mede e monta um perfil
-(`~/reels-banco/estilos`). Na aba **Revisão** você aplica o estilo ao projeto e pede uma revisão do que ainda tem
-cara de edição automática.
+**Estilo:** mande vídeos de referência de um estilo que você quer seguir; o Claude mede e monta um perfil
+(`~/reels-banco/estilos`) e aplica no projeto.
 
 ## Estrutura do repositório
 
@@ -266,14 +157,16 @@ cinex/
 ├── requirements.txt
 ├── docs/
 │   └── FLUXO.md              # o fluxo completo, do vídeo bruto à entrega
-├── app/
-│   ├── server.py             # app Cinex: servidor local (127.0.0.1:8765)
-│   └── static/               # interface: index.html, app.css, app.js
+├── conhecimento/             # conhecimento OFICIAL (só muda por proposta aprovada)
+│   ├── tecnicas.json         # catálogo de técnicas: quando usar, quando evitar, o que o Cinex faz
+│   ├── formatos.json         # os 8 perfis de formato + combinações
+│   ├── regras.json           # regras globais (com origem e data)
+│   ├── padrao.json           # configuração padrão
+│   └── historico/            # versões anteriores, para reverter
 ├── scripts/
 │   ├── setup_env.py          # cria ~/reelsenv e instala dependências
-│   ├── app_project.py        # projetos do app: estado compartilhado com o Claude Code
+│   ├── aprendizado.py        # memória por escopo, regras vigentes, correções, propostas e aprovação
 │   ├── estilo.py             # perfis de estilo medidos em vídeos de referência
-│   ├── revisao.py            # revisão "cara de IA" do projeto
 │   ├── transcribe.py         # transcrição com faster-whisper (tempo por palavra)
 │   ├── energy.py             # mapa de energia do áudio (pausas)
 │   ├── faces.py              # detecção de rostos (YuNet) + folha de miniaturas
@@ -295,7 +188,8 @@ cinex/
 │   └── fx.py                 # animações de texto e fundos (inspiradas no React Bits)
 ├── references/
 │   ├── manual-edicao.md      # critérios do manual de edição (prevalece sobre os demais)
-│   ├── formatos.md           # os 13 formatos: estrutura, edição, motions e guia de gravação
+│   ├── formatos.md           # os 8 formatos: estrutura, edição, motions e guia de gravação
+│   ├── aprendizado.md        # como a Cinex aprende sem mudar nada sozinha
 │   ├── banco.md              # como a skill usa referências, fontes, motions e sons do banco
 │   ├── onboarding.md         # briefing + análise do Instagram (1ª vez por marca)
 │   ├── style-guide.md        # números e regras: ritmo, zoom, proporção, legendas
@@ -306,7 +200,6 @@ cinex/
     ├── example_motion.py     # exemplo de motion explicativo (RSD, sistema solar)
     ├── marca_template.json   # modelo do marca.json
     ├── decisoes_template.json # modelo do registro de decisões
-    ├── formatos.json         # padrões de máquina de cada formato
     ├── *.ttf + OFL.txt       # fontes (SIL Open Font License)
     └── yunet.onnx            # modelo de detecção de rosto (MIT)
 ```
@@ -331,32 +224,51 @@ no Windows, `~/reelsenv/bin/python` no macOS/Linux). `<skill>` é `~/.claude/ski
 | `python <skill>/scripts/export_ig.py final.mp4 --name "Marca - Tema" --cover 4.3` | Arquivos para o Instagram na pasta de entrega |
 | `python <skill>/scripts/saida.py pasta "<pasta>"` | Escolhe a pasta de entrega deste computador |
 
-Comandos do app (rodados na pasta do Cinex):
+Aprendizado (rodados na pasta do Cinex; lista completa com `python scripts/aprendizado.py`):
 
 | Comando | Para quê |
 |---|---|
-| `python scripts/app_project.py modo auto` / `modo sessao` | Quem responde o chat: o Cinex sozinho (padrão) ou uma conversa aberta do Claude Code |
-| `python scripts/app_project.py wait <nome>` | Na Sessão aberta: espera a próxima mensagem do chat (`say <nome> "..."` responde) |
-| `python scripts/app_project.py export <nome> --voz adobe` | Exporta com a voz limpa pelo Adobe (o mesmo que o botão **Enviar ao Adobe**) |
-| `~/reelsenv/Scripts/python -m unittest discover -s tests -t . -v` | Roda todos os testes automáticos (não usa a sua conta do Claude nem a internet) |
+| `python scripts/aprendizado.py regras --projeto <nome>` | Regras vigentes do vídeo e de onde cada uma veio |
+| `python scripts/aprendizado.py sugerir --formato <id> --marca <arroba>` | Técnicas para usar, para evitar e o que o Cinex ainda não faz |
+| `python scripts/aprendizado.py propostas [--marca <arroba>]` | Propostas de melhoria esperando a sua decisão |
+| `python scripts/aprendizado.py aprovar <id> --por "<nome>"` / `rejeitar` / `reverter` | Decide uma proposta (toda aprovação vira versão nova e pode ser desfeita) |
+| `python scripts/aprendizado.py status [--marca <arroba>]` | Versões, pendências e rotinas de revisão e pesquisa |
+| `~/reelsenv/Scripts/python -m unittest discover -s tests -t . -v` | Roda todos os testes automáticos (sem internet) |
 
 ## Formatos
 
-Depois do perfil da marca, a skill recomenda **3 formatos** para o vídeo (e mostra os 13 se você quiser).
-Cada formato define estrutura, ritmo, duração, disposição na tela, motions e traz um **guia de gravação** —
-se o material não serve ao formato escolhido, a skill avisa e explica como gravar.
+Depois do perfil da marca, a skill recomenda **3 formatos** para o vídeo (e mostra os 8 se você quiser).
+Cada formato é um perfil próprio, com versão: estrutura, ritmo, duração, posição da legenda, motions, técnicas
+recomendadas, técnicas a evitar e um **guia de gravação** — se o material não serve, a skill avisa e explica como gravar.
 
-| Grupo | Formatos |
+| id | Formato |
 |---|---|
-| Fala para câmera | Fala + pop-ups · Dicas rápidas · História / narrativa |
-| Prova e reação | Depoimento de cliente · React (tela dividida) · Clone |
-| Imagem + texto/voz | Frase de identificação · Conteúdo na legenda · Voiceover |
-| Recorrência e visual | Série com episódios · Gancho visual forte / Dia X · Multitarefa |
-| Sem vídeo gravado | **Motion explicativo** — texto cinético + diagrama de sistema animado (`motion_lib.py`) |
+| `talking_head` | Yap Content (Talking Head) — fala para a câmera, entrevista, podcast |
+| `split_screen` | Tela Dividida — react ou clone |
+| `lists_rankings` | Listas Rápidas e Rankings |
+| `before_after` | Antes e Depois |
+| `behind_the_scenes` | Bastidores da Instalação e Dia de Obra |
+| `myths_facts` | Mitos e Verdades |
+| `visualization_3d` | Visualizações 3D e Fluxo de Energia — o Cinex anima em 2D (`motion_lib.py`); 3D pronto entra como clipe |
+| `testimonial` | Depoimento Real do Cliente |
 
-Formatos com mais de uma fonte são montados antes da edição com `scripts/compose.py`
-(`split` para React, `clone` para Clone, `assemble` para clipes + narração). Detalhes em
-[references/formatos.md](references/formatos.md).
+Formatos podem ser combinados (ex.: depoimento + antes e depois). Os que têm mais de uma fonte são montados antes
+com `scripts/compose.py` (`split`, `clone`, `assemble`). Detalhes em [references/formatos.md](references/formatos.md).
+
+## Aprendizado contínuo
+
+A Cinex aprende com a prática, mas **não muda nada oficial sozinha** ([references/aprendizado.md](references/aprendizado.md)):
+
+- **Três memórias separadas:** global (técnicas e formatos, sem dados de cliente), de cada marca (só dela) e de cada
+  vídeo. O que é de uma marca nunca aparece em outra.
+- **Ordem de prioridade:** o que você pede para o vídeo > preferência da marca > perfil do formato > regra global >
+  padrão. A skill mostra de onde veio cada regra.
+- **Correções classificadas:** erro técnico, preferência da marca ou do formato, decisão só daquele vídeo ou possível
+  regra geral. Uma alteração sua não é tratada automaticamente como "a versão anterior estava errada".
+- **Avaliação separada:** qualidade técnica, qualidade editorial, aderência à marca e desempenho são notas diferentes.
+- **Central de Melhorias:** padrões repetidos, desempenho, pesquisas e experimentos viram **propostas** com motivo,
+  evidências, confiança, limitações e riscos. Você aprova, recusa ou desfaz; tudo fica no histórico com versão.
+- **Rotinas:** revisão do aprendizado semanal e pesquisa de tendências mensal (configuráveis), sempre com a fonte e a data.
 
 ## Perfil da marca
 
@@ -441,28 +353,23 @@ Com o conector **Adobe for creativity** ativo no Claude, só a trilha de voz é 
 reverb) e é mixado localmente. Sem o conector, a skill limpa a voz com o próprio ffmpeg
 (`mix_audio.py --clean`: corta graves, reduz ruído e comprime de leve) e normaliza.
 
-**No app Cinex:** peça no chat ("limpa a minha voz com o Adobe"). A resposta vem com o botão **Enviar ao Adobe** e
-o aviso de que só o áudio sai do computador. Nada é enviado antes do clique. Se o Adobe não estiver disponível, o
-Cinex limpa a voz no próprio computador e avisa no chat. Se o áudio saiu mas a voz limpa não voltou, o vídeo sai
-com o áudio normal e aparece **Tentar de novo**.
-
-> No app desktop (aba Code), o resultado do Adobe chega por um painel que pode demorar a aparecer.
+> No app desktop do Claude (aba Code), o resultado do Adobe chega por um painel que pode demorar a aparecer.
 > Alternativa manual: enviar `voice.wav` em podcast.adobe.com/enhance e devolver o arquivo tratado.
 
 ## Privacidade e segurança
 
 - **Tudo roda no seu computador.** Vídeo, transcrição, rostos e render ficam locais. Só a trilha de voz sai,
   e só se você usar o conector Adobe.
-- **A IA do chat só mexe no vídeo daquela conversa.** Ela não tem terminal, não abre arquivos do computador e
-  não mexe em outros projetos. O áudio só vai ao Adobe depois do clique em **Enviar ao Adobe**.
+- **O áudio só vai ao Adobe com o seu OK.**
+- **Aprendizado sem vazamento:** o que é de uma marca fica na pasta dela; o conhecimento global (`conhecimento/`,
+  no repositório) recusa texto que cite uma marca.
 - **Nada de dados de clientes no Git.** O `.gitignore` bloqueia vídeos, áudios e imagens. O perfil das marcas
   (`~/instagram-legendas`), o banco (`~/reels-banco`) e os projetos (`~/reels`) ficam fora do repositório.
 - **Instagram só leitura.** O login é seu; a skill nunca digita senha nem código e não curte, comenta ou
   altera nada.
 - **Sem downloads por conta própria.** A skill não baixa sons, motions ou vídeos sem o seu OK.
 - **Sem telemetria.** Os scripts não mandam dados para fora por conta própria: a rede só é usada pelo
-  Claude Code do chat (a sua conta) e pelo envio ao Adobe que você confirmou. Os comandos externos (ffmpeg,
-  claude) são chamados sem shell, com os argumentos em lista.
+  envio ao Adobe que você confirmou. O ffmpeg é chamado sem shell, com os argumentos em lista.
 - As dependências Python têm versões delimitadas em [requirements.txt](requirements.txt).
 
 Detalhes em [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
@@ -486,8 +393,6 @@ Detalhes em [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
 | Legenda com texto errado | Corrigir no `FIX` do projeto ou direto no `words.json` |
 | Imagem lavada, cor errada (iPhone) | Vídeo HDR (HLG). O Cinex converte sozinho; confira com `python scripts/hdr.py <vídeo>` |
 | Timeline mais curta que o esperado | Trecho pedido passa do fim do clipe; o aviso mostra qual e o tempo foi encurtado |
-| O chat diz que falta entrar na conta | Rode `claude auth login` (confira com `claude auth status`) e toque em **Testar de novo** |
-| O Claude Code está instalado mas o Cinex não acha | Defina a variável `CINEX_CLAUDE` com o caminho completo do `claude.exe` (ex.: `C:\Users\<você>\.local\bin\claude.exe`) e reinicie o app |
 
 ## Documentação detalhada
 
@@ -495,6 +400,7 @@ Detalhes em [TERMOS_DE_USO.md](TERMOS_DE_USO.md).
 - [SKILL.md](SKILL.md) — as instruções que o Claude segue
 - [references/style-guide.md](references/style-guide.md) — regras de ritmo, zoom, proporção e legendas
 - [references/visual-references.md](references/visual-references.md) — estilos, cor, SFX e bancos de assets
+- [references/aprendizado.md](references/aprendizado.md) — memória por escopo, propostas, aprovação e reversão
 - [references/legendas.md](references/legendas.md) — como o Cinex escreve a legenda do post (antes a skill `legendas-instagram`)
 - [CHANGELOG.md](CHANGELOG.md) — o que mudou em cada versão
 

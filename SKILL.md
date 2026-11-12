@@ -1,6 +1,6 @@
 ---
 name: cinex
-description: Cinex (formerly reels-editor) — edit raw phone videos into dynamic Instagram Reels / TikTok / Shorts (9:16) — cut pauses, breaths, stumbles and repeated takes; add Hormozi-style word-by-word captions; face-tracked smooth zooms/punch-ins; explanatory motion graphics (hook, product cards, charts, counters, CTA); colour-grade looks; sound effects; and studio-clean voice via Adobe Podcast Enhance Speech. Starts with a one-time brand onboarding (short briefing + read-only analysis of the user's Instagram Reels and insights, saved on disk and reused), then the user picks one of 13 format templates (talking head + pop-ups, quick tips, story, testimonial, react split-screen, clone, identification phrase, content-in-caption, voiceover, series, strong visual hook / Day X, multitask, and a pure motion-graphics explainer with no footage — kinetic text plus an animated system diagram built from a script or a reference explanation). Knows reference styles (Hormozi, minimal/authority, flash cut, moody, cinematic text) and asset banks (Motion Array, Envato, Artlist, Mixkit, Pixabay). Use this whenever the user shares a .MOV/.MP4 and mentions reels, stories, shorts, TikTok, "legendas dinâmicas", "cortar pausas", "zoom", "motion", "editar vídeo para o Instagram", or wants another video "como aquele" — even if they only ask for one part (just captions, just the cut, just the audio) — and also when they mention Cinex, or ask for a "vídeo em motion" / "motion explicativo" / animated explainer from a script, a text or a reference reel, with no footage of their own. Also writes the Instagram post text (legenda / caption) in the brand's own voice — for the reels it edits and for any carousel, photo or Reels post: hook, search keywords, CTA and hashtags, delivered as a Word (.docx) file. Use it whenever the user asks for a legenda, caption, texto do post, "copy do carrossel", "o que escrevo nesse Reels", hashtags or CTA, or wants an Instagram caption improved or rewritten — even if they only send the image/video and say "faz o texto".
+description: Cinex (formerly reels-editor) — edit raw phone videos into dynamic Instagram Reels / TikTok / Shorts (9:16) — cut pauses, breaths, stumbles and repeated takes; add Hormozi-style word-by-word captions; face-tracked smooth zooms/punch-ins; explanatory motion graphics (hook, product cards, charts, counters, CTA); colour-grade looks; sound effects; and studio-clean voice via Adobe Podcast Enhance Speech. Starts with a one-time brand onboarding (short briefing + read-only analysis of the user's Instagram Reels and insights, saved on disk and reused), then the user picks one of 8 versioned format profiles (talking head / yap content, split screen, quick lists & rankings, before & after, behind the scenes / day on site, myths & facts, 2D energy-flow visualization with no footage, real customer testimonial) — formats can be combined. Learns continuously in an advisory way: records and classifies corrections, evaluations, metrics, research and experiments per scope (global, brand, project — isolated), and proposes improvements that only change official rules after the owner approves (versioned, reversible). Knows reference styles (Hormozi, minimal/authority, flash cut, moody, cinematic text) and asset banks (Motion Array, Envato, Artlist, Mixkit, Pixabay). Use this whenever the user shares a .MOV/.MP4 and mentions reels, stories, shorts, TikTok, "legendas dinâmicas", "cortar pausas", "zoom", "motion", "editar vídeo para o Instagram", or wants another video "como aquele" — even if they only ask for one part (just captions, just the cut, just the audio) — and also when they mention Cinex, or ask for a "vídeo em motion" / "motion explicativo" / animated explainer from a script, a text or a reference reel, with no footage of their own. Also writes the Instagram post text (legenda / caption) in the brand's own voice — for the reels it edits and for any carousel, photo or Reels post: hook, search keywords, CTA and hashtags, delivered as a Word (.docx) file. Use it whenever the user asks for a legenda, caption, texto do post, "copy do carrossel", "o que escrevo nesse Reels", hashtags or CTA, or wants an Instagram caption improved or rewritten — even if they only send the image/video and say "faz o texto".
 ---
 
 # Cinex
@@ -19,9 +19,13 @@ precedence over every other reference when they disagree. Then read `references/
 (timings, easing, spacing, safe zones) and the reasoning behind them — and
 `references/visual-references.md` to pick a direction (caption style, colour look, SFX, angles,
 asset banks) from the reference reels the user chose, and `references/reactbits.md` for the animation bank.
-`assets/example_project.py` is a complete worked project in the v2 pattern (one speaker, format `fala_popups`,
+`assets/example_project.py` is a complete worked project in the v2 pattern (one speaker, format `talking_head`,
 brand loaded with `load_brand`, format motions from `formats.py`, selective SFX): copy it and adapt rather than
 writing a render from scratch. `assets/example_motion.py` is the equivalent for a video with no footage.
+**Learning (`references/aprendizado.md`, `scripts/aprendizado.py`)**: before editing, read the rules in force for this
+video and where each comes from (project > brand > format > global > default); during and after, record corrections
+(classified), the evaluation and later the metrics. Official knowledge (`conhecimento/`) and brand rules change ONLY
+through a proposal the owner approves — never on your own.
 
 ## A. Brand profile — ALWAYS the first step
 
@@ -48,31 +52,31 @@ the same questions twice. Full procedure (questions, what to read, templates): `
 The profile then drives the edit: `transcricao_termos` → `--prompt` of transcribe.py; `edicao`
 (caption style, look, target length, hook, things to avoid) → direction (3b) and cut length (2);
 `cores`/`fontes`/`logo`/`cta` → `project.py` via `from brand import load_brand` (step 5).
-Anything the user corrects during the edit ("não gosto dessa cor") is written back to `marca.json`.
+Anything the user corrects during the edit ("não gosto dessa cor") is recorded and classified with `aprendizado.py corrigir`;
+it becomes a brand rule only through a proposal the owner approves (an explicit "daqui pra frente…" is that approval —
+quote it in `--nota`). Read the rules in force with `aprendizado.py regras --marca <handle> --formato <id>`.
 
 ## B. Video format — chosen by the user, right after the brand profile
 
-Every video is edited to one **format template** (`references/formatos.md`; defaults in `assets/formatos.json`,
-read with `from formats import fmt`). The 13 formats: `fala_popups`, `dicas_rapidas`, `historia`, `depoimento`,
-`react`, `clone`, `frase_identificacao`, `conteudo_legenda`, `voiceover`, `serie`, `gancho_visual`, `multitarefa`,
-plus `motion_explicativo` — a pure motion-graphics explainer with NO footage (kinetic text + an animated system
-diagram), built with `scripts/motion_lib.py` from a script/explanation; see its section in `formatos.md` and
-`assets/example_motion.py`. For it, steps 1–3 and 5 are replaced by: extract the ideas of the source (rewrite, never
-reuse someone's audio/words) → script with one idea per sentence → storyboard of system states → project with
-`Motion(draw, dur)` → `preview` / `check` → `full` → `qa.py --silent`.
+Every video is edited to one of the **8 official format profiles** (`references/formatos.md`; machine profile, techniques
+and anti-patterns in `conhecimento/formatos.json`, read with `from formats import fmt`): `talking_head`, `split_screen`,
+`lists_rankings`, `before_after`, `behind_the_scenes`, `myths_facts`, `visualization_3d` (2D energy flow with NO footage,
+built with `scripts/motion_lib.py` — see its section and `assets/example_motion.py`; steps 1–3 and 5 become: extract the
+ideas of the source and rewrite → one idea per sentence → storyboard of system states → `Motion(draw, dur)` →
+`preview` / `check` → `full` → `qa.py --silent`) and `testimonial`. Profiles can be combined (`--combina`).
 1. Look at what was recorded (quick `faces.py --sheet` of the raw) + the brand's `video.md` and objective.
-2. Ask with `AskUserQuestion`: the **3 formats that best fit this footage and brand** (first = recommended, one
-   line each on why) + a 4th option "Ver todos os formatos". If they pick it, show the grouped list
-   (fala / prova / imagem / visual) in a second question set. `marca.json → formatos_preferidos` goes first.
-3. If the footage can't deliver the format (Clone without a locked camera, React without a reference clip,
-   Voiceover without narration), say so plainly and give that format's **recording guide** ("Gravar") instead of
-   forcing it.
-4. The format then sets: structure (feeds 1b), montage (`compose.py split | clone | assemble` BEFORE step 1 when
-   it needs several sources), target duration, rhythm, `cap_y`, zoom policy, SFX budget and which
-   `formats.py` motions to use (`tip_card`, `name_card`, `before_after`, `quote_card`, `react_label`,
-   `speaker_tag`, `big_phrase`, `read_caption`, `series_badge`, `next_episode`, `day_title`, `chapter_label`,
-   `cta_save`, `cta_follow`). Record it in `decisoes.json → formato` and add it to `formatos_preferidos` when the
-   user likes the result. Series: keep name/episode/identity in `marca.json → series`.
+2. Ask with `AskUserQuestion`: the **3 formats that best fit this footage and brand** (first = recommended, one line
+   each on why) + "Ver todos os formatos". Approved brand preferences (`marca.formatos_preferidos` in
+   `aprendizado.py regras --marca <handle>`) go first.
+3. If the footage can't deliver the format (clone without a locked camera, before/after from different angles), say so
+   and give the format's **recording guide** ("Gravar") instead of forcing it.
+4. Register the project: `aprendizado.py projeto <name> --marca <handle> --formato <id> [--combina <id2>] --objetivo "..."`,
+   then `aprendizado.py regras --projeto <name>` and `aprendizado.py sugerir --formato <id> --marca <handle> --objetivo "..."`
+   (techniques to use, to AVOID, and what Cinex can't do yet — say so instead of improvising). The profile sets
+   structure (feeds 1b), montage (`compose.py split | clone | assemble` BEFORE step 1 when it needs several sources),
+   target duration, rhythm, `cap_y`, zoom policy, SFX budget and the `formats.py` motions (`tip_card`, `name_card`,
+   `before_after`, `quote_card`, `react_label`, `speaker_tag`, `big_phrase`, `series_badge`, `next_episode`,
+   `day_title`, `chapter_label`, `cta_save`, `cta_follow`). Record it in `decisoes.json → formato`.
 
 ## C. User asset bank — references, fonts, motions, SFX (`references/banco.md`)
 
@@ -90,70 +94,10 @@ reuse someone's audio/words) → script with one idea per sentence → storyboar
   You cannot hear, so ask the user to listen once to the ones classified "só pelo áudio".
 Tell the user in the delivery which bank items were used and their licence notes.
 
-## D. Cinex app — visual editor (v3, in progress)
+## D. Reference styles and the "AI look" review
 
-When the user wants to see and adjust the edit themselves ("abre no app", "editor", "timeline", "quero mexer
-nas legendas"), use the local app instead of delivering a finished file. http://127.0.0.1:8765 opens the **guided
-mode** (for people who don't edit: step pages Começar → Corte → Estilo → Elementos → Revisão → Publicar, the chat
-always on the side as the main way to change things, voice commands transcribed locally by faster-whisper "small");
-http://127.0.0.1:8765/editor is the full editor (timeline, all tools). Chat messages from the guided mode carry the
-page the user was on (pages: comecar = brand profiles, upload = files + format, then corte, estilo, elementos, revisao, publicar; `wait` prints "usuário (página corte): …"): answer in that context, in plain language, no
-editing jargon, and say what changed on screen. Word times are fitted to the measured speech at preparation (`snap_words`); for projects prepared before that, run `app_project.py ressincronizar <name>` (times and segment texts only, cut untouched) when captions miss words. New projects from the app: `app_project.py novo <name> <files…> [--marca h] [--formato f]` (one video, extra files appended as speech clips) or `serie <base> <files…>` (one project per file, `serie` = {base, parte, total, projetos}); the brand profile sets accent colour, caption style, highlight words, spelling fixes and the transcription prompt (name + `transcricao_termos`). Profiles are edited in the app (brand.save, fields in brand.EDITABLE). Manual text corrections (the user clicks a phrase on the Corte page, or `app_project.py texto <name> <s> <e> "..."`) go to `textos` ([{s, e, text}], applied in order over words_raw.json, new words re-aligned onto the old timings) and feed the captions and the export; prefer them over `fix` for a one-off mistake. Guided-mode progress lives in `guia` ({estilo, elementos, revisao}). The app is the interface; **you stay the
-brain**: you propose the cut, answer the app's chat and change the project. Current scope: cut, captions, camera
-(`camera`: follow, zoom 1.0–1.25, punch on cuts), colour (`color`: correct, look), motion (`motions`: [{id, type
-(titulo|topico|nome|citacao|frase|seguir|salvar), t0, t1 in raw seconds, text, text2, sfx}]) and SFX (`sfx`:
-[{id, t, cat, gain}], categories of ~/reels-banco/sfx; manual: ~2 per 10 s, key events only)
-motion engine (`motion_engine`: "html" = HyperFrames templates in motion_html/templates, "classico" = formats.py; any HTML element can have `"atras": true` = behind the person via the MediaPipe matte, type `gigante` defaults to it); type `cenario` = 3D text stuck to a surface: `quad` = 4 corners clockwise from top-left, normalised to the SOURCE frame, `tmark` = time it was marked; the export tracks it with scripts/plane_track.py and warps it in perspective behind the person and phrase order (`order`: kept segment ids in play order; `app_project.py order <name> <id> ...`; missing ids
-follow their source predecessor), shorter versions (`app_project.py versao <name> 10|15|30` or Corte › Versões curtas: phrases of the current cut, hook and closing CTA always in, the rest chosen by a knapsack on proof — numbers, highlight words, motion — and speech density; a NEW project `<name>_<s>s` sharing the media by hard links, editable on its own), per-segment `retrato` (true: background blurred, only the front person sharp — MediaPipe matte, the blob under the tracked face) and `quadro` ({z 1–3, cx, cy} in source fractions: reframe to take something out of the shot; cut.py crops the original 4K, so it stays sharp; fixed framing for that stretch), per-segment `speed` (1 | 0.5 | 0.35 | 0.25: slow motion, motion-interpolated, silent, no captions) and `mudo` (keep the picture, drop the sound; captions hidden) — `app_project.py lenta <name> <seg_id>` splits a kept segment around its action peak (motion + brightness) and slows 2 s to 0.35x; an optional licensed track in `music` ({src, db, duck}: ducked under the voice with a sidechain compressor at export — never a downloaded song; viral songs are added in Instagram's editor); speech from several clips (talks, events: `app_project.py clips <name> <video|folder> ...` or the Corte tab — each clip is proxied to the project canvas, transcribed with the project's `prompt`, pause-cut and appended; `clips` = [{id, name, src, off, dur}] laid end to end form ONE timeline in raw seconds, so segments, `order`, motions, B-roll and SFX work across clips, and the export maps each kept segment back to its clip; a clip without audio is kept whole), and B-roll on track V2: clips in `media` ([{id, name, src, dur, ready}], added with
-`app_project.py media <name> <video>` or from the app by path/upload — the original file stays where it is; a light
-proxy + filmstrip go to `~/reels/<name>/media/`, HDR converted) and windows in `broll` ([{id, media, t0, t1 in raw
-seconds over the speech, ss = entry point in the clip, mode "full"|"card", zoom}]; `app_project.py broll <name>
-<media_id> <t0> <t1> [ss] [full|card]`). The picture changes, the voice keeps playing; a window entirely over
-removed stretches is skipped. Use it to show what the speaker describes or to hide a problem in the A-roll (a cable,
-someone in the background, a scene without PPE). The app has a live preview: export only when the user asks for the file.
-
-**Automatic chat (default).** In the "Automático" mode the server answers each chat message by itself, with no open
-Claude Code session: `scripts/chat_ai.py` runs a headless `claude -p` call (model `haiku` for simple edits; `opus` for
-creative/analysis requests or the Revisão page, with `--fallback-model sonnet` — on the Pro plan sonnet answers when
-opus isn't available). That AI's only tools are `scripts/cinex_mcp.py <name>`, bound to that one project:
-`ver_projeto`, `cortar_ou_manter`, `corrigir_texto`, `ajustar`, `camera_lenta`, `versao_curta`, `revisar`,
-`ressincronizar`, `voltar_como_estava`, `confirmar`. It has no shell, no file access and no other project (`--tools ""`,
-`--strict-mcp-config`, `--permission-mode dontAsk`). One message at a time per project, in order; the step status
-("Lendo o projeto…", "Ajustando a legenda…") is in `~/reels/<name>/chat.json` and the daily counter ("{n} hoje") in
-`~/reels/_chat_uso.json`; the mode lives in `~/reels/_chat_modo.json`. Before the first change of each answer the
-project is saved to `ponto_salvo.json`; `voltar_como_estava` ("volta como estava") restores it and keeps the
-conversation. The AI never exports nor sends audio: `confirmar(acao)` only adds a button to its answer. Export starts
-after the user clicks "Gerar agora"; Adobe only after "Enviar ao Adobe" (`app_project.py export <name> --voz adobe`: a
-separate headless call with a fixed prompt, `scripts/adobe_prompt.md`, that only sees the Adobe connector and
-`cinex_mcp.py <name> --voz`; when Adobe isn't available it falls back to a local `mix_audio.py --clean`, and the user is
-told). Failures (not installed, not logged in, offline, usage limit, 10 min timeout) show a notice in the chat and the
-message is kept and resent.
-1. Start the server once, in the background: `python app/server.py` → http://127.0.0.1:8765 (local only).
-2. Create the project: `python scripts/app_project.py new <video> --name <name> --prompt "<marca.json termos>"`
-   (proxy, transcription, waveform and an automatic pause cut). The user can also create it from the app.
-3. Editorial pass with the same rules as steps 1b–2 (manual §2–3): `app_project.py show <name>` lists every
-   segment with its text; cut false starts, repetitions and filler with `seg <name> <id|s-e> cut "motivo"`, keep
-   functional pauses, then summarise the plan in the app's chat with `say <name> "..."` and give the link.
-4. Answer from this session only in "Sessão aberta": switch the app to it (selector in the chat header) or run
-   `app_project.py modo sessao`, then run `app_project.py wait <name>` in the background. `wait` uses the same atomic
-   `claim(name, "sessao")` as the server, so each message is delivered to exactly one side. In "Automático" this
-   session must NOT answer: `wait` prints a hint and keeps waiting, and the server replies by itself. When `wait`
-   returns, do what was asked (`seg`, caption changes by editing `captions` in `~/reels/<name>/cinex.json` through
-   `app_project.update`), answer with `say`, and start `wait` again. The user's edits in the app land in the same
-   file — re-read with `show` before changing anything, never overwrite their choices without saying so. Switch
-   back with `app_project.py modo auto` when done.
-5. Export is the app's button — in the chat, the "Gerar agora" button under the answer (or `app_project.py export
-   <name>`, `--voz adobe` for the Adobe voice): cut → captions with the engine → −14 LUFS →
-   `<delivery folder>/AAAA-MM-DD <titulo or name> (<format label>).mp4` (section H). `format`: "vertical" 9:16 (Reels/Stories),
-   "feed" 4:5, "quadrado" 1:1, "horizontal" 16:9, "4x3", "led" 512x384 trade-show panel (drawn at 1024x768, scaled down at
-   the end). Vertical footage in a wide format is fitted over a blurred
-   fill; safe area = Instagram UI only in 9:16, a 6% margin elsewhere. Then run `qa.py` on the delivered file
-   (`--platform reels|desktop|feed|quadrado|4x3|led`) and report it in the chat.
-
-## E. Reference styles and the "AI look" review
-
-The goal is editing that doesn't look automatic. Two tools, both visible in the app's **Revisão** tab:
-1. **Style profiles** (`scripts/estilo.py`, saved in `~/reels-banco/estilos/<id>/`). When the user sends reference
+The goal is editing that doesn't look automatic.
+**Style profiles** (`scripts/estilo.py`, saved in `~/reels-banco/estilos/<id>/`). When the user sends reference
    videos of a style they like (files; for Instagram links ask them to send the file — never download without their
    OK), run `python scripts/estilo.py analisar <v1> <v2> ... --nome <id> [--formato <fmt>] [--link URL]`. It measures
    cut rhythm, the colour look (Lab statistics, used for a partial look transfer on export), loudness and speech pace,
@@ -161,14 +105,11 @@ The goal is editing that doesn't look automatic. Two tools, both visible in the 
    `estilo.py set <id> legenda '{"font","weight","upper","size","stroke","lines","words","color","accent","y"}'`
    (sizes on the 1080x1920 scale), `camera '{"zoom","punch"}'`, `motion`, `sfx`, `gancho`, `notas`, then
    `set <id> revisado true`. Copy decisions (rhythm, type, placement, look), never content, words, logos or audio.
-   The user applies a profile in the app ("Aplicar estilo"): captions, camera and `color.look = "ref:<id>"`.
-2. **Review** (`scripts/revisao.py <projeto> [--quadros]`): flags regularity and sameness (equal shot lengths, motions
-   or sounds on a beat, the same element in a row, a sound on every element, one word per caption, CTA too early) and
-   compares with the applied profile. Instant, no export. When the user asks for a review in the chat, run it with
-   `--quadros` (uses the last exported final.mp4, if any), look at `revisao_quadros.jpg` for what numbers miss (text
-   over a face, cheap-looking motion, flat moments) and answer with `app_project.py say`, concrete and prioritised.
+   Apply a profile in `project.py`: captions, camera and `color.look = "ref:<id>"`.
+Then judge sameness by eye on the sheets (equal shot lengths, motions or sounds on a beat, the same element in a row,
+a sound on every element, CTA too early) and log what you find as corrections (`aprendizado.py corrigir`).
 
-## F. Brand performance and niche references (app tab "Marca")
+## E. Brand performance and niche references
 
 Every brand learns from its own results. Data sits with the brand profile in `~/instagram-legendas/<handle>/`.
 - **Performance** (`scripts/desempenho.py`): after onboarding and then every week or two (or when the user asks
@@ -178,18 +119,19 @@ Every brand learns from its own results. Data sits with the brand profile in `~/
   tags: {formato, cenario, tema, gancho, estilo, editado_cinex, duracao}}'` — tag from the caption and the cover
   (cenario: "situação real" / "escritório" / "arte/convite" — where and how it was shot), and mark
   reels edited by Cinex (match videos.md). `desempenho.py relatorio` ranks each tag against the profile's median
-  (followers + profile visits and shares + saves weigh most, then views and retention); `aplicar` writes winners with ≥ 3 reels into `marca.json`.
+  (followers + profile visits and shares + saves weigh most, then views and retention); `aplicar` turns winners with ≥ 3 reels into a brand PROPOSAL (nothing changes until the owner approves it);
+  per-video metrics also go to `aprendizado.py metricas <project>` so comparisons stay within comparable videos.
   Insights on the web: the reel's media id is its shortcode decoded as base-64 (alphabet `A–Z a–z 0–9 - _`); open
   `instagram.com/insights/media/<id>/`, wait ~5 s, read the text (views, % não seguidores, visualizadores, curtidas,
   comentários, salvamentos, compartilhamentos, seguidores). The web does not show average watch time — ask for prints
   of "tempo médio de visualização" from the app when retention matters. A boosted reel ("Esse post está turbinado")
   mixes paid views: record the organic numbers at the boost date, tag `turbinado`, and read the "Anúncio" tab later. Use the ranking when
   choosing format, hook and length; say when a conclusion rests on 1–2 reels. Never type credentials.
-- **Niche references**: the user adds links or uploads videos per brand in the app (`brand.py refs <handle>`).
+- **Niche references**: the user sends links or videos per brand (`brand.py refs <handle>`).
   Uploaded videos are measured automatically into the style profile `nicho_<handle>`; read its sheets and fill the
-  visual rules (section E). Links: open read-only in the browser, sample frames, and describe what to copy.
+  visual rules (section D). Links: open read-only in the browser, sample frames, and describe what to copy.
 
-## G. Instagram captions (legendas do post)
+## F. Instagram captions (legendas do post)
 
 The post text is part of the job (it used to be the separate `legendas-instagram` skill). Full procedure, in Portuguese:
 **`references/legendas.md`** — read it before writing any caption; `references/legendas-tecnicas.md` holds sizes, hook models,
@@ -205,7 +147,7 @@ structures and hashtag rules; `references/legendas-perfil-template.md` is the vo
   caption in the reply.
 - Log it in `historico.md`; any voice correction ("eu não falo assim") goes into `perfil.md` right away.
 
-## H. Delivery folder and file names
+## G. Delivery folder and file names
 
 Every finished file (video, cover, Stories parts, captions .docx, a horizontal/LED version) goes to ONE folder, read by
 `scripts/saida.py` from `~/reels/_config.json → saida` (falls back to `~/Downloads`). Show it with `python scripts/saida.py`,
@@ -213,8 +155,7 @@ set it once per machine with `python scripts/saida.py pasta "<folder>"`. Names m
 **`AAAA-MM-DD Marca - Tema (Formato)`** — e.g. `2026-11-06 Ynvest - Entrega Euroville (Reels 9x16).mp4`; companions add a
 suffix to the same name (` - capa.jpg`, ` - capa grade.jpg`, ` - story 1.mp4`, ` - legendas.docx`). The theme is what the video
 says in 2–5 words (never IMG_xxxx, project ids or `final`); a series adds its number (`Ynvest - Série Segurança 03 - RSD 700 V
-viram 50 V`). Use `saida.nome(titulo, formato)` for any file you write by hand (horizontal cut-only edits, re-exports), and an
-app project's `titulo` (falls back to its name) names its export. Never overwrite a delivered file silently: a new version of the
+viram 50 V`). Use `saida.nome(titulo, formato)` for any file you write by hand (horizontal cut-only edits, re-exports),. Never overwrite a delivered file silently: a new version of the
 same video replaces it only when the user asked for the change.
 
 ## 0. Environment (once per machine, ~2 min)
@@ -260,7 +201,7 @@ Pick the phrases to keep in RAW seconds (first word `s` − 0.1 … last word `e
 python scripts/plan_cut.py RAW.MOV phrases.json keep.json      # prints segments + total duration
 ```
 A strong line from later in the video makes a great 1–2 s cold open (put it first in phrases.json).
-**HDR:** iPhone records HLG by default. `cut.py`, the app preview, engine B-roll and `compose.py` detect HLG/PQ
+**HDR:** iPhone records HLG by default. `cut.py`, engine B-roll and `compose.py` detect HLG/PQ
 (`python scripts/hdr.py <video>`) and tone map to Rec.709 automatically — never re-encode an HDR source with a
 plain `scale` (washed-out picture). Any new ffmpeg read of a SOURCE video goes through `hdr.vf(src, ...)`.
 **Clip bounds:** a B-roll/assemble window must fit in its clip (`ss + dur <= length`); both now clamp and warn.
@@ -300,7 +241,6 @@ words.json by hand — wrong caption text is worse than no caption.
 ## 3. Audio — Adobe Podcast Enhance Speech
 
 Only the audio goes to Adobe (smaller, and the picture never leaves the machine):
-From the app: the "Enviar ao Adobe" button runs this flow headless (see §D); in a session, keep using the connector as below.
 1. `<FFMPEG> -i cut_1080.mp4 -vn -ac 1 -ar 48000 voice.wav` (the ffmpeg path printed by setup_env.py)
 2. Adobe connector: `adobe_mandatory_init` → `asset_initialize_file_upload` (path, size, `audio/wav`)
    → `curl -L -X PUT <transfer href> -H "Content-Type: audio/wav" --data-binary @voice.wav`
@@ -424,11 +364,15 @@ Still yours to do by eye: `final_sheet.jpg`, caption text, names, numbers, dates
 Fill the rest of `decisoes.json` (b_roll, caption_style, final_output, `rejected_errors_check` — true for each
 error avoided) and the **0–5 scores** in the 10 dimensions, honestly; ≤ 3 needs a reason and, when possible, what
 would raise it. `python scripts/decisions.py check` must say COMPLETAS; `report` prints the table for the reply.
+Then the learning record (`references/aprendizado.md`): `aprendizado.py avaliar <name> '{"dimensoes": {narrativa, ritmo,
+direcao_visual, motion_graphics, audio, assets}, "lentes": {qualidade_tecnica, qualidade_editorial, aderencia_marca}}'`
+(0–5 each, kept apart from performance), and every problem found or fixed during this edit as `aprendizado.py corrigir`
+with its type (erro_tecnico | preferencia_marca | preferencia_formato | decisao_projeto | melhoria_global).
 
 ## 7. Deliver
 
 Instagram only for now:
-`python scripts/export_ig.py final.mp4 --name "<Marca> - <Tema>" --cover <t>` → delivery folder (section H):
+`python scripts/export_ig.py final.mp4 --name "<Marca> - <Tema>" --cover <t>` → delivery folder (section G):
 `AAAA-MM-DD Marca - Tema (Reels 9x16).mp4`, `… - capa.jpg` (cover), `… - capa grade.jpg` (3:4 profile-grid crop — check the
 title/face fit inside it), and `… - story N.mp4` only if the video is longer than 60 s. Reply with:
 - where the file is and its duration;
@@ -438,7 +382,17 @@ title/face fit inside it), and `… - story N.mp4` only if the video is longer t
 - when relevant, what the engine can't do that would lift the video (text behind the subject, 3D-tracked text, a reshoot angle) — see visual-references §8;
 - the scorecard (`decisions.py report`: 10 dimensions, average, lowest) and the QA verdict;
 - a one-line offer for adjustments.
-When the user wants the post text too, write it with section G (`… - legendas.docx` next to the video, same name).
-Archive the log: `python scripts/decisions.py archive <handle> <name>`. Then log it: `python scripts/brand.py log <handle> "<name> · <duration> · <topic>"`, and write any preference the
-user expressed during this edit back to `marca.json` / `video.md`.
+When the user wants the post text too, write it with section F (`… - legendas.docx` next to the video, same name).
+Archive the log: `python scripts/decisions.py archive <handle> <name>`. Then log it: `python scripts/brand.py log <handle> "<name> · <duration> · <topic>"`, and record any preference the
+user expressed during this edit with `aprendizado.py corrigir` — if they said it should hold from now on, turn it into a
+proposal and approve it citing their words; if you only inferred it, propose and ask. After publication, when numbers
+exist: `aprendizado.py metricas <name> '{...}'`.
 Keep the project folder — the user may ask for tweaks, and re-rendering from project.py is cheap.
+
+## H. Learning routines
+
+`aprendizado.py status [--marca <handle>]` says when the weekly review or the monthly research is due (configurable).
+Review: `padroes --marca <handle> --propor` / `padroes --propor` (global needs 2+ brands) create DRAFT proposals from
+repeated corrections; check them, `enviar`, and present each to the owner in plain words (what changes, why, how many
+cases, risk, how to undo). Research: every finding with its source and date via `pesquisa add`; a trend is not a rule.
+Experiments only for a relevant hypothesis (`experimento criar`); small or inconclusive results stay hypotheses.

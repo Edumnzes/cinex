@@ -8,17 +8,17 @@ Data lives with the brand profile (shared with legendas-instagram): ~/instagram-
     python desempenho.py set <handle> '<json>'          add/update a reel by "codigo" (metrics and/or tags)
     python desempenho.py tag <handle> <codigo> '<json>' set tags of a reel
     python desempenho.py relatorio <handle>             ranking per tag -> desempenho.md (+ JSON on stdout with --json)
-    python desempenho.py aplicar <handle>               write the winners into marca.json (formatos_preferidos, estilos_preferidos,
-                                                        edicao.duracao_alvo_s) — only groups with >= 3 reels count
+    python desempenho.py aplicar <handle>               PROPOSE the winners (formatos/estilos preferidos, duração) to the owner —
+                                                        only groups with >= 3 reels count; nothing changes until it is approved
 
 Metrics (any can be missing): views, alcance, nao_seg_pct, tempo_medio_s, duracao_s, retencao_3s_pct, curtidas,
 comentarios, compart, salvos, seguiu, visitas. Retention = tempo_medio_s / duracao_s. Read-only collection: Claude
 reads the grid and "Ver insights" in the browser with the user's own login; never types credentials.
 """
-import datetime, json, statistics, sys
+import datetime, json, os, statistics, sys
 from pathlib import Path
 
-ROOT = Path.home() / "instagram-legendas"
+ROOT = Path(os.environ.get("CINEX_MARCAS") or Path.home() / "instagram-legendas")   # brand folders (env: tests)
 TAGS = ("formato", "cenario", "estilo", "gancho", "legenda", "motion", "tema", "editado_cinex", "duracao", "postagem", "turbinado")
 
 
@@ -113,19 +113,34 @@ def write_md(h, rep):
 
 
 def apply(h):
-    rep = report(h); p = folder(h) / "marca.json"
-    m = json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
-    good = lambda k: [r["valor"] for r in rep["ranking"].get(k, []) if r["n"] >= 3 and r["score"] >= 1.0]
-    if good("formato"): m["formatos_preferidos"] = good("formato")
-    if good("estilo"): m["estilos_preferidos"] = good("estilo")
-    band = next(iter(good("duracao")), None)
+    """Consultive: the winners become a PROPOSAL for the brand (scripts/aprendizado.py), never a silent change.
+    Nothing is written to the brand's rules until the owner approves it (`aprendizado.py aprovar <id> --por ... --marca h`)."""
+    import aprendizado as A
+    rep = report(h)
+    good = lambda k: [r for r in rep["ranking"].get(k, []) if r["n"] >= 3 and r["score"] >= 1.0]
+    mud, ev, ns = [], [], []
+    for tag, chave in (("formato", "marca.formatos_preferidos"), ("estilo", "marca.estilos_preferidos")):
+        g = good(tag)
+        if g:
+            mud.append(dict(chave=chave, para=[r["valor"] for r in g])); ns += [r["n"] for r in g]
+            ev += [f"{tag} {r['valor']}: n={r['n']}, score {r['score']:.2f}" for r in g]
+    bands = {"até 30 s": [15, 30], "30–60 s": [30, 60], "60–90 s": [45, 90], "90 s +": [60, 120]}
+    band = next((r for r in good("duracao") if r["valor"] in bands), None)
     if band:
-        m.setdefault("edicao", {})["duracao_alvo_s"] = {"até 30 s": [15, 30], "30–60 s": [30, 60], "60–90 s": [45, 90], "90 s +": [60, 120]}[band]
-    m["updated"] = datetime.date.today().isoformat(); m.setdefault("handle", folder(h).name)
-    p.write_text(json.dumps(m, ensure_ascii=False, indent=2), encoding="utf-8")
-    return dict(formatos_preferidos=m.get("formatos_preferidos"), estilos_preferidos=m.get("estilos_preferidos"),
-                duracao_alvo_s=m.get("edicao", {}).get("duracao_alvo_s"))
-
+        mud.append(dict(chave="edicao.duracao_alvo_s", para=bands[band["valor"]]))
+        ev.append(f"duração {band['valor']}: n={band['n']}, score {band['score']:.2f}"); ns.append(band["n"])
+    if not mud: return dict(proposta=None, motivo="nenhum grupo com 3+ reels acima da mediana: nada a propor")
+    n = rep.get("reels")
+    pr = A.propor(dict(
+        titulo="Preferências a partir do desempenho", descricao="Formatos, estilos e duração que ficaram acima da mediana da marca.",
+        escopo="marca", alvo=f"marca:{A.handle(h)}", tipo="preferencia", problema="Escolher formato e duração pelo que já funcionou na marca.",
+        evidencias=ev, amostra=f"{n} reels medidos" if n else "reels medidos em desempenho.json",
+        comparabilidade="mesma marca e plataforma; objetivos e temas diferentes misturados",
+        confianca="media" if min(ns) >= A.MIN_COMPARAVEIS else "baixa",
+        limitacoes="Correlação, não causa: tema, horário e música também mudam o resultado.",
+        efeitos_colaterais="Pode reduzir a variedade de formatos testados.", mudancas=mud,
+        impacto_esperado="Mais vídeos no formato e na duração que a marca já viu funcionar."))
+    return dict(proposta=pr["id"], status=pr["status"], mudancas=mud)
 
 if __name__ == "__main__":
     sys.stdout.reconfigure(encoding="utf-8")

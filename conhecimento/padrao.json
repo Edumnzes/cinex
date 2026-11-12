@@ -1,0 +1,15 @@
+{
+ "_doc": "Configuração PADRÃO (a camada mais fraca): os valores do motor quando nada mais diz o contrário.",
+ "versao": 1,
+ "regras": {
+  "legenda.estilo": "minimal",
+  "legenda.max_palavras": 3,
+  "legenda.cor": "#FFFFFF",
+  "legenda.fonte": "Montserrat",
+  "camera.jump_zoom": 1.04,
+  "camera.deriva": [1.0, 1.03],
+  "cor.look": "natural",
+  "sfx.max_10s": 2,
+  "formato.plataforma": "instagram"
+ }
+}

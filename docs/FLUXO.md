@@ -10,7 +10,7 @@ vídeo (`~/reels/<nome>/`), salvo indicação.
 vídeo bruto (.MOV/.MP4)
   │
   ├─ A. Perfil da marca ─ brand.py · briefing · Instagram (leitura) → perfil.md · video.md · marca.json
-  ├─ B. Formato ──────── 3 recomendados ou lista completa (13)     → template + compose.py se preciso
+  ├─ B. Formato ──────── 3 recomendados ou lista completa (8)     → template + compose.py se preciso
   ├─ C. Banco ────────── referências do formato · fontes · motions · sons (~/reels-banco)
   ├─ 1. Análise ──────── transcribe.py · energy.py · faces.py  →  mapa + perguntas
   ├─ 1b. Plano ───────── objetivo · mensagem · estrutura · sequência  →  decisoes.json
@@ -21,7 +21,8 @@ vídeo bruto (.MOV/.MP4)
   ├─ 6. QA ───────────── preview · check · cuts · motion       →  ajustes
   ├─ 7. Render ──────── project.py full · mix_audio.py        →  final.mp4
   ├─ 8. QA + nota ───── qa.py · decisions.py                  →  qa.json · decisoes.json
-  └─ 9. Entrega ─────── export_ig.py                          →  Reel · capa · grade · Stories
+  ├─ 9. Entrega ─────── export_ig.py                          →  Reel · capa · grade · Stories
+  └─ 10. Aprendizado ── aprendizado.py (regras · corrigir · avaliar · métricas) →  propostas que o dono aprova
 ```
 
 ## A. Perfil da marca (sempre primeiro; completo só na 1ª vez)
@@ -51,15 +52,15 @@ Ao entregar, `brand.py log` registra o vídeo em `videos.md`.
 
 ## B. Formato do vídeo (escolhido pelo usuário)
 
-Logo depois do perfil da marca, o Claude olha o material gravado e recomenda **3 dos 13 formatos**
+Logo depois do perfil da marca, o Claude olha o material gravado e recomenda **3 dos 8 formatos**
 (`references/formatos.md`), com o motivo de cada um; a pessoa escolhe ou pede a lista completa. O formato define
 estrutura, montagem, duração, ritmo, posição da legenda, política de zoom, orçamento de SFX e os motions
-(`scripts/formats.py`). Se o material não serve (ex.: Clone sem câmera fixa), a skill entrega o guia de gravação.
+(`scripts/formats.py`). Se o material não serve (ex.: tela dividida em clone sem câmera fixa), a skill entrega o guia de gravação.
 
 Formatos com várias fontes são montados primeiro com `scripts/compose.py` e o resultado entra no fluxo normal:
-- `split` — React: referência em cima (áudio −14 dB), reação embaixo centrada no rosto; legenda na emenda.
-- `clone` — dois takes com câmera fixa unidos por uma emenda suave; avisa se a câmera mexeu.
-- `assemble` — clipes em sequência (9:16), com ou sem narração separada (voiceover, frase, conteúdo na legenda, Dia X).
+- `split` — Tela dividida (react): referência em cima (áudio −14 dB), reação embaixo centrada no rosto; legenda na emenda.
+- `clone` — Tela dividida (clone): dois takes com câmera fixa unidos por uma emenda suave; avisa se a câmera mexeu.
+- `assemble` — clipes em sequência (9:16), com ou sem narração separada (antes e depois, bastidores e dia de obra).
 Todos limpam a marcação de rotação dos vídeos de celular (senão o player gira a imagem de novo).
 
 ## C. Banco do usuário (`~/reels-banco`)
@@ -239,3 +240,12 @@ sem refazer análise nem corte.
 | `render.mp4`, `final.mp4`, `sfx.wav` | saída |
 | `color.jpg` | correção de cor |
 | `qa.json`, `decisoes.json` | controle de qualidade, registro de decisões e notas |
+
+## 10. Aprendizado contínuo (consultivo)
+
+Procedimento em `references/aprendizado.md`. No começo, `aprendizado.py projeto` registra marca, formato e objetivo e
+`aprendizado.py regras` mostra as regras vigentes com a origem (projeto > marca > formato > global > padrão). Cada
+correção é registrada já classificada (erro técnico, preferência da marca ou do formato, decisão do projeto, possível
+regra geral); na entrega vêm a avaliação (dimensões e lentes separadas) e, depois de publicado, as métricas. Padrões
+repetidos, desempenho, pesquisa e experimentos viram **propostas** na Central de Melhorias; nada oficial muda sem a
+aprovação do dono, e toda aprovação é versionada e pode ser revertida.
