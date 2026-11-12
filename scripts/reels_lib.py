@@ -77,10 +77,13 @@ def font(size, weight=None, family="sans"):
         _fc[k] = f
     return _fc[k]
 
+SHADOW = (.55, 9, 6)  # opacity, blur radius, y offset of the caption drop shadow (projects may raise it)
+
+
 def T(txt, size, fill=WHITE, weight=None, stroke=0, sf=BLACK, shadow=True, family="sans", glow=None, glow_r=18):
     """Cached text sprite. Sprites carry `stroke+24` (+glow) px transparent padding on each side.
     glow=(r,g,b,a) adds a soft coloured halo (neon/keyword emphasis look)."""
-    k = (txt, size, fill, weight, stroke, shadow, family, glow, glow_r)
+    k = (txt, size, fill, weight, stroke, shadow, family, glow, glow_r, SHADOW)
     if k in _tc: return _tc[k]
     f = font(size, weight, family); pad = stroke + 24 + (glow_r * 2 if glow else 0)
     bb = f.getbbox(txt, stroke_width=stroke)
@@ -90,9 +93,9 @@ def T(txt, size, fill=WHITE, weight=None, stroke=0, sf=BLACK, shadow=True, famil
         ga = im.getchannel("A").filter(ImageFilter.GaussianBlur(glow_r)).point(lambda v: min(255, int(v * 1.6 * glow[3] / 255)))
         gl = Image.new("RGBA", im.size, glow[:3] + (0,)); gl.putalpha(ga); gl.alpha_composite(im); im = gl
     if shadow:
-        a = im.getchannel("A").filter(ImageFilter.GaussianBlur(9)).point(lambda v: int(v * .55))
+        op, br, dy = SHADOW; a = im.getchannel("A").filter(ImageFilter.GaussianBlur(br)).point(lambda v: min(255, int(v * op)))
         sh = Image.new("RGBA", im.size); sh.putalpha(a)
-        base = Image.new("RGBA", im.size); base.alpha_composite(sh, (0, 6)); base.alpha_composite(im); im = base
+        base = Image.new("RGBA", im.size); base.alpha_composite(sh, (0, dy)); base.alpha_composite(im); im = base
     _tc[k] = im
     return im
 
