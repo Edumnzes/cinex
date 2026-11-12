@@ -578,7 +578,6 @@ function bindMusic() {
 }
 
 // ------------------------------------------------------------ chat
-const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 // guide card (D-12), problem messages (D-06) and waiting/cancelled metas (D-13): the guided mode's copy, text-only buttons (A-11)
 const PS = "Abra o PowerShell: aperte a tecla Windows, digite PowerShell e aperte Enter.";
 const SETUP = {

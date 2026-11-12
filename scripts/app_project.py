@@ -158,6 +158,34 @@ def read_job(name, kind):
     return _read_json(p) if p.exists() else {}
 
 
+def pid_alive(pid):
+    """True while process `pid` runs. Never os.kill(pid, 0) on Windows: there it terminates the process."""
+    if not isinstance(pid, int) or pid <= 0: return False
+    if os.name != "nt":
+        try: os.kill(pid, 0); return True
+        except PermissionError: return True
+        except OSError: return False
+    import ctypes
+    k = ctypes.windll.kernel32; h = k.OpenProcess(0x1000, False, pid)   # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h: return False
+    code = ctypes.c_ulong(); ok = k.GetExitCodeProcess(h, ctypes.byref(code)); k.CloseHandle(h)
+    return bool(ok) and code.value == 259                                # STILL_ACTIVE
+
+
+def export_running(name, stale_h=3):
+    """Is an export in progress? A job left "not done" by a process that died (app closed, PC restarted) is marked
+    as interrupted, so the Publicar button works again. Jobs from before the pid was recorded expire after stale_h hours."""
+    j = read_job(name, "export")
+    if not j or j.get("done", True): return False
+    pid = j.get("pid")
+    if pid is not None: alive = pid_alive(pid)
+    else:
+        try: alive = (datetime.datetime.now() - datetime.datetime.fromisoformat(j.get("t", ""))).total_seconds() < stale_h * 3600
+        except ValueError: alive = False
+    if not alive: job(name, "export", step="Interrompida", done=True, error="o app foi fechado no meio da exportação")
+    return alive
+
+
 # ------------------------------------------------------------ helpers
 def duration(src):
     e = subprocess.run([_ff(), "-hide_banner", "-i", str(src)], capture_output=True, text=True, encoding="utf-8", errors="replace").stderr
@@ -983,7 +1011,7 @@ def export(name, voz=None):
     try:
         kept = play_order(st)                            # play order (phrases may be reordered)
         if not kept: raise ValueError("nenhum trecho mantido no corte")
-        job(name, "export", step="Cortando", pct=3, done=False, error=None, out=None)
+        job(name, "export", step="Cortando", pct=3, done=False, error=None, out=None, pid=os.getpid())
         _write_json(d / "keep.json", cut_list(st, kept))
         cam = {**CAMERA, **st.get("camera", {})}; col = {**COLOR, **st.get("color", {})}
         fit, base = cut_plan(fmt, source_aspect(d))

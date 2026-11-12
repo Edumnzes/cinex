@@ -79,8 +79,7 @@ def fonts():
 
 
 def running(name):
-    j = P.read_job(name, "export")
-    return j and not j.get("done", True)
+    return P.export_running(name)
 
 
 class H(BaseHTTPRequestHandler):
@@ -217,11 +216,13 @@ class H(BaseHTTPRequestHandler):
                 sub = parts[3] if len(parts) > 3 else ""
                 if sub == "":
                     st = P.load(name) if (d / "cinex.json").exists() else None
+                    running(name)                      # an export cut short by a closed app shows as interrupted
                     return self._send(200, dict(state=st, prep=P.read_job(name, "prep"), export=P.read_job(name, "export"),
                                                 project_fonts=sorted(p.name for p in (d / "fonts").glob("*")) if (d / "fonts").exists() else []))
                 if sub == "poll":
                     st = P.load(name) if (d / "cinex.json").exists() else None
                     if st: C.ensure(name, st)          # a lost worker / a restart: the queue never gets stuck
+                    running(name)                      # same for an export whose process died
                     return self._send(200, dict(rev=st["rev"] if st else -1, prep=P.read_job(name, "prep"),
                                                 export=P.read_job(name, "export"), chat=P.read_job(name, "chat"),
                                                 uso=C.uso(), modo=P.chat_mode()))
