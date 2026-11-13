@@ -77,6 +77,18 @@ transforme uma pista em proposta quando ela se repetir com amostra suficiente.
   Pesquisa externa não é verdade: separe tendência passageira de técnica consistente e compare com o padrão atual.
   Um achado só vira técnica do catálogo por proposta aprovada. No fim: `aprendizado.py rotina pesquisa`.
 
+## Referências profissionais (meta: 10 por formato e por técnica)
+
+`referencia add '{"url","autor","plataforma","alvos":["formato:<id>"|"tecnica:<id>"],"insight","tipo"}'` e
+`referencia list [--alvo ...]`. Cada referência é aberta e conferida antes de entrar; o insight é escrito com as nossas
+palavras (nunca o texto do autor). Ordem de qualidade aprovada pelo dono (2026-11-13):
+1. Instagram oficial (@creators, Adam Mosseri, creators.instagram.com) e criadores com conteúdo de verdade — legenda,
+   carrossel ou a transcrição automática que o próprio Instagram mostra no Reel (nada é baixado);
+2. profissionais reconhecidos de edição e vídeo curto (ex.: StudioBinder, Frame.io, Walter Murch, Paddy Galloway, Jenny Hoyos);
+3. só então blogs, marcados como tal.
+Post de "comente X que eu te mando", venda de curso sem conteúdo e número sem fonte não entram. Melhor ficar abaixo de 10
+num item do que encher com referência fraca. Leitura no Instagram só pelo navegador do dono, logado por ele, só leitura.
+
 ## Experimentos (só com hipótese relevante)
 
 Não gere versões de todo vídeo. Exemplo (talking head): A frase de impacto, B direto na fala, C B-roll com narração,

@@ -400,7 +400,7 @@ META_REFS = 10                      # referências desejadas por formato e por t
 
 def referencia_add(data):
     """Uma referência profissional para um formato ou técnica (pesquisa, não regra). Só entra depois de aberta e conferida:
-    url, autor, plataforma, alvos ["formato:<id>" | "tecnica:<id>"], insight (com as nossas palavras, sem copiar o texto
+    url, autor, plataforma, alvos ["formato:<id>" | "tecnica:<id>" | "geral:instagram|retencao|metricas"], insight (com as nossas palavras, sem copiar o texto
     do autor), tipo (criador | estudo | documentacao | curso | caso_real). Vira oficial só por proposta aprovada."""
     miss = [k for k in REF_CAMPOS if not data.get(k)]
     if miss: raise SystemExit(f"faltam campos: {miss}")
@@ -412,6 +412,8 @@ def referencia_add(data):
         if kind == "formato": formato(i)
         elif kind == "tecnica":
             if i not in conh("tecnicas")["tecnicas"]: raise SystemExit(f"técnica desconhecida: {i}")
+        elif kind == "geral":                         # plataforma e distribuição: vale para todos, não conta por item
+            if i not in ("instagram", "retencao", "metricas"): raise SystemExit("geral: instagram | retencao | metricas")
         else: raise SystemExit(f"alvo inválido: {a}")
     p = local_root() / "referencias.jsonl"
     if any(r["url"] == data["url"] for r in readl(p)): raise SystemExit("essa url já está registrada")
