@@ -1,6 +1,6 @@
 ---
 name: cinex
-description: Cinex (formerly reels-editor) — edit raw phone videos into dynamic Instagram Reels / TikTok / Shorts (9:16) — cut pauses, breaths, stumbles and repeated takes; add Hormozi-style word-by-word captions; face-tracked smooth zooms/punch-ins; explanatory motion graphics (hook, product cards, charts, counters, CTA); colour-grade looks; sound effects; and studio-clean voice via Adobe Podcast Enhance Speech. Starts with a one-time brand onboarding (short briefing + read-only analysis of the user's Instagram Reels and insights, saved on disk and reused), then the user picks one of 8 versioned format profiles (talking head / yap content, split screen, quick lists & rankings, before & after, behind the scenes / day on site, myths & facts, 2D energy-flow visualization with no footage, real customer testimonial) — formats can be combined. Learns continuously in an advisory way: records and classifies corrections, evaluations, metrics, research and experiments per scope (global, brand, project — isolated), and proposes improvements that only change official rules after the owner approves (versioned, reversible). Knows reference styles (Hormozi, minimal/authority, flash cut, moody, cinematic text) and asset banks (Motion Array, Envato, Artlist, Mixkit, Pixabay). Use this whenever the user shares a .MOV/.MP4 and mentions reels, stories, shorts, TikTok, "legendas dinâmicas", "cortar pausas", "zoom", "motion", "editar vídeo para o Instagram", or wants another video "como aquele" — even if they only ask for one part (just captions, just the cut, just the audio) — and also when they mention Cinex, or ask for a "vídeo em motion" / "motion explicativo" / animated explainer from a script, a text or a reference reel, with no footage of their own. Also writes the Instagram post text (legenda / caption) in the brand's own voice — for the reels it edits and for any carousel, photo or Reels post: hook, search keywords, CTA and hashtags, delivered as a Word (.docx) file. Use it whenever the user asks for a legenda, caption, texto do post, "copy do carrossel", "o que escrevo nesse Reels", hashtags or CTA, or wants an Instagram caption improved or rewritten — even if they only send the image/video and say "faz o texto".
+description: Cinex (formerly reels-editor) — edit raw phone videos into dynamic Instagram Reels / TikTok / Shorts (9:16) — cut pauses, breaths, stumbles and repeated takes; add Hormozi-style word-by-word captions; face-tracked smooth zooms/punch-ins; explanatory motion graphics (hook, product cards, charts, counters, CTA); colour-grade looks; sound effects; and studio-clean voice via Adobe Podcast Enhance Speech. Starts with a one-time brand onboarding (short briefing + read-only analysis of the user's Instagram Reels and insights, saved on disk and reused), then the user picks one of 8 versioned format profiles (talking head / yap content, split screen, quick lists & rankings, before & after, behind the scenes / day on site, myths & facts, 2D energy-flow visualization with no footage, real customer testimonial) — formats can be combined. Learns continuously in an advisory way: records and classifies corrections, evaluations, metrics, research and experiments per scope (global, brand, project — isolated), and proposes improvements that only change official rules after the owner approves (versioned, reversible). Knows reference styles (Hormozi, minimal/authority, flash cut, moody, cinematic text) and asset banks (Motion Array, Envato, Artlist, Mixkit, Pixabay). Use this whenever the user shares a .MOV/.MP4 and mentions reels, stories, shorts, TikTok, "legendas dinâmicas", "cortar pausas", "zoom", "motion", "editar vídeo para o Instagram", or wants another video "como aquele" — even if they only ask for one part (just captions, just the cut, just the audio) — and also when they mention Cinex, or ask for a "vídeo em motion" / "motion explicativo" / animated explainer from a script, a text or a reference reel, with no footage of their own. Also writes the Instagram post text (legenda / caption) in the brand's own voice — for the reels it edits and for any carousel, photo or Reels post: hook, search keywords, CTA and hashtags, sent straight in the chat, ready to copy (no file). Use it whenever the user asks for a legenda, caption, texto do post, "copy do carrossel", "o que escrevo nesse Reels", hashtags or CTA, or wants an Instagram caption improved or rewritten — even if they only send the image/video and say "faz o texto".
 ---
 
 # Cinex
@@ -142,18 +142,17 @@ structures and hashtag rules; `references/legendas-perfil-template.md` is the vo
 - For a reel edited here, take the speech from the project's `words.json` and only claim what the video says (numbers included).
 - Check every caption: `python scripts/checar_legenda.py legenda.txt --formato reels|carrossel|foto` (preview before "mais",
   length, hashtags ≤ 5, AI clichés).
-- Deliver as Word, not .txt: `python scripts/legenda_docx.py legendas.json "<delivery folder>/<video name> - legendas.docx"` (JSON format in
-  the script docstring; 2+ posts get the posting-order table). Confirm the file exists, then summarise the strategy and paste the
-  caption in the reply.
+- Deliver IN THE CHAT, no file (no Word, no .txt — owner's rule since 2026-11-12): strategy in 2–4 lines, then each caption in its
+  own code block ready to copy; 2+ posts start with a short posting-order table.
 - Log it in `historico.md`; any voice correction ("eu não falo assim") goes into `perfil.md` right away.
 
 ## G. Delivery folder and file names
 
-Every finished file (video, cover, Stories parts, captions .docx, a horizontal/LED version) goes to ONE folder, read by
+Every finished file (video, Stories parts, a horizontal/LED version) goes to ONE folder, read by
 `scripts/saida.py` from `~/reels/_config.json → saida` (falls back to `~/Downloads`). Show it with `python scripts/saida.py`,
 set it once per machine with `python scripts/saida.py pasta "<folder>"`. Names must read at a glance, sorted by day:
 **`AAAA-MM-DD Marca - Tema (Formato)`** — e.g. `2026-11-06 Ynvest - Entrega Euroville (Reels 9x16).mp4`; companions add a
-suffix to the same name (` - capa.jpg`, ` - capa grade.jpg`, ` - story 1.mp4`, ` - legendas.docx`). The theme is what the video
+suffix to the same name (` - story 1.mp4`). No cover images and no caption files (owner's rule, 2026-11-12). The theme is what the video
 says in 2–5 words (never IMG_xxxx, project ids or `final`); a series adds its number (`Ynvest - Série Segurança 03 - RSD 700 V
 viram 50 V`). Use `saida.nome(titulo, formato)` for any file you write by hand (horizontal cut-only edits, re-exports),. Never overwrite a delivered file silently: a new version of the
 same video replaces it only when the user asked for the change.
@@ -372,9 +371,8 @@ with its type (erro_tecnico | preferencia_marca | preferencia_formato | decisao_
 ## 7. Deliver
 
 Instagram only for now:
-`python scripts/export_ig.py final.mp4 --name "<Marca> - <Tema>" --cover <t>` → delivery folder (section G):
-`AAAA-MM-DD Marca - Tema (Reels 9x16).mp4`, `… - capa.jpg` (cover), `… - capa grade.jpg` (3:4 profile-grid crop — check the
-title/face fit inside it), and `… - story N.mp4` only if the video is longer than 60 s. Reply with:
+`python scripts/export_ig.py final.mp4 --name "<Marca> - <Tema>"` → delivery folder (section G):
+`AAAA-MM-DD Marca - Tema (Reels 9x16).mp4`, and `… - story N.mp4` only if the video is longer than 60 s. No covers. Reply with:
 - where the file is and its duration;
 - a table: time | what was added (captions style, zooms, each motion);
 - what was cut;
@@ -382,7 +380,7 @@ title/face fit inside it), and `… - story N.mp4` only if the video is longer t
 - when relevant, what the engine can't do that would lift the video (text behind the subject, 3D-tracked text, a reshoot angle) — see visual-references §8;
 - the scorecard (`decisions.py report`: 10 dimensions, average, lowest) and the QA verdict;
 - a one-line offer for adjustments.
-When the user wants the post text too, write it with section F (`… - legendas.docx` next to the video, same name).
+When the user wants the post text too, write it with section F and send it in the reply (no file).
 Archive the log: `python scripts/decisions.py archive <handle> <name>`. Then log it: `python scripts/brand.py log <handle> "<name> · <duration> · <topic>"`, and record any preference the
 user expressed during this edit with `aprendizado.py corrigir` — if they said it should hold from now on, turn it into a
 proposal and approve it citing their words; if you only inferred it, propose and ask. After publication, when numbers

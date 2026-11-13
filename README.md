@@ -50,9 +50,9 @@ com o Adobe Podcast Enhance Speech.
 | Áudio | Voz tratada pelo Adobe Podcast + ambiente dosado + volume no padrão do Instagram (−14 LUFS) |
 | Controle de qualidade | Resolução, fps, volume, pico, distorção, quadros pretos, imagem congelada, safe zones, excesso de SFX |
 | Nota e registro | Nota 0–5 em 10 dimensões + `decisoes.json` com cada decisão e o motivo |
-| Entrega (Instagram) | Reel, capa, prévia do recorte da grade do perfil e partes para Stories se passar de 60 s |
+| Entrega (Instagram) | Reel na pasta de entrega e partes para Stories se passar de 60 s (sem capas) |
 | Aprendizado | Regras vigentes com a origem (projeto > marca > formato > global), correções classificadas, avaliação, métricas, pesquisa e experimentos; melhorias só mudam o oficial depois que você aprova |
-| Legenda do post | Texto do post na voz da marca (gancho, palavra-chave, lista, CTA e hashtags), conferido e entregue em Word (.docx); vale também para carrossel e foto |
+| Legenda do post | Texto do post na voz da marca (gancho, palavra-chave, lista, CTA e hashtags), conferido e enviado aqui na conversa, pronto para copiar; vale também para carrossel e foto |
 
 O fluxo completo, passo a passo, está em [docs/FLUXO.md](docs/FLUXO.md). Os critérios de edição seguem o
 *Manual Técnico de Edição Profissional para Social Media* do autor, transformado em regras em
@@ -116,7 +116,7 @@ No Claude Code, anexe o vídeo e chame a skill:
 
 Ou simplesmente peça em linguagem natural: *"edita esse vídeo para Reels, corta as pausas e
 coloca legenda"*. A skill também é acionada por pedidos parciais (só legendas, só o corte, só o áudio).
-Para o texto do post, peça *"faz a legenda desse Reels"*: sai um arquivo Word na pasta de entrega (a antiga skill
+Para o texto do post, peça *"faz a legenda desse Reels"*: a legenda vem aqui na conversa, pronta para copiar (a antiga skill
 `legendas-instagram` agora faz parte do Cinex; se ela ainda estiver instalada em `~/.claude/skills`, pode apagar).
 
 O Claude vai:
@@ -132,7 +132,7 @@ O Claude vai:
 
 **Pasta de entrega e nomes:** tudo o que fica pronto vai para uma pasta só (padrão: `Downloads`). Para escolher outra, uma vez
 por computador: `python scripts/saida.py pasta "C:\caminho\da\pasta"`. Os arquivos saem com nome fácil de ler, em ordem de data:
-`2026-11-06 Ynvest - Entrega Euroville (Reels 9x16).mp4`, e ao lado `… - capa.jpg` e `… - legendas.docx`.
+`2026-11-06 Ynvest - Entrega Euroville (Reels 9x16).mp4` (e `… - story N.mp4` se passar de 60 s).
 
 Cada vídeo ganha uma pasta de trabalho em `~/reels/<nome-do-video>/`. Ela é mantida para que
 ajustes (texto, cor, tempo) sejam rápidos — basta pedir.
@@ -178,7 +178,7 @@ cinex/
 │   ├── brand.py              # lê/grava o perfil da marca (~/instagram-legendas/<arroba>/)
 │   ├── qa.py                 # controle de qualidade do arquivo final
 │   ├── decisions.py          # registro de decisões + nota 0–5 (decisoes.json)
-│   ├── export_ig.py          # Reel, capa, prévia da grade e Stories
+│   ├── export_ig.py          # Reel e partes para Stories
 │   ├── formats.py            # padrões e motions de cada formato
 │   ├── motion_lib.py         # motor de motion puro (sem vídeo): texto cinético, cards, fios, ícones
 │   ├── compose.py            # split (react), clone e assemble (clipes + narração)
@@ -221,7 +221,7 @@ no Windows, `~/reelsenv/bin/python` no macOS/Linux). `<skill>` é `~/.claude/ski
 | `python project.py full render.mp4` | Render final (+ `final_sheet.jpg` para conferência) |
 | `python <skill>/scripts/qa.py final.mp4 --project project.py` | Controle de qualidade — qualquer FALHA bloqueia a entrega |
 | `python <skill>/scripts/decisions.py check` / `report` | Registro completo? Tabela de notas para a entrega |
-| `python <skill>/scripts/export_ig.py final.mp4 --name "Marca - Tema" --cover 4.3` | Arquivos para o Instagram na pasta de entrega |
+| `python <skill>/scripts/export_ig.py final.mp4 --name "Marca - Tema"` | Arquivos para o Instagram na pasta de entrega |
 | `python <skill>/scripts/saida.py pasta "<pasta>"` | Escolhe a pasta de entrega deste computador |
 
 Aprendizado (rodados na pasta do Cinex; lista completa com `python scripts/aprendizado.py`):

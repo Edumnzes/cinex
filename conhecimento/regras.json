@@ -1,18 +1,73 @@
 {
  "_doc": "Regras globais OFICIAIS (valem para todas as marcas e formatos, abaixo do formato, da marca e do projeto). Só mudam por proposta aprovada. Cada regra guarda valor, origem e data.",
- "versao": 1,
+ "versao": 2,
  "regras": {
-  "legenda.borda": {"valor": false, "origem": "instrução explícita do dono", "desde": "2026-11-11"},
-  "legenda.brilho": {"valor": false, "origem": "instrução explícita do dono", "desde": "2026-11-11"},
-  "legenda.sombra": {"valor": "suave", "origem": "instrução explícita do dono (sombra e cor podem; borda e brilho não)", "desde": "2026-11-11"},
-  "gancho.cold_open": {"valor": true, "origem": "instrução explícita do dono (\"ganchos fracos\")", "desde": "2026-11-11"},
-  "gancho.titulo_s": {"valor": 3.2, "origem": "prática aprovada pelo dono", "desde": "2026-11-11"},
-  "corte.frase_completa": {"valor": true, "origem": "instrução explícita do dono (\"sem frases cortadas\")", "desde": "2026-11-10"},
-  "audio.lufs": {"valor": -14, "origem": "manual de edição §10", "desde": "2026-10-01"},
-  "audio.pico_dbtp": {"valor": -1, "origem": "manual de edição §12", "desde": "2026-10-01"},
-  "musica.gerar": {"valor": false, "origem": "instrução explícita do dono: só música real viral, adicionada no app do Instagram", "desde": "2026-10-20"},
-  "conteudo.afirmacao_tecnica_conferida": {"valor": true, "origem": "correção explícita do dono (fala técnica errada não vai ao ar)", "desde": "2026-11-08"},
-  "entrega.nome": {"valor": "AAAA-MM-DD Marca - Tema (Formato)", "origem": "instrução explícita do dono", "desde": "2026-11-06"},
-  "legenda_post.formato_arquivo": {"valor": "docx", "origem": "instrução explícita do dono", "desde": "2026-11-06"}
+  "legenda.borda": {
+   "valor": false,
+   "origem": "instrução explícita do dono",
+   "desde": "2026-11-11"
+  },
+  "legenda.brilho": {
+   "valor": false,
+   "origem": "instrução explícita do dono",
+   "desde": "2026-11-11"
+  },
+  "legenda.sombra": {
+   "valor": "suave",
+   "origem": "instrução explícita do dono (sombra e cor podem; borda e brilho não)",
+   "desde": "2026-11-11"
+  },
+  "gancho.cold_open": {
+   "valor": true,
+   "origem": "instrução explícita do dono (\"ganchos fracos\")",
+   "desde": "2026-11-11"
+  },
+  "gancho.titulo_s": {
+   "valor": 3.2,
+   "origem": "prática aprovada pelo dono",
+   "desde": "2026-11-11"
+  },
+  "corte.frase_completa": {
+   "valor": true,
+   "origem": "instrução explícita do dono (\"sem frases cortadas\")",
+   "desde": "2026-11-10"
+  },
+  "audio.lufs": {
+   "valor": -14,
+   "origem": "manual de edição §10",
+   "desde": "2026-10-01"
+  },
+  "audio.pico_dbtp": {
+   "valor": -1,
+   "origem": "manual de edição §12",
+   "desde": "2026-10-01"
+  },
+  "musica.gerar": {
+   "valor": false,
+   "origem": "instrução explícita do dono: só música real viral, adicionada no app do Instagram",
+   "desde": "2026-10-20"
+  },
+  "conteudo.afirmacao_tecnica_conferida": {
+   "valor": true,
+   "origem": "correção explícita do dono (fala técnica errada não vai ao ar)",
+   "desde": "2026-11-08"
+  },
+  "entrega.nome": {
+   "valor": "AAAA-MM-DD Marca - Tema (Formato)",
+   "origem": "instrução explícita do dono",
+   "desde": "2026-11-06"
+  },
+  "legenda_post.formato_arquivo": {
+   "valor": "chat",
+   "origem": "proposta P-20261112-232522-ae3c",
+   "aprovado_por": "dono (instrução explícita na conversa)",
+   "desde": "2026-11-12"
+  },
+  "entrega.capa": {
+   "valor": false,
+   "origem": "proposta P-20261112-232522-ae3c",
+   "aprovado_por": "dono (instrução explícita na conversa)",
+   "desde": "2026-11-12"
+  }
  }
 }

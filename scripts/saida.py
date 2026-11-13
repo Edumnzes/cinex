@@ -5,7 +5,7 @@
 
 Folder: "saida" in <CINEX_ROOT or ~/reels>/_config.json, else ~/Downloads.
 Name:   "AAAA-MM-DD Marca - Tema (Formato)", e.g. "2026-11-06 Ynvest - Entrega Euroville (Reels 9x16)".
-        The date sorts the folder by production day; companions share the name: " - capa.jpg", " - legendas.docx".
+        The date sorts the folder by production day; companions share the name: " - story 1.mp4".
 """
 import datetime, json, os, re, sys
 from pathlib import Path

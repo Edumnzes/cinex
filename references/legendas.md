@@ -172,19 +172,13 @@ Ele mostra a prévia antes do "mais", contagem de caracteres/palavras, hashtags,
 menções, emojis e alertas (passou de 2.200, mais de 5 hashtags, gancho longo, link
 não clicável, frases típicas de IA). Corrija os alertas que fizerem sentido.
 
-### Formato da entrega: arquivo Word (.docx), não .txt
+### Formato da entrega: na própria conversa (sem arquivo)
 
-O dono quer as legendas num documento que abre no Word / Google Docs. Monte um JSON com os posts e gere:
+Desde 2026-11-12 o dono quer as legendas **aqui no chat**, sem Word nem .txt (regra global
+`legenda_post.formato_arquivo = chat`). Com vários posts, comece pela ordem de postagem (tabela curta: dia, vídeo,
+tema, sinal) e depois uma legenda por post, cada uma no seu bloco de código.
 
-```
-python scripts/legenda_docx.py legendas.json "<pasta de entrega>/<nome do vídeo> - legendas.docx"
-```
-
-`legendas.json` = `{"titulo": "...", "intro": ["parágrafo", ...], "posts": [{"tema", "txt", "kw", "sinal", "ganchos": [...],
-"capa", "alt", "data"?, "arq"?, "estrategia"?}]}`. Com 2 posts ou mais, entra a tabela da ordem de postagem (data, arquivo,
-tema, sinal). A legenda vai num bloco cinza, linha por linha, pronta para copiar. Abra o arquivo antes de entregar
-(no Windows, Word via PowerShell `Word.Application`) e confirme que existe na pasta.
-
+Formato de cada post:
 Na conversa, resuma o mesmo conteúdo:
 
 ```
@@ -195,7 +189,7 @@ Na conversa, resuma o mesmo conteúdo:
 **Ganchos alternativos:** 2 opções de primeira frase com ângulos diferentes
 
 **Texto alternativo (acessibilidade):** 1–2 frases descrevendo a imagem/vídeo com a palavra-chave
-**Extras** (só se fizer sentido): texto de capa do Reels, sugestão de 1º comentário,
+**Extras** (só se fizer sentido): sugestão de 1º comentário,
 marcações, convite de colaboração (collab), localização, melhor horário para postar
 (dos Insights salvos no perfil)
 ```

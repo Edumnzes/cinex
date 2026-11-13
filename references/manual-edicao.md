@@ -124,8 +124,8 @@ igualar planos) → **2. look** (aparência intencional, coerente com a marca).
 
 ## 10. Instagram (destino atual)
 Só Instagram por enquanto. Reels 9:16 1080×1920, 30 fps, até 180 s; elementos importantes dentro da
-safe zone; áudio e texto legíveis. `export_ig.py` gera o Reel, a capa, a prévia do recorte 3:4 da
-grade do perfil e, se passar de 60 s, as partes para Stories.
+safe zone; áudio e texto legíveis. `export_ig.py` gera o Reel e, se passar de 60 s, as partes para
+Stories (sem capas, por decisão do dono em 2026-11-12).
 
 ## 11. Acessibilidade
 Legendas sincronizadas e revisadas; contraste suficiente; texto em tamanho legível; nada essencial
