@@ -131,8 +131,9 @@ O Claude vai:
    te mostrar uma proposta de melhoria para você aprovar ou recusar.
 
 **Pasta de entrega e nomes:** tudo o que fica pronto vai para uma pasta só (padrão: `Downloads`). Para escolher outra, uma vez
-por computador: `python scripts/saida.py pasta "C:\caminho\da\pasta"`. Os arquivos saem com nome fácil de ler, em ordem de data:
-`2026-11-06 Ynvest - Entrega Euroville (Reels 9x16).mp4` (e `… - story N.mp4` se passar de 60 s).
+por computador: `python scripts/saida.py pasta "C:\caminho\da\pasta"`. Os arquivos saem como **Marca - Tema - Sequência de publicação - Formato e plataforma**:
+`Ynvest - Entrega Euroville - 04 - Reels 9x16 Instagram.mp4` (e `… - story N.mp4` se passar de 60 s). A sequência é a ordem de
+postagem da marca: você diz qual é, ou o Cinex usa o próximo número livre (uma nova versão do mesmo vídeo mantém o número).
 
 Cada vídeo ganha uma pasta de trabalho em `~/reels/<nome-do-video>/`. Ela é mantida para que
 ajustes (texto, cor, tempo) sejam rápidos — basta pedir.

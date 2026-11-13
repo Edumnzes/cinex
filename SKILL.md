@@ -71,7 +71,9 @@ ideas of the source and rewrite → one idea per sentence → storyboard of syst
 3. If the footage can't deliver the format (clone without a locked camera, before/after from different angles), say so
    and give the format's **recording guide** ("Gravar") instead of forcing it.
 4. Register the project: `aprendizado.py projeto <name> --marca <handle> --formato <id> [--combina <id2>] --objetivo "..."`,
-   then `aprendizado.py regras --projeto <name>` and `aprendizado.py sugerir --formato <id> --marca <handle> --objetivo "..."`
+   then set its measurable goal `aprendizado.py objetivo <name> --tipo alcance|compartilhamento|salvamento|engajamento|seguidores|
+   visitas|leads|vendas|retencao [--meta N] [--tecnicas cold_open,...]` (ask the user which one when it isn't obvious), then
+   `aprendizado.py regras --projeto <name>` and `aprendizado.py sugerir --formato <id> --marca <handle> --objetivo "..."`
    (techniques to use, to AVOID, and what Cinex can't do yet — say so instead of improvising). The profile sets
    structure (feeds 1b), montage (`compose.py split | clone | assemble` BEFORE step 1 when it needs several sources),
    target duration, rhythm, `cap_y`, zoom policy, SFX budget and the `formats.py` motions (`tip_card`, `name_card`,
@@ -150,11 +152,14 @@ structures and hashtag rules; `references/legendas-perfil-template.md` is the vo
 
 Every finished file (video, Stories parts, a horizontal/LED version) goes to ONE folder, read by
 `scripts/saida.py` from `~/reels/_config.json → saida` (falls back to `~/Downloads`). Show it with `python scripts/saida.py`,
-set it once per machine with `python scripts/saida.py pasta "<folder>"`. Names must read at a glance, sorted by day:
-**`AAAA-MM-DD Marca - Tema (Formato)`** — e.g. `2026-11-06 Ynvest - Entrega Euroville (Reels 9x16).mp4`; companions add a
+set it once per machine with `python scripts/saida.py pasta "<folder>"`. Names must read at a glance (owner's rule, 2026-11-13):
+**`Marca - Tema - NN - Formato Plataforma`** — e.g. `Ynvest - Entrega Euroville - 04 - Reels 9x16 Instagram.mp4`. NN is the brand's
+publishing sequence: pass `--seq` when the user gives the posting order; otherwise a new version of the same brand+theme keeps its
+number and a new video takes the brand's next free one (`python scripts/saida.py nome "Marca - Tema" [--seq N]` previews it). The
+platform follows the format (9:16 Instagram, 16:9 YouTube, 4:3 Telão, LED Feira) or `--plataforma`. Companions add a
 suffix to the same name (` - story 1.mp4`). No cover images and no caption files (owner's rule, 2026-11-12). The theme is what the video
-says in 2–5 words (never IMG_xxxx, project ids or `final`); a series adds its number (`Ynvest - Série Segurança 03 - RSD 700 V
-viram 50 V`). Use `saida.nome(titulo, formato)` for any file you write by hand (horizontal cut-only edits, re-exports),. Never overwrite a delivered file silently: a new version of the
+says in 2–5 words (never IMG_xxxx, project ids or `final`); a series keeps its episode number inside the theme (`Ynvest - Série Segurança 03 RSD 700 V viram 50 V - 12 -
+Reels 9x16 Instagram`). Use `saida.nome(titulo, formato, seq)` for any file you write by hand (horizontal cut-only edits, re-exports). Never overwrite a delivered file silently: a new version of the
 same video replaces it only when the user asked for the change.
 
 ## 0. Environment (once per machine, ~2 min)
@@ -371,8 +376,8 @@ with its type (erro_tecnico | preferencia_marca | preferencia_formato | decisao_
 ## 7. Deliver
 
 Instagram only for now:
-`python scripts/export_ig.py final.mp4 --name "<Marca> - <Tema>"` → delivery folder (section G):
-`AAAA-MM-DD Marca - Tema (Reels 9x16).mp4`, and `… - story N.mp4` only if the video is longer than 60 s. No covers. Reply with:
+`python scripts/export_ig.py final.mp4 --name "<Marca> - <Tema>" [--seq N]` → delivery folder (section G):
+`Marca - Tema - NN - Reels 9x16 Instagram.mp4`, and `… - story N.mp4` only if the video is longer than 60 s. No covers. Reply with:
 - where the file is and its duration;
 - a table: time | what was added (captions style, zooms, each motion);
 - what was cut;
@@ -384,7 +389,9 @@ When the user wants the post text too, write it with section F and send it in th
 Archive the log: `python scripts/decisions.py archive <handle> <name>`. Then log it: `python scripts/brand.py log <handle> "<name> · <duration> · <topic>"`, and record any preference the
 user expressed during this edit with `aprendizado.py corrigir` — if they said it should hold from now on, turn it into a
 proposal and approve it citing their words; if you only inferred it, propose and ask. After publication, when numbers
-exist: `aprendizado.py metricas <name> '{...}'`.
+exist (Insights read in the browser with the user's own login, read-only — section E): `aprendizado.py metricas <name> '{...}'`,
+then `aprendizado.py resultados --marca <handle>` says per video whether it met its goal, didn't, or has no base yet, and what the
+ones that met it have in common (a clue, never a cause; few videos = say so).
 Keep the project folder — the user may ask for tweaks, and re-rendering from project.py is cheap.
 
 ## H. Learning routines

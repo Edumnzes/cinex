@@ -1,9 +1,10 @@
 """Instagram deliverables from the final render (Instagram only, for now).
 
-Usage: python export_ig.py final.mp4 --name "Marca - Tema" [--out <pasta>] [--cuts cuts.json]
+Usage: python export_ig.py final.mp4 --name "Marca - Tema" [--seq N] [--plataforma Instagram] [--out <pasta>] [--cuts cuts.json]
 
---name is a readable title ("Ynvest - Entrega Euroville"); files are named with saida.nome():
-"AAAA-MM-DD Marca - Tema (Reels 9x16)". Writes to --out (default: the delivery folder, saida.pasta()):
+--name is "Marca - Tema" ("Ynvest - Entrega Euroville"); files are named with saida.nome():
+"Marca - Tema - NN - Reels 9x16 Instagram", NN = publishing sequence (--seq, else the theme's existing number, else the
+brand's next one). Writes to --out (default: the delivery folder, saida.pasta()):
   <nome>.mp4               the Reel (copied; run qa.py on it first)
   <nome> - story N.mp4     only when the video is longer than 60 s: Stories parts of <= 60 s, split on
                            the cut points of cuts.json when possible (never mid-word)
@@ -38,10 +39,11 @@ def story_splits(dur, cuts):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("video"); ap.add_argument("--name", required=True)
+    ap.add_argument("--seq", type=int, default=None); ap.add_argument("--plataforma", default=None)
     ap.add_argument("--out", default=None); ap.add_argument("--cuts", default="cuts.json")
     a = ap.parse_args(); sys.stdout.reconfigure(encoding="utf-8")
     out = Path(a.out).expanduser() if a.out else pasta(); out.mkdir(parents=True, exist_ok=True); dur = duration(a.video)
-    base = nome(a.name)
+    base = nome(a.name, "vertical", a.seq, a.plataforma, out)
 
     reel = out / f"{base}.mp4"; shutil.copy(a.video, reel); print("Reel:", reel, f"({dur:.1f} s)")
 

@@ -24,7 +24,10 @@ Uso (python scripts/aprendizado.py <comando> ...):
   corrigir <P> --tipo T --area A --texto "..." [--tecnica id] [--chave k --valor v-json] [--antes v-json]
            [--texto-geral "..."]   T: erro_tecnico | preferencia_marca | preferencia_formato | decisao_projeto | melhoria_global
   avaliar <P> '<json>'                                notas 0-5 por dimensão + lentes separadas
-  metricas <P> '<json>'                               desempenho real depois de publicar
+  objetivo <P> --tipo T [--metrica M] [--meta N] [--tecnicas a,b]   objetivo mensurável do vídeo (antes de publicar)
+           T: alcance | compartilhamento | salvamento | engajamento | seguidores | visitas | leads | vendas | retencao
+  metricas <P> '<json>'                               desempenho real depois de publicar (Insights)
+  resultados --marca H                                o que cumpriu o objetivo e o que não cumpriu (+ resultados.md)
   comparar --marca H [--formato F] [--objetivo O] [--plataforma X]
   padroes [--marca H] [--formato F] [--propor]        hipóteses a partir das correções (rascunhos com --propor)
   pesquisa add '<json>' | pesquisa list [--tipo T]
@@ -259,6 +262,73 @@ def metricas(p, data):
         append(brand_dir(pj["marca"]) / "metricas.jsonl", dict(m, projeto=p, formato=pj["formato"], combina=pj.get("combina", []),
                                                                 objetivo=pj.get("objetivo", ""), plataforma=pj.get("plataforma", "")))
     return m
+
+
+OBJETIVOS = {  # objetivo -> métrica que diz se cumpriu (quando o dono não define outra)
+    "alcance": "views", "compartilhamento": "compart", "salvamento": "salvos", "engajamento": "comentarios",
+    "seguidores": "seguiu", "visitas": "visitas", "leads": "cliques", "vendas": "conversoes", "retencao": "retencao_3s_pct"}
+
+
+def definir_objetivo(p, tipo, metrica=None, meta=None, tecnicas=None):
+    """Objetivo mensurável do vídeo: tipo + métrica (+ meta numérica opcional) + técnicas usadas (para comparar depois)."""
+    if tipo not in OBJETIVOS: raise SystemExit(f"objetivo: {', '.join(OBJETIVOS)}")
+    metrica = metrica or OBJETIVOS[tipo]
+    if metrica not in METRICAS: raise SystemExit(f"métrica desconhecida: {metrica}")
+    pj = projeto_need(p)
+    pj["meta"] = dict(tipo=tipo, metrica=metrica, valor=meta, definido=now())
+    if tecnicas: pj["tecnicas"] = list(tecnicas)
+    wj(project_file(p), pj); return pj["meta"]
+
+
+def resultados(marca, min_base=3):
+    """O que cumpriu o objetivo e o que não cumpriu, por vídeo publicado da marca. Sem meta numérica, o vídeo é comparado
+    com a mediana dos outros vídeos da marca no MESMO formato (precisa de min_base vídeos; senão 'sem base').
+    Depois mostra o que os que cumpriram têm em comum (formato, técnicas, notas) — como pista, não como causa."""
+    root = projects_root(); rows = []
+    for f in sorted(root.glob("*/aprendizado.json")) if root.exists() else []:
+        pj = rj(f)
+        if pj.get("marca") != handle(marca) or not pj.get("metricas"): continue
+        rows.append(pj)
+    out = []
+    for pj in rows:
+        meta = pj.get("meta") or {}; k = meta.get("metrica") or OBJETIVOS.get(pj.get("objetivo", ""), "views")
+        v = pj["metricas"].get(k)
+        pares = [o["metricas"].get(k) for o in rows if o is not pj and o["formato"] == pj["formato"]
+                 and isinstance(o["metricas"].get(k), (int, float)) and not o["metricas"].get("turbinado")]
+        alvo, base = meta.get("valor"), "meta definida"
+        if alvo is None and len(pares) >= min_base: alvo, base = statistics.median(pares), f"mediana de {len(pares)} vídeos do formato"
+        if not isinstance(v, (int, float)): veredito = "sem dado"
+        elif alvo is None: veredito = "sem base"
+        else: veredito = "cumpriu" if v >= alvo else "não cumpriu"
+        out.append(dict(projeto=pj["projeto"], formato=pj["formato"], combina=pj.get("combina", []),
+                        objetivo=meta.get("tipo") or pj.get("objetivo") or "?", metrica=k, valor=v, alvo=alvo, base=base,
+                        veredito=veredito, turbinado=bool(pj["metricas"].get("turbinado")),
+                        tecnicas=pj.get("tecnicas", []), lentes=(pj.get("avaliacao") or {}).get("lentes", {})))
+    sim = [r for r in out if r["veredito"] == "cumpriu"]; nao = [r for r in out if r["veredito"] == "não cumpriu"]
+    def freq(rs, key):
+        c = {}
+        for r in rs:
+            for x in (r[key] if isinstance(r[key], list) else [r[key]]): c[x] = c.get(x, 0) + 1
+        return c
+    pistas = []
+    for key in ("formato", "tecnicas"):
+        a, b = freq(sim, key), freq(nao, key)
+        for x in set(a) | set(b):
+            pa = a.get(x, 0) / len(sim) if sim else 0; pb = b.get(x, 0) / len(nao) if nao else 0
+            if abs(pa - pb) >= .3 and a.get(x, 0) + b.get(x, 0) >= 2:
+                pistas.append(dict(o_que=f"{key}: {x}", nos_que_cumpriram=f"{a.get(x, 0)}/{len(sim)}", nos_que_nao=f"{b.get(x, 0)}/{len(nao)}",
+                                   leitura="aparece mais nos que cumpriram" if pa > pb else "aparece mais nos que não cumpriram"))
+    aviso = ("Poucos vídeos: leia como pista, não como regra." if len(out) < MIN_COMPARAVEIS else
+             "Correlação, não causa: tema, horário e música também mudam o resultado.")
+    rep = dict(marca=handle(marca), videos=len(out), cumpriu=len(sim), nao_cumpriu=len(nao),
+               sem_base=sum(r["veredito"] in ("sem base", "sem dado") for r in out), por_video=out, pistas=pistas, aviso=aviso)
+    md = [f"# Resultados — @{handle(marca)} ({today()})", "", f"{len(sim)} cumpriram, {len(nao)} não cumpriram, "
+          f"{rep['sem_base']} sem base. {aviso}", "", "| vídeo | formato | objetivo | métrica | valor | alvo | resultado |", "|---|---|---|---|---|---|---|"]
+    md += [f"| {r['projeto']} | {r['formato']} | {r['objetivo']} | {r['metrica']} | {r['valor']} | "
+           f"{'' if r['alvo'] is None else round(r['alvo'], 1)} ({r['base']}) | {r['veredito']}{' (turbinado)' if r['turbinado'] else ''} |" for r in out]
+    if pistas: md += ["", "## Pistas", *[f"- {p['o_que']}: {p['leitura']} ({p['nos_que_cumpriram']} × {p['nos_que_nao']})" for p in pistas]]
+    (brand_dir(marca)).mkdir(parents=True, exist_ok=True); (brand_dir(marca) / "resultados.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    return rep
 
 
 def comparar(marca, fmt=None, objetivo=None, plataforma=None):
@@ -589,6 +659,11 @@ def main(argv):
         _show(rec); aviso and print("AVISO:", aviso)
     elif cmd == "avaliar": _show(avaliar(pos[0], J(pos[1])))
     elif cmd == "metricas": _show(metricas(pos[0], J(pos[1])))
+    elif cmd == "objetivo":
+        s = _opt(args, "--meta"); t = _opt(args, "--tecnicas")
+        _show(definir_objetivo(pos[0], _opt(args, "--tipo"), _opt(args, "--metrica"), float(s) if s else None,
+                               [x.strip() for x in t.split(",")] if t else None))
+    elif cmd == "resultados": _show(resultados(mk))
     elif cmd == "comparar": _show(comparar(mk, _opt(args, "--formato"), _opt(args, "--objetivo"), _opt(args, "--plataforma")))
     elif cmd == "padroes": _show(padroes(mk, _opt(args, "--formato"), "--propor" in args))
     elif cmd == "pesquisa":

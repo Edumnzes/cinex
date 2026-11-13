@@ -53,6 +53,18 @@ Dados de cliente nunca vão para o repositório. `conhecimento/` é público e s
    `qualidade_editorial`, `aderencia_marca`. Desempenho não entra aqui: vem das métricas.
 6. **Depois de publicado** (quando houver números): `metricas <projeto> '{"views":…, "retencao_3s_pct":…, "compart":…}'`.
 
+## Objetivo e resultado de cada vídeo
+
+Antes de publicar, cada vídeo ganha um objetivo mensurável: `objetivo <projeto> --tipo <tipo> [--metrica M] [--meta N]
+[--tecnicas a,b]`. Tipos e métrica padrão: alcance → views, compartilhamento → compart, salvamento → salvos, engajamento →
+comentarios, seguidores → seguiu, visitas → visitas, leads → cliques, vendas → conversoes, retencao → retencao_3s_pct.
+Depois dos Insights (lidos no navegador com o login do dono, só leitura; tempo médio e retenção só aparecem no app → prints),
+`resultados --marca X` diz, por vídeo: **cumpriu** (atingiu a meta, ou a mediana dos vídeos da marca no mesmo formato quando
+não há meta), **não cumpriu**, ou **sem base** (menos de 3 vídeos comparáveis). Também lista **pistas**: formatos e técnicas
+que aparecem mais nos que cumpriram do que nos que não cumpriram. Vídeo turbinado aparece marcado e fica fora das medianas.
+O relatório fica em `<marca>/aprendizado/resultados.md`. Na revisão semanal, leia junto com o `desempenho.py relatorio` e só
+transforme uma pista em proposta quando ela se repetir com amostra suficiente.
+
 ## Revisão semanal e pesquisa mensal (rotinas configuráveis)
 
 `aprendizado.py status [--marca X]` mostra versões, propostas aguardando e se as rotinas estão atrasadas

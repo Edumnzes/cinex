@@ -1,6 +1,6 @@
 {
  "_doc": "Regras globais OFICIAIS (valem para todas as marcas e formatos, abaixo do formato, da marca e do projeto). Só mudam por proposta aprovada. Cada regra guarda valor, origem e data.",
- "versao": 2,
+ "versao": 3,
  "regras": {
   "legenda.borda": {
    "valor": false,
@@ -53,9 +53,10 @@
    "desde": "2026-11-08"
   },
   "entrega.nome": {
-   "valor": "AAAA-MM-DD Marca - Tema (Formato)",
-   "origem": "instrução explícita do dono",
-   "desde": "2026-11-06"
+   "valor": "Marca - Tema - NN (sequência de publicação) - Formato Plataforma",
+   "origem": "proposta P-20261112-235245-9f87",
+   "aprovado_por": "dono (instrução explícita na conversa)",
+   "desde": "2026-11-12"
   },
   "legenda_post.formato_arquivo": {
    "valor": "chat",
@@ -66,6 +67,12 @@
   "entrega.capa": {
    "valor": false,
    "origem": "proposta P-20261112-232522-ae3c",
+   "aprovado_por": "dono (instrução explícita na conversa)",
+   "desde": "2026-11-12"
+  },
+  "marca.fontes_minimo": {
+   "valor": 2,
+   "origem": "proposta P-20261112-235245-9f87",
    "aprovado_por": "dono (instrução explícita na conversa)",
    "desde": "2026-11-12"
   }

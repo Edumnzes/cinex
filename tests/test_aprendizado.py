@@ -217,6 +217,29 @@ class AprendizadoTest(Base):
         self.assertIn("em dia", A.status()["rotinas"]["pesquisa_de_tendencias"])
 
 
+class ResultadosTest(Base):
+    def test_cumpriu_ou_nao(self):
+        dados = [("a", 5000, ["cold_open"]), ("b", 4000, ["cold_open"]), ("c", 900, []), ("d", 800, []), ("e", 3000, ["cold_open"])]
+        for p, views, tec in dados:
+            A.projeto_init(p, "marcaum", "talking_head")
+            A.definir_objetivo(p, "alcance", tecnicas=tec)
+            A.metricas(p, {"views": views})
+        A.projeto_init("m", "marcaum", "testimonial"); A.definir_objetivo("m", "compartilhamento", meta=50)
+        A.metricas("m", {"compart": 20})
+        r = A.resultados("marcaum")
+        v = {x["projeto"]: x["veredito"] for x in r["por_video"]}
+        self.assertEqual(v["a"], "cumpriu"); self.assertEqual(v["d"], "não cumpriu")
+        self.assertEqual(v["m"], "não cumpriu")                         # meta definida: 20 < 50
+        self.assertTrue(any("cold_open" in p["o_que"] and "cumpriram" in p["leitura"] for p in r["pistas"]))
+        self.assertTrue((A.brand_dir("marcaum") / "resultados.md").exists())
+        self.assertEqual(A.resultados("marcadois")["videos"], 0)        # outra marca não vê nada
+
+    def test_sem_base_com_poucos_videos(self):
+        A.projeto_init("a", "marcaum", "myths_facts"); A.definir_objetivo("a", "seguidores"); A.metricas("a", {"seguiu": 3})
+        self.assertEqual(A.resultados("marcaum")["por_video"][0]["veredito"], "sem base")
+        with self.assertRaises(SystemExit): A.definir_objetivo("a", "fama")
+
+
 class DesempenhoTest(Base):
     def test_aplicar_vira_proposta_e_nao_muda_a_marca(self):
         import importlib, desempenho as D
