@@ -1,0 +1,974 @@
+{
+ "_doc": "Perfis OFICIAIS dos 8 formatos (Format Learning Engine). Só mudam por proposta aprovada (scripts/aprendizado.py aprovar): cada aprovação sobe 'versao' e guarda a anterior em conhecimento/historico/. Lido por scripts/formats.py -> fmt(id) e pelo resolvedor de regras. Explicação de cada formato: references/formatos.md.",
+ "versao": 7,
+ "formatos": {
+  "talking_head": {
+   "nome": "Yap Content (Talking Head)",
+   "aprende": [
+    "ganchos",
+    "pausas",
+    "cortes",
+    "enquadramento",
+    "zoom",
+    "legendas",
+    "ritmo de fala"
+   ],
+   "estrutura": [
+    "gancho",
+    "contexto",
+    "desenvolvimento",
+    "prova",
+    "conclusao",
+    "cta"
+   ],
+   "duracao_s": [
+    20,
+    60
+   ],
+   "ritmo": "medio",
+   "entrada": "1 vídeo falando para a câmera (ou entrevista/podcast recortado)",
+   "montagem": "cut",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "jumpcuts",
+   "sfx_max_10s": 2,
+   "motions": [
+    "hook_title",
+    "pill",
+    "card",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "cold_open",
+    "titulo_gancho",
+    "corte_pausas",
+    "jump_cut_zoom",
+    "legenda_por_grupo",
+    "reenquadramento_ancoras",
+    "loudness_reels"
+   ],
+   "evitar": [
+    "zoom_em_todo_corte",
+    "efeito_sem_funcao",
+    "legenda_com_borda_brilho"
+   ],
+   "gravar": "Celular na vertical na altura dos olhos, luz de frente, lapela; frases curtas com 1 s de silêncio entre ideias. Um B-roll de 3–5 s do assunto ajuda.",
+   "origem": [
+    "fala_popups",
+    "historia",
+    "multitarefa"
+   ],
+   "versao": 2,
+   "referencias": [
+    {
+     "autor": "@the.jessicacarter",
+     "url": "https://www.instagram.com/p/DalhfQZSVkE/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Ordem de trabalho para 'yap reels': cortar muito mais do que parece necessário e recapturar a atenção a cada poucos segundos com cortes rápidos; depois texto na tela; zoom lento por keyframe; efeitos sonoros só no fim, para não poluir. (27,7 mil curtidas, 8,4 mil compartilhamentos)",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@omgadrian",
+     "url": "https://www.instagram.com/p/DVEPAMoCSdr/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Talking head não precisa ser simétrico e centralizado: enquadrar a pessoa fora do centro no 9:16, usando o espaço livre para texto ou contexto, deixa o quadro mais dinâmico sem nenhum efeito. (17 mil curtidas, 4,5 mil compartilhamentos)",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@trainwithcharan",
+     "url": "https://www.instagram.com/p/DeM3KIRqsN5/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Talking head bom é mais gravação que edição: corte leve, legenda opcional e um gancho em texto na tela no começo já bastam; o excesso de efeito atrasa a produção sem ganho. (4,1 mil curtidas, 2,5 mil compartilhamentos)",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@eduardanedel",
+     "url": "https://www.instagram.com/p/DKMq-_ntldS/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "O formato 'cabeça falante' serve para criar conexão e ensinar com autoridade, e permite gravar vários vídeos de uma vez com consistência — por isso é a base de produção recorrente de profissionais. (Brasil, 230 curtidas, 60 compartilhamentos)",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@lucureau",
+     "url": "https://www.instagram.com/p/DbI9QcxgcUm/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Como ler o gráfico de retenção dos Reels: queda leve e constante é normal; queda brusca no início aponta gancho fraco; queda contínua é falta de valor; queda num ponto é um trecho ruim (enrolação, explicação confusa); queda no fim é CTA longo ou mal encaixado.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@apinheirocamila",
+     "url": "https://www.instagram.com/p/DfkJ53DOhsP/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Diagnóstico pela curva de retenção: queda forte nos 3 primeiros segundos = gancho não segurou; queda no meio = o vídeo não entregou o que o gancho prometeu (ou entregou devagar); queda só no final = CTA sem motivo para agir; linha alta e estável = repetir formato, tema e estrutura.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@fernandoalvaric",
+     "url": "https://www.instagram.com/p/Dayvznxs_e0/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Antes de culpar algoritmo, horário ou áudio, olhar onde a retenção cai: começo fraco, explicação arrastada ou entrega menor que a promessa. Ler a retenção melhora roteiro, gancho, edição e CTA ao mesmo tempo.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@venzo.visuals",
+     "url": "https://www.instagram.com/p/DdZijvxI4wD/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Edição conceitual de uma entrevista simples: cor, tipografia cinética, motion e sound design entram com um único propósito, manter a atenção na mensagem. Cada camada precisa justificar sua presença.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@rafaelaraujocn",
+     "url": "https://www.instagram.com/p/DaDYWNvjm3-/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Ganchos organizados por tipo (verdade dura, curiosidade, autoridade, experimento, problema a resolver), adaptados ao nicho trocando a lacuna. Lembrete central: o gancho é a porta, não a casa — sem entrega depois, a retenção cai.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@renatayugen",
+     "url": "https://www.instagram.com/p/DP2B3JIDe36/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Gravar o gancho de novo no fim da sessão: com a pessoa já aquecida diante da câmera, a abertura sai mais natural e fluida. Na edição, usa-se essa versão no começo.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@euomikael",
+     "url": "https://www.instagram.com/p/DbHK1fWuXf0/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Para quem trava diante da câmera: conversar antes, entender a mensagem, montar o roteiro junto com a pessoa e validar cada ponto só então gravar. O método dá segurança sem deixar a fala decorada ou robótica.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Reuben Evans (Frame.io)",
+     "url": "https://blog.frame.io/2018/12/03/remain-sane-cutting-mundane/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Material 'comum' de empresa: marcar falas e B-roll pelo tema da história e agrupar por tema; para disfarçar jump cut de entrevista em 4K, aproximar 40–50% alinhando o olho mais próximo da câmera (simula duas câmeras); cortar logo antes de uma piscada e voltar logo depois. Obs.: o Cinex usa 4% no corte — a regra de 40–50% vale para recorte de 4K, não para zoom sutil.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Richard Kronenberg (Frame.io)",
+     "url": "https://blog.frame.io/2018/07/23/tips-for-no-coverage/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Com uma câmera só: gravar em resolução maior e recortar um plano médio do aberto para cobrir cortes; cobrir a fala com imagens do lugar onde a história acontece, ajustando velocidade e cor ao clima; fades para cor sólida disfarçam cortes e definem o tom.",
+     "consultado": "2026-11-13"
+    }
+   ]
+  },
+  "split_screen": {
+   "nome": "Tela Dividida",
+   "aprende": [
+    "proporções",
+    "sincronização",
+    "hierarquia visual",
+    "composição",
+    "equilíbrio entre painéis"
+   ],
+   "estrutura": [
+    "trecho_que_prende",
+    "reacao_ou_comparacao",
+    "opiniao_especialista",
+    "cta"
+   ],
+   "duracao_s": [
+    15,
+    45
+   ],
+   "ritmo": "rapido",
+   "entrada": "2 fontes: referência (com direito de uso) + reação, ou 2 takes em câmera fixa (clone)",
+   "montagem": "split",
+   "layout": "dividida",
+   "cap_y": 960,
+   "zoom": "off",
+   "sfx_max_10s": 1,
+   "motions": [
+    "react_label",
+    "speaker_tag",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "split_hierarquia",
+    "legenda_na_emenda",
+    "audio_referencia_baixo"
+   ],
+   "evitar": [
+    "zoom_em_todo_corte",
+    "dois_focos_animados"
+   ],
+   "gravar": "Reação: assista à referência no fone e reaja de verdade nos primeiros segundos. Clone: tripé sem mexer, mesma luz, ninguém cruza a metade do quadro. Use só referência sua, licenciada ou trecho curto com crédito.",
+   "origem": [
+    "react",
+    "clone"
+   ],
+   "versao": 2,
+   "referencias": [
+    {
+     "autor": "Instagram (oficial)",
+     "url": "https://creators.instagram.com/blog/tips-for-improving-your-reach",
+     "tipo": "documentacao",
+     "plataforma": "Instagram",
+     "insight": "Conteúdo original é priorizado: repostar Reel que já está no Instagram, marca d'água visível ou perfil que só agrega conteúdo alheio reduzem a recomendação. Para reagir a um Reel popular, usar o Remix. Palavras-chave na legenda ajudam a busca; nos Insights, olhar a parcela do alcance vinda de não seguidores.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@hanahfranklin",
+     "url": "https://www.instagram.com/p/DW6hQ2RjYfk/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Tela dividida funciona em nichos diferentes porque mantém dois canais de atenção no mesmo vídeo: um mostra, o outro explica. Isso facilita a compreensão e reduz o esforço do espectador — desde que os dois painéis tenham papéis claros.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@bruno.lucialdo",
+     "url": "https://www.instagram.com/p/Db9TSuUiOc6/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "No editor Edits, a tela dividida pode trazer um Reels já publicado (seu ou de outra pessoa) como painel clicável: quem assiste pode tocar e ir para aquele conteúdo. Uso estratégico: falar do produto num painel e convidar a clicar no outro.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@leodias.r",
+     "url": "https://www.instagram.com/p/DZxfah3OmcM/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Tela dividida com emenda em degradê entre os painéis, em vez de linha dura: a transição suave entre as duas imagens deixa o quadro mais limpo e integrado (o mesmo princípio da emenda desfocada das referências visuais do Cinex).",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Rex Provost (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/split-screen-film-examples/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Tela dividida serve para simultaneidade, expectativa × realidade e dois pontos de vista. Usar com parcimônia (divide a atenção), escalonar os tempos — um painel mostra primeiro, o outro responde — e usar o som para indicar onde olhar.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Michael Maher (PremiumBeat)",
+     "url": "https://www.premiumbeat.com/blog/split-screen-editing-and-composing/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Esconder a emenda atrás de elementos do cenário (batente, coluna) quando a ideia é parecer um quadro só; manter o rosto de cada pessoa visível para o espectador saber quem fala; escalonar o que cada painel revela para o público montar a ação aos poucos.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Lei 9.610/98, art. 46 (Planalto)",
+     "url": "https://www.planalto.gov.br/ccivil_03/leis/l9610.htm",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "No Brasil, usar trecho de obra alheia é permitido para estudo, crítica ou polêmica, na medida justificada pelo objetivo e citando autor e origem (art. 46, III); pequenos trechos em obra nova só quando a reprodução não é o objetivo principal (art. 46, VIII). Para react: trecho curto, comentário de verdade e crédito na tela.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "U.S. Copyright Office (Fair Use Index)",
+     "url": "https://www.copyright.gov/fair-use/summaries/hosseinzadeh-klein-sdny2017.pdf",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Caso Hosseinzadeh v. Klein (2017): um vídeo de reação foi considerado uso legítimo porque era crítica e comentário 'momento a momento' que transformava o original e não o substituía no mercado. O que protege o react é o comentário que transforma — exibir o vídeo alheio sem acrescentar análise não tem essa proteção.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Paddy Galloway (via Colin and Samir)",
+     "url": "https://www.colinandsamir.com/resources/the-new-rules-of-youtube-from-paddy-galloway",
+     "tipo": "criador",
+     "plataforma": "Web",
+     "insight": "Estrategista de grandes canais: lista só funciona se for específica e única; formatos de lacuna de curiosidade (superlativos, confrontos, comparações em 3 passos) rendem com constância; 'familiar mas inesperado' — pegar um formato conhecido e dar uma virada; comparações tipo 'R$ 1 × R$ 100' funcionam em qualquer nicho.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Kyle DeGuzman (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/what-is-a-reaction-shot-definition/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Plano de reação: mostrar como alguém responde ao que foi dito ou feito. Diz ao público o que sentir, controla o ritmo e dá flexibilidade de edição (cobrir um corte na fala principal). No react em tela dividida, o painel da reação é exatamente esse plano — precisa ter reação legível, não só presença.",
+     "consultado": "2026-11-13"
+    }
+   ]
+  },
+  "lists_rankings": {
+   "nome": "Listas Rápidas e Rankings",
+   "aprende": [
+    "velocidade",
+    "progressão",
+    "animação de números",
+    "retenção entre itens"
+   ],
+   "estrutura": [
+    "gancho_com_numero",
+    "item_1",
+    "item_2",
+    "item_n",
+    "resumo",
+    "cta_salvar"
+   ],
+   "duracao_s": [
+    15,
+    45
+   ],
+   "ritmo": "rapido",
+   "entrada": "1 vídeo com 3–7 itens, um por take",
+   "montagem": "cut",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "jumpcuts",
+   "sfx_max_10s": 2,
+   "motions": [
+    "tip_card",
+    "tip_progress",
+    "cta_save"
+   ],
+   "tecnicas": [
+    "titulo_gancho",
+    "corte_pausas",
+    "card_por_item",
+    "progresso_visivel"
+   ],
+   "evitar": [
+    "introducao_longa",
+    "efeito_sem_funcao"
+   ],
+   "gravar": "Uma dica por take, começando já pela dica (\"Dois: …\"). Liste os itens antes de gravar.",
+   "origem": [
+    "dicas_rapidas"
+   ],
+   "versao": 2,
+   "referencias": [
+    {
+     "autor": "@alepaness",
+     "url": "https://www.instagram.com/p/Dey9e5mI2eh/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Fontes de pauta para listas: perguntas que os clientes mais fazem, erros que cometem, o que você gostaria que soubessem e mitos da profissão. Cada item da lista pode virar um Reels próprio — a lista também serve de banco de temas.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@bruno.lucialdo",
+     "url": "https://www.instagram.com/p/DbQ5M0UBtHR/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Lista em formato checklist: escrever os itens no bloco de notas e gravar a tela marcando cada um enquanto o vídeo do produto ou serviço roda. Para produto, listar benefícios; para serviço, listar a transformação que ele gera.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@gtech.s.a",
+     "url": "https://www.instagram.com/p/DbtvddKRK5x/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Mitos e verdades em lista: cada afirmação recebe o veredito marcado (VERDADE/MITO) e uma única frase de porquê com causa física concreta. Lista curta, veredito visível e explicação de uma linha mantêm o ritmo.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Jakob Nielsen (Nielsen Norman Group)",
+     "url": "https://www.nngroup.com/articles/web-writing-show-numbers-as-numerals/",
+     "tipo": "estudo",
+     "plataforma": "Web",
+     "insight": "Rastreamento ocular: algarismos 'param o olho que vagueia' e atraem fixação mesmo no meio de texto ignorado, porque sinalizam fato. Escrever '3' e não 'três' (inclusive no início), números exatos dão credibilidade; unidades incomuns precisam de explicação.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Saul McLeod (Simply Psychology)",
+     "url": "https://www.simplypsychology.org/primacy-recency.html",
+     "tipo": "estudo",
+     "plataforma": "Web",
+     "insight": "Efeito de posição serial: lembramos melhor o primeiro e o último item de uma sequência (curva em U) e esquecemos os do meio. Numa lista, o item mais forte vai no começo ou no fim — e o resumo final reforça o que caiu no meio.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Zach St. George (Nautilus), sobre Loewenstein",
+     "url": "https://nautil.us/curiosity-depends-on-what-you-already-know-235803",
+     "tipo": "estudo",
+     "plataforma": "Web",
+     "insight": "Curiosidade é máxima quando a pessoa tem um bom palpite mas não tem certeza (estudo de fMRI com Loewenstein; teoria da lacuna de informação). Ranking e lista que deixam o nº 1 para o fim exploram essa lacuna: o público sabe parte, quer confirmar o resto.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@larissareisarquitetura",
+     "url": "https://www.instagram.com/p/DLnpJv-BR2c/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Lista de erros de obra aberta pelo risco concreto ('podem acabar com seu dinheiro' e 'fazer você se arrepender') e posicionada 'antes de colocar a mão na massa': o medo de perder dinheiro puxa mais que a promessa de ganho, e o momento da decisão dá urgência.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@clailtonluiz",
+     "url": "https://www.instagram.com/p/DYiGnE4hYgB/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Lista de 3 erros que termina pedindo ao público para ranquear ('qual desses é o mais prejudicial?'): transformar a lista num voto gera comentário com opinião, que é o tipo de interação que puxa conversa.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Tanner Kohler (Nielsen Norman Group)",
+     "url": "https://www.nngroup.com/articles/psychology-study-guide/",
+     "tipo": "estudo",
+     "plataforma": "Web",
+     "insight": "Memória de trabalho é muito limitada (por volta de 7 blocos, valor tratado como heurística): apresentar a informação em grupos com sentido e tirar da cabeça do público o que dá para pôr na tela. Na lista: poucos itens, cada um num card curto que fica visível enquanto é explicado.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Paddy Galloway (via Colin and Samir)",
+     "url": "https://www.colinandsamir.com/resources/the-new-rules-of-youtube-from-paddy-galloway",
+     "tipo": "criador",
+     "plataforma": "Web",
+     "insight": "Estrategista de grandes canais: lista só funciona se for específica e única; formatos de lacuna de curiosidade (superlativos, confrontos, comparações em 3 passos) rendem com constância; 'familiar mas inesperado' — pegar um formato conhecido e dar uma virada; comparações tipo 'R$ 1 × R$ 100' funcionam em qualquer nicho.",
+     "consultado": "2026-11-13"
+    }
+   ]
+  },
+  "before_after": {
+   "nome": "Antes e Depois",
+   "aprende": [
+    "comparação",
+    "sincronização",
+    "evidências visuais",
+    "transições",
+    "revelação"
+   ],
+   "estrutura": [
+    "depois_primeiro_ou_tensao",
+    "antes",
+    "processo_resumido",
+    "revelacao",
+    "numero_ou_prova",
+    "cta"
+   ],
+   "duracao_s": [
+    10,
+    40
+   ],
+   "ritmo": "medio",
+   "entrada": "clipes do antes e do depois do MESMO ângulo (+ processo opcional)",
+   "montagem": "assemble",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "suave",
+   "sfx_max_10s": 1,
+   "motions": [
+    "before_after",
+    "day_title",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "mesmo_angulo_antes_depois",
+    "revelacao_por_corte_seco",
+    "numero_na_tela"
+   ],
+   "evitar": [
+    "transicao_chamativa_sem_funcao",
+    "grading_diferente_entre_antes_e_depois"
+   ],
+   "gravar": "Grave o antes e o depois do mesmo ponto, mesma altura e lente; marque o lugar no chão. Registre números reais (conta de luz, geração).",
+   "origem": [
+    "gancho_visual"
+   ],
+   "versao": 2,
+   "referencias": [
+    {
+     "autor": "Brent Dunham (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/match-cuts-creative-transitions-examples/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Tipos de match cut: gráfico (forma, cor, composição), por ação (o movimento leva de um plano ao outro) e ponte sonora (o som atravessa o corte). A escolha da transição segue o tempo que passou: corte seco para salto brusco, dissolve para passagem suave.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Manana Papiashvili (Insense)",
+     "url": "https://insense.pro/blog/how-to-make-before-and-after-video",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Igualar ângulo, distância e luz nos dois momentos para não criar um resultado falso; abrir com um vislumbre do 'depois' nos 3 primeiros segundos; mostrar o processo, não só a troca; um texto na tela que nomeia a mudança; quem conta a história é o cliente, com autorização de uso.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Leah Retta (Runway)",
+     "url": "https://runway.com/resources/before-after-video-generator",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Para obra: marcar no chão o ponto do 'antes' e voltar exatamente a ele, no mesmo horário do dia. Cada revelação dura uns 5–10 s (≈2 s antes, 2 s transição, 3 s depois); vários cômodos viram uma sequência de pares no mesmo ângulo; aproximação lenta em cada foto parece mais crível que efeito de morph.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Kyle DeGuzman (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/what-is-a-montage-definition/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Montagem: planos separados que, juntos, contam um todo contínuo. O uso que mais serve a obra é comprimir o tempo — semanas viram segundos — e mostrar transformação; a justaposição entre planos cria sentido que nenhum deles tem sozinho.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "USGS (Serviço Geológico dos EUA)",
+     "url": "https://www.usgs.gov/centers/norock/science/repeat-photography-project",
+     "tipo": "estudo",
+     "plataforma": "Web",
+     "insight": "'Fotografia de repetição' científica: para o antes e depois valer como evidência, achar o ponto exato da primeira foto, alinhar elementos do fundo (ex.: cruzamento de montanhas), igualar a altura e repetir na mesma estação. O mesmo rigor transforma o antes e depois de obra em prova, não em impressão.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Chris Heckmann (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/what-is-a-dissolve-in-film-definition/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Dissolve é a transição gradual (≈1–2 s); o 'match dissolve' mostra a mudança ao longo do tempo sem perder a composição — ideal quando antes e depois têm o mesmo enquadramento. Dissolve longo dá peso e calma; o corte seco é a alternativa para revelação de impacto.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@evosolar",
+     "url": "https://www.instagram.com/p/DZx9lhbAUfZ/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Antes e depois feito com documento: duas contas de luz lado a lado, sem e com energia solar. A prova é o papel que o cliente reconhece, não uma imagem bonita — e o número da economia vira o destaque.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@matheush.marconi",
+     "url": "https://www.instagram.com/p/DfCKCIuRXka/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Cuidado no antes e depois de conta de luz: a conta mostra só o que sobrou e foi para a rede, não tudo o que o sistema gerou — o consumo instantâneo da casa nunca passa pelo medidor. Comparar sem explicar isso pode parecer que o sistema rende menos.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "ASA/CAP (regulador de publicidade do Reino Unido)",
+     "url": "https://www.asa.org.uk/advice-online/before-and-after-photos.html",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Antes e depois é uma alegação de resultado: guardar prova assinada e datada de que as imagens são reais e não manipuladas, mostrar resultado que o cliente pode esperar de verdade e registrar qualquer retoque. Letra miúda não corrige uma imagem enganosa.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "FTC (Comissão Federal de Comércio dos EUA)",
+     "url": "https://www.ftc.gov/business-guidance/resources/health-products-compliance-guidance",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "O que conta é a impressão geral que o anúncio deixa: um antes e depois comunica uma promessa mesmo sem dizer. 'Resultados não típicos' em letra pequena não resolve; se o caso mostrado for melhor que o normal, é preciso dizer claramente o resultado típico (ex.: economia média, não só a maior).",
+     "consultado": "2026-11-13"
+    }
+   ]
+  },
+  "behind_the_scenes": {
+   "nome": "Bastidores da Instalação e Dia de Obra",
+   "aprende": [
+    "sequência operacional",
+    "planos de detalhe",
+    "timelapse",
+    "ambientação",
+    "narrativa documental"
+   ],
+   "estrutura": [
+    "imagem_que_para_a_rolagem",
+    "contexto_do_dia",
+    "etapas_em_ordem",
+    "resultado",
+    "cta"
+   ],
+   "duracao_s": [
+    15,
+    60
+   ],
+   "ritmo": "medio",
+   "entrada": "muitos clipes curtos da obra (3–5 s), com ou sem fala/narração",
+   "montagem": "assemble",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "suave",
+   "sfx_max_10s": 2,
+   "motions": [
+    "day_title",
+    "chapter_label",
+    "pill",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "broll_semantico",
+    "planos_de_detalhe",
+    "corte_no_movimento",
+    "timelapse_curto",
+    "checagem_epi"
+   ],
+   "evitar": [
+    "cortar_no_meio_do_gesto",
+    "cena_sem_epi",
+    "musica_mais_alta_que_fala"
+   ],
+   "gravar": "Registre o dia inteiro em clipes de 3–5 s: plano aberto, médio e detalhe de cada etapa. EPI sempre visível (luva, capacete).",
+   "origem": [
+    "gancho_visual",
+    "multitarefa",
+    "voiceover",
+    "frase_identificacao",
+    "conteudo_legenda",
+    "serie"
+   ],
+   "versao": 2,
+   "referencias": [
+    {
+     "autor": "@natyelepinto",
+     "url": "https://www.instagram.com/p/DadDbd6gsGj/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Bastidor não depende de rotina extraordinária: todo profissional faz tarefas 'chatas' parecidas todo dia. O que torna o bastidor interessante é a forma de apresentar cada tarefa (ângulo, ritmo, o porquê de cada etapa).",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Alyssa Maio (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/cutaway-shot/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Cutaway: sair da ação principal para um detalhe e voltar a ela com novo sentido. Serve para disfarçar cortes, controlar o ritmo (alternar planos no mesmo lugar cria tensão) e dar contexto — na obra, o detalhe de uma ferramenta ou conexão entre dois momentos da instalação.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Kyle DeGuzman (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/what-is-a-montage-definition/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Montagem: planos separados que, juntos, contam um todo contínuo. O uso que mais serve a obra é comprimir o tempo — semanas viram segundos — e mostrar transformação; a justaposição entre planos cria sentido que nenhum deles tem sozinho.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "CamDo",
+     "url": "https://cam-do.com/blogs/camdo-blog/8-camera-placement-tips-for-optimal-time-lapse-in-construction",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Timelapse de obra: posição alta e firme, longe do caminho de máquinas e materiais; combinar plano aberto do progresso com closes das partes-chave; estudar o caminho do sol para evitar contraluz e sombra dura; câmera de reserva de outro ângulo. (Fabricante de câmeras, mas guia técnico específico.)",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Kyle DeGuzman (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/what-is-an-l-cut-in-film/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "L-cut: o som do plano anterior continua sobre a imagem seguinte; J-cut: o som do próximo plano entra antes da imagem. Deixam a conversa natural (ficar na reação de quem ouve) e permitem que a fala vire narração por cima de uma montagem — exatamente o caso da explicação sobre imagens da obra.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Reuben Evans (Frame.io)",
+     "url": "https://blog.frame.io/2018/12/03/remain-sane-cutting-mundane/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Material 'comum' de empresa: marcar falas e B-roll pelo tema da história e agrupar por tema; para disfarçar jump cut de entrevista em 4K, aproximar 40–50% alinhando o olho mais próximo da câmera (simula duas câmeras); cortar logo antes de uma piscada e voltar logo depois. Obs.: o Cinex usa 4% no corte — a regra de 40–50% vale para recorte de 4K, não para zoom sutil.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Richard Kronenberg (Frame.io)",
+     "url": "https://blog.frame.io/2018/07/23/tips-for-no-coverage/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Com uma câmera só: gravar em resolução maior e recortar um plano médio do aberto para cobrir cortes; cobrir a fala com imagens do lugar onde a história acontece, ajustando velocidade e cor ao clima; fades para cor sólida disfarçam cortes e definem o tom.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "John Kenney (Cotney Consulting)",
+     "url": "https://www.rooferscoffeeshop.com/post/posting-worksite-pictures-can-send-the-wrong-message",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Foto ou vídeo de obra com prática insegura diz ao cliente que a empresa não leva segurança a sério, mesmo sem fiscalização. Revisar todo material antes de postar, ter consentimento por escrito de quem aparece e conferir se o contrato da obra permite divulgar imagens.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Lancaster Safety Consulting",
+     "url": "https://www.lancastersafety.com/blog/are-you-posting-safety-violations-online",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Imagem publicada de obra pode virar prova de irregularidade (denúncia de terceiros, concorrentes, ex-funcionários) além do dano de reputação. Boa prática: revisar riscos em toda foto e vídeo antes de publicar, inclusive o que funcionários postam. Base para a checagem de EPI do Cinex.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@tecnomastersolar",
+     "url": "https://www.instagram.com/p/DeedCVPRIIm/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Entrega de obra solar com especificação concreta (modelo dos painéis, potência do inversor, quantidade de baterias) ligada a um benefício direto para o cliente (não fica mais sem energia). O bastidor ganha credibilidade quando nomeia o que foi instalado e o que muda para quem mora ali.",
+     "consultado": "2026-11-13"
+    }
+   ]
+  },
+  "myths_facts": {
+   "nome": "Mitos e Verdades",
+   "aprende": [
+    "suspense",
+    "explicação",
+    "ritmo",
+    "comprovação"
+   ],
+   "estrutura": [
+    "afirmacao_do_mito",
+    "pausa_de_suspense",
+    "veredito",
+    "explicacao",
+    "prova_ou_norma",
+    "cta"
+   ],
+   "duracao_s": [
+    20,
+    50
+   ],
+   "ritmo": "medio",
+   "entrada": "1 vídeo falando (ou narração) + prova visual (norma, medição, foto)",
+   "montagem": "cut",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "jumpcuts",
+   "sfx_max_10s": 2,
+   "motions": [
+    "big_phrase",
+    "pill",
+    "card",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "cold_open",
+    "titulo_gancho",
+    "veredito_visual",
+    "fonte_normativa_conferida"
+   ],
+   "evitar": [
+    "afirmacao_tecnica_sem_fonte",
+    "efeito_sem_funcao"
+   ],
+   "gravar": "Diga o mito numa frase, pause 1 s, dê o veredito e explique com um exemplo concreto. Tenha a fonte (norma, fabricante) em mãos.",
+   "origem": [],
+   "versao": 2,
+   "referencias": [
+    {
+     "autor": "@alepaness",
+     "url": "https://www.instagram.com/p/Dey9e5mI2eh/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Fontes de pauta para listas: perguntas que os clientes mais fazem, erros que cometem, o que você gostaria que soubessem e mitos da profissão. Cada item da lista pode virar um Reels próprio — a lista também serve de banco de temas.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@matheush.marconi",
+     "url": "https://www.instagram.com/p/DetqzEkxkWh/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Responde a uma dúvida comum como se fosse um mito ('dá para pôr bateria no sistema já instalado?'): resposta direta no começo ('dá, sim, sem trocar nada'), depois o nome do conceito (microrrede) e a explicação do funcionamento passo a passo.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "John Cook e coautores (Debunking Handbook 2020)",
+     "url": "https://skepticalscience.com/news.php?n=4891",
+     "tipo": "estudo",
+     "plataforma": "Web",
+     "insight": "Consenso de pesquisadores sobre como corrigir um mito: começar pelo fato; citar o mito uma única vez, logo antes da correção e avisando que é um mito; explicar por que o raciocínio do mito falha; terminar repetindo o fato, para ele ser a última coisa lembrada. Repetir o mito à toa o faz parecer verdadeiro.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@gtech.s.a",
+     "url": "https://www.instagram.com/p/DbtvddKRK5x/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Mitos e verdades em lista: cada afirmação recebe o veredito marcado (VERDADE/MITO) e uma única frase de porquê com causa física concreta. Lista curta, veredito visível e explicação de uma linha mantêm o ritmo.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@engehalleletrica",
+     "url": "https://www.instagram.com/p/DQKvCLaEc6W/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Mitos sobre energia solar com bateria respondidos com a regra que vale (todo sistema on-grid ou híbrido precisa de homologação na concessionária). No setor elétrico, o veredito ganha força quando aponta a norma ou a exigência que o sustenta.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@julliesouza.energy",
+     "url": "https://www.instagram.com/p/DeuFiUqxxbk/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Gancho que contraria uma crença ('você não precisa produzir energia no seu telhado para economizar com energia solar') seguido da prova legal (Lei 14.300, geração distribuída compartilhada) e do passo a passo de como funciona: afirmação contraintuitiva + fonte verificável.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@goldisolar",
+     "url": "https://www.instagram.com/p/Da2khihO8rE/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Mito publicado no momento em que ele volta à cabeça das pessoas: 'placa não gera na estação chuvosa', postado justamente no período de chuvas, quando o cliente duvida do investimento. Calendário do mito vale tanto quanto o conteúdo.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@shahprachi",
+     "url": "https://www.instagram.com/p/DSmnTesDJin/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Mitos em série numerada ('Myth Buster #1') com promessa de método ('com ciência, não com tendência'): cada episódio derruba um mito, a numeração cria hábito e o seguidor espera o próximo.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Ullrich Ecker (UWA)",
+     "url": "https://www.uwa.edu.au/news/Article/2020/October/How-to-debunk-misinformation",
+     "tipo": "estudo",
+     "plataforma": "Web",
+     "insight": "Desinformação fica na memória mesmo depois de desmentida; por isso o 'prebunking' — avisar e vacinar o público contra o mito antes que ele se fixe — é tão importante quanto o desmentido em si. Conteúdo de mito funciona melhor antes da dúvida virar certeza.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Ecker, Cook e Lewandowsky (The Conversation)",
+     "url": "https://theconversation.com/fighting-fact-free-journalism-a-how-to-guide-5125",
+     "tipo": "estudo",
+     "plataforma": "Web",
+     "insight": "Não basta negar: preencher a lacuna com a explicação correta, começar pela verdade, avisar antes de repetir o mito, usar o argumento mais forte (não vários fracos), linguagem simples e terminar com uma frase memorável. Falar com quem está em dúvida, não com quem já está convicto.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@matheush.marconi",
+     "url": "https://www.instagram.com/p/DfCKCIuRXka/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Cuidado no antes e depois de conta de luz: a conta mostra só o que sobrou e foi para a rede, não tudo o que o sistema gerou — o consumo instantâneo da casa nunca passa pelo medidor. Comparar sem explicar isso pode parecer que o sistema rende menos.",
+     "consultado": "2026-11-13"
+    }
+   ]
+  },
+  "visualization_3d": {
+   "nome": "Visualizações 3D e Fluxo de Energia",
+   "aprende": [
+    "câmera",
+    "materiais",
+    "iluminação",
+    "animação",
+    "representação técnica"
+   ],
+   "estrutura": [
+    "gancho_em_texto",
+    "titulo_do_conceito",
+    "sistema_montando",
+    "problema",
+    "numero",
+    "solucao",
+    "cta"
+   ],
+   "duracao_s": [
+    15,
+    45
+   ],
+   "ritmo": "medio",
+   "entrada": "roteiro/explicação (sem vídeo) ou renders 3D importados como clipes",
+   "montagem": "motion_lib",
+   "layout": "diagrama",
+   "cap_y": 1440,
+   "zoom": "off",
+   "sfx_max_10s": 2,
+   "motions": [
+    "ktext",
+    "card",
+    "chip",
+    "Wires",
+    "toggle"
+   ],
+   "tecnicas": [
+    "diagrama_estados",
+    "texto_e_narracao",
+    "cores_fixas_energia"
+   ],
+   "evitar": [
+    "texto_menor_que_xs",
+    "afirmacao_tecnica_sem_fonte"
+   ],
+   "gravar": "Não precisa gravar: escreva uma ideia por frase. O motor do Cinex desenha 2D (motion_lib.py); 3D de verdade entra como clipe pronto.",
+   "limitacoes": "O Cinex não renderiza 3D: o fluxo de energia é 2D animado. Renders 3D externos entram como B-roll.",
+   "origem": [
+    "motion_explicativo"
+   ],
+   "versao": 1
+  },
+  "testimonial": {
+   "nome": "Depoimento Real do Cliente",
+   "aprende": [
+    "seleção de falas",
+    "autenticidade",
+    "emoção",
+    "contexto",
+    "imagens de apoio",
+    "credibilidade"
+   ],
+   "estrutura": [
+    "resultado_primeiro",
+    "quem_e",
+    "antes",
+    "decisao",
+    "depois_numeros",
+    "cta"
+   ],
+   "duracao_s": [
+    20,
+    60
+   ],
+   "ritmo": "medio",
+   "entrada": "vídeo do cliente falando (+ B-roll do projeto/local)",
+   "montagem": "cut",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "jumpcuts",
+   "sfx_max_10s": 1,
+   "motions": [
+    "name_card",
+    "before_after",
+    "quote_card",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "cold_open",
+    "corte_pausas_natural",
+    "broll_semantico",
+    "numero_na_tela"
+   ],
+   "evitar": [
+    "robotizar_fala_do_cliente",
+    "efeito_sem_funcao"
+   ],
+   "gravar": "Entreviste, não peça texto decorado: \"como era antes?\", \"o que mudou?\", \"quanto pagava e quanto paga?\". Autorização de uso de imagem obrigatória.",
+   "origem": [
+    "depoimento"
+   ],
+   "versao": 1
+  }
+ },
+ "combinacoes": {
+  "talking_head+lists_rankings": {
+   "origens": [
+    "talking_head",
+    "lists_rankings"
+   ],
+   "nota": "fala para a câmera com cards numerados por item"
+  },
+  "testimonial+before_after": {
+   "origens": [
+    "testimonial",
+    "before_after"
+   ],
+   "nota": "o cliente conta e o antes/depois prova"
+  },
+  "behind_the_scenes+visualization_3d": {
+   "origens": [
+    "behind_the_scenes",
+    "visualization_3d"
+   ],
+   "nota": "obra real intercalada com o fluxo de energia animado"
+  },
+  "myths_facts+talking_head": {
+   "origens": [
+    "myths_facts",
+    "talking_head"
+   ],
+   "nota": "mito e veredito ditos pelo especialista"
+  },
+  "split_screen+visualization_3d": {
+   "origens": [
+    "split_screen",
+    "visualization_3d"
+   ],
+   "nota": "fala num painel, diagrama no outro"
+  }
+ }
+}

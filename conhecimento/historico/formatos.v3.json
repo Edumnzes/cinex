@@ -1,0 +1,638 @@
+{
+ "_doc": "Perfis OFICIAIS dos 8 formatos (Format Learning Engine). Só mudam por proposta aprovada (scripts/aprendizado.py aprovar): cada aprovação sobe 'versao' e guarda a anterior em conhecimento/historico/. Lido por scripts/formats.py -> fmt(id) e pelo resolvedor de regras. Explicação de cada formato: references/formatos.md.",
+ "versao": 3,
+ "formatos": {
+  "talking_head": {
+   "nome": "Yap Content (Talking Head)",
+   "aprende": [
+    "ganchos",
+    "pausas",
+    "cortes",
+    "enquadramento",
+    "zoom",
+    "legendas",
+    "ritmo de fala"
+   ],
+   "estrutura": [
+    "gancho",
+    "contexto",
+    "desenvolvimento",
+    "prova",
+    "conclusao",
+    "cta"
+   ],
+   "duracao_s": [
+    20,
+    60
+   ],
+   "ritmo": "medio",
+   "entrada": "1 vídeo falando para a câmera (ou entrevista/podcast recortado)",
+   "montagem": "cut",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "jumpcuts",
+   "sfx_max_10s": 2,
+   "motions": [
+    "hook_title",
+    "pill",
+    "card",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "cold_open",
+    "titulo_gancho",
+    "corte_pausas",
+    "jump_cut_zoom",
+    "legenda_por_grupo",
+    "reenquadramento_ancoras",
+    "loudness_reels"
+   ],
+   "evitar": [
+    "zoom_em_todo_corte",
+    "efeito_sem_funcao",
+    "legenda_com_borda_brilho"
+   ],
+   "gravar": "Celular na vertical na altura dos olhos, luz de frente, lapela; frases curtas com 1 s de silêncio entre ideias. Um B-roll de 3–5 s do assunto ajuda.",
+   "origem": [
+    "fala_popups",
+    "historia",
+    "multitarefa"
+   ],
+   "versao": 2,
+   "referencias": [
+    {
+     "autor": "@the.jessicacarter",
+     "url": "https://www.instagram.com/p/DalhfQZSVkE/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Ordem de trabalho para 'yap reels': cortar muito mais do que parece necessário e recapturar a atenção a cada poucos segundos com cortes rápidos; depois texto na tela; zoom lento por keyframe; efeitos sonoros só no fim, para não poluir. (27,7 mil curtidas, 8,4 mil compartilhamentos)",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@omgadrian",
+     "url": "https://www.instagram.com/p/DVEPAMoCSdr/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Talking head não precisa ser simétrico e centralizado: enquadrar a pessoa fora do centro no 9:16, usando o espaço livre para texto ou contexto, deixa o quadro mais dinâmico sem nenhum efeito. (17 mil curtidas, 4,5 mil compartilhamentos)",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@trainwithcharan",
+     "url": "https://www.instagram.com/p/DeM3KIRqsN5/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Talking head bom é mais gravação que edição: corte leve, legenda opcional e um gancho em texto na tela no começo já bastam; o excesso de efeito atrasa a produção sem ganho. (4,1 mil curtidas, 2,5 mil compartilhamentos)",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@eduardanedel",
+     "url": "https://www.instagram.com/p/DKMq-_ntldS/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "O formato 'cabeça falante' serve para criar conexão e ensinar com autoridade, e permite gravar vários vídeos de uma vez com consistência — por isso é a base de produção recorrente de profissionais. (Brasil, 230 curtidas, 60 compartilhamentos)",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@lucureau",
+     "url": "https://www.instagram.com/p/DbI9QcxgcUm/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Como ler o gráfico de retenção dos Reels: queda leve e constante é normal; queda brusca no início aponta gancho fraco; queda contínua é falta de valor; queda num ponto é um trecho ruim (enrolação, explicação confusa); queda no fim é CTA longo ou mal encaixado.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@apinheirocamila",
+     "url": "https://www.instagram.com/p/DfkJ53DOhsP/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Diagnóstico pela curva de retenção: queda forte nos 3 primeiros segundos = gancho não segurou; queda no meio = o vídeo não entregou o que o gancho prometeu (ou entregou devagar); queda só no final = CTA sem motivo para agir; linha alta e estável = repetir formato, tema e estrutura.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@fernandoalvaric",
+     "url": "https://www.instagram.com/p/Dayvznxs_e0/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Antes de culpar algoritmo, horário ou áudio, olhar onde a retenção cai: começo fraco, explicação arrastada ou entrega menor que a promessa. Ler a retenção melhora roteiro, gancho, edição e CTA ao mesmo tempo.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@venzo.visuals",
+     "url": "https://www.instagram.com/p/DdZijvxI4wD/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Edição conceitual de uma entrevista simples: cor, tipografia cinética, motion e sound design entram com um único propósito, manter a atenção na mensagem. Cada camada precisa justificar sua presença.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@rafaelaraujocn",
+     "url": "https://www.instagram.com/p/DaDYWNvjm3-/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Ganchos organizados por tipo (verdade dura, curiosidade, autoridade, experimento, problema a resolver), adaptados ao nicho trocando a lacuna. Lembrete central: o gancho é a porta, não a casa — sem entrega depois, a retenção cai.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@renatayugen",
+     "url": "https://www.instagram.com/p/DP2B3JIDe36/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Gravar o gancho de novo no fim da sessão: com a pessoa já aquecida diante da câmera, a abertura sai mais natural e fluida. Na edição, usa-se essa versão no começo.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@euomikael",
+     "url": "https://www.instagram.com/p/DbHK1fWuXf0/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Para quem trava diante da câmera: conversar antes, entender a mensagem, montar o roteiro junto com a pessoa e validar cada ponto só então gravar. O método dá segurança sem deixar a fala decorada ou robótica.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Reuben Evans (Frame.io)",
+     "url": "https://blog.frame.io/2018/12/03/remain-sane-cutting-mundane/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Material 'comum' de empresa: marcar falas e B-roll pelo tema da história e agrupar por tema; para disfarçar jump cut de entrevista em 4K, aproximar 40–50% alinhando o olho mais próximo da câmera (simula duas câmeras); cortar logo antes de uma piscada e voltar logo depois. Obs.: o Cinex usa 4% no corte — a regra de 40–50% vale para recorte de 4K, não para zoom sutil.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Richard Kronenberg (Frame.io)",
+     "url": "https://blog.frame.io/2018/07/23/tips-for-no-coverage/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Com uma câmera só: gravar em resolução maior e recortar um plano médio do aberto para cobrir cortes; cobrir a fala com imagens do lugar onde a história acontece, ajustando velocidade e cor ao clima; fades para cor sólida disfarçam cortes e definem o tom.",
+     "consultado": "2026-11-13"
+    }
+   ]
+  },
+  "split_screen": {
+   "nome": "Tela Dividida",
+   "aprende": [
+    "proporções",
+    "sincronização",
+    "hierarquia visual",
+    "composição",
+    "equilíbrio entre painéis"
+   ],
+   "estrutura": [
+    "trecho_que_prende",
+    "reacao_ou_comparacao",
+    "opiniao_especialista",
+    "cta"
+   ],
+   "duracao_s": [
+    15,
+    45
+   ],
+   "ritmo": "rapido",
+   "entrada": "2 fontes: referência (com direito de uso) + reação, ou 2 takes em câmera fixa (clone)",
+   "montagem": "split",
+   "layout": "dividida",
+   "cap_y": 960,
+   "zoom": "off",
+   "sfx_max_10s": 1,
+   "motions": [
+    "react_label",
+    "speaker_tag",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "split_hierarquia",
+    "legenda_na_emenda",
+    "audio_referencia_baixo"
+   ],
+   "evitar": [
+    "zoom_em_todo_corte",
+    "dois_focos_animados"
+   ],
+   "gravar": "Reação: assista à referência no fone e reaja de verdade nos primeiros segundos. Clone: tripé sem mexer, mesma luz, ninguém cruza a metade do quadro. Use só referência sua, licenciada ou trecho curto com crédito.",
+   "origem": [
+    "react",
+    "clone"
+   ],
+   "versao": 2,
+   "referencias": [
+    {
+     "autor": "Instagram (oficial)",
+     "url": "https://creators.instagram.com/blog/tips-for-improving-your-reach",
+     "tipo": "documentacao",
+     "plataforma": "Instagram",
+     "insight": "Conteúdo original é priorizado: repostar Reel que já está no Instagram, marca d'água visível ou perfil que só agrega conteúdo alheio reduzem a recomendação. Para reagir a um Reel popular, usar o Remix. Palavras-chave na legenda ajudam a busca; nos Insights, olhar a parcela do alcance vinda de não seguidores.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@hanahfranklin",
+     "url": "https://www.instagram.com/p/DW6hQ2RjYfk/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "Tela dividida funciona em nichos diferentes porque mantém dois canais de atenção no mesmo vídeo: um mostra, o outro explica. Isso facilita a compreensão e reduz o esforço do espectador — desde que os dois painéis tenham papéis claros.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@bruno.lucialdo",
+     "url": "https://www.instagram.com/p/Db9TSuUiOc6/",
+     "tipo": "criador",
+     "plataforma": "Instagram",
+     "insight": "No editor Edits, a tela dividida pode trazer um Reels já publicado (seu ou de outra pessoa) como painel clicável: quem assiste pode tocar e ir para aquele conteúdo. Uso estratégico: falar do produto num painel e convidar a clicar no outro.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "@leodias.r",
+     "url": "https://www.instagram.com/p/DZxfah3OmcM/",
+     "tipo": "caso_real",
+     "plataforma": "Instagram",
+     "insight": "Tela dividida com emenda em degradê entre os painéis, em vez de linha dura: a transição suave entre as duas imagens deixa o quadro mais limpo e integrado (o mesmo princípio da emenda desfocada das referências visuais do Cinex).",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Rex Provost (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/split-screen-film-examples/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Tela dividida serve para simultaneidade, expectativa × realidade e dois pontos de vista. Usar com parcimônia (divide a atenção), escalonar os tempos — um painel mostra primeiro, o outro responde — e usar o som para indicar onde olhar.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Michael Maher (PremiumBeat)",
+     "url": "https://www.premiumbeat.com/blog/split-screen-editing-and-composing/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Esconder a emenda atrás de elementos do cenário (batente, coluna) quando a ideia é parecer um quadro só; manter o rosto de cada pessoa visível para o espectador saber quem fala; escalonar o que cada painel revela para o público montar a ação aos poucos.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Lei 9.610/98, art. 46 (Planalto)",
+     "url": "https://www.planalto.gov.br/ccivil_03/leis/l9610.htm",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "No Brasil, usar trecho de obra alheia é permitido para estudo, crítica ou polêmica, na medida justificada pelo objetivo e citando autor e origem (art. 46, III); pequenos trechos em obra nova só quando a reprodução não é o objetivo principal (art. 46, VIII). Para react: trecho curto, comentário de verdade e crédito na tela.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "U.S. Copyright Office (Fair Use Index)",
+     "url": "https://www.copyright.gov/fair-use/summaries/hosseinzadeh-klein-sdny2017.pdf",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Caso Hosseinzadeh v. Klein (2017): um vídeo de reação foi considerado uso legítimo porque era crítica e comentário 'momento a momento' que transformava o original e não o substituía no mercado. O que protege o react é o comentário que transforma — exibir o vídeo alheio sem acrescentar análise não tem essa proteção.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Paddy Galloway (via Colin and Samir)",
+     "url": "https://www.colinandsamir.com/resources/the-new-rules-of-youtube-from-paddy-galloway",
+     "tipo": "criador",
+     "plataforma": "Web",
+     "insight": "Estrategista de grandes canais: lista só funciona se for específica e única; formatos de lacuna de curiosidade (superlativos, confrontos, comparações em 3 passos) rendem com constância; 'familiar mas inesperado' — pegar um formato conhecido e dar uma virada; comparações tipo 'R$ 1 × R$ 100' funcionam em qualquer nicho.",
+     "consultado": "2026-11-13"
+    },
+    {
+     "autor": "Kyle DeGuzman (StudioBinder)",
+     "url": "https://www.studiobinder.com/blog/what-is-a-reaction-shot-definition/",
+     "tipo": "documentacao",
+     "plataforma": "Web",
+     "insight": "Plano de reação: mostrar como alguém responde ao que foi dito ou feito. Diz ao público o que sentir, controla o ritmo e dá flexibilidade de edição (cobrir um corte na fala principal). No react em tela dividida, o painel da reação é exatamente esse plano — precisa ter reação legível, não só presença.",
+     "consultado": "2026-11-13"
+    }
+   ]
+  },
+  "lists_rankings": {
+   "nome": "Listas Rápidas e Rankings",
+   "aprende": [
+    "velocidade",
+    "progressão",
+    "animação de números",
+    "retenção entre itens"
+   ],
+   "estrutura": [
+    "gancho_com_numero",
+    "item_1",
+    "item_2",
+    "item_n",
+    "resumo",
+    "cta_salvar"
+   ],
+   "duracao_s": [
+    15,
+    45
+   ],
+   "ritmo": "rapido",
+   "entrada": "1 vídeo com 3–7 itens, um por take",
+   "montagem": "cut",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "jumpcuts",
+   "sfx_max_10s": 2,
+   "motions": [
+    "tip_card",
+    "tip_progress",
+    "cta_save"
+   ],
+   "tecnicas": [
+    "titulo_gancho",
+    "corte_pausas",
+    "card_por_item",
+    "progresso_visivel"
+   ],
+   "evitar": [
+    "introducao_longa",
+    "efeito_sem_funcao"
+   ],
+   "gravar": "Uma dica por take, começando já pela dica (\"Dois: …\"). Liste os itens antes de gravar.",
+   "origem": [
+    "dicas_rapidas"
+   ],
+   "versao": 1
+  },
+  "before_after": {
+   "nome": "Antes e Depois",
+   "aprende": [
+    "comparação",
+    "sincronização",
+    "evidências visuais",
+    "transições",
+    "revelação"
+   ],
+   "estrutura": [
+    "depois_primeiro_ou_tensao",
+    "antes",
+    "processo_resumido",
+    "revelacao",
+    "numero_ou_prova",
+    "cta"
+   ],
+   "duracao_s": [
+    10,
+    40
+   ],
+   "ritmo": "medio",
+   "entrada": "clipes do antes e do depois do MESMO ângulo (+ processo opcional)",
+   "montagem": "assemble",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "suave",
+   "sfx_max_10s": 1,
+   "motions": [
+    "before_after",
+    "day_title",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "mesmo_angulo_antes_depois",
+    "revelacao_por_corte_seco",
+    "numero_na_tela"
+   ],
+   "evitar": [
+    "transicao_chamativa_sem_funcao",
+    "grading_diferente_entre_antes_e_depois"
+   ],
+   "gravar": "Grave o antes e o depois do mesmo ponto, mesma altura e lente; marque o lugar no chão. Registre números reais (conta de luz, geração).",
+   "origem": [
+    "gancho_visual"
+   ],
+   "versao": 1
+  },
+  "behind_the_scenes": {
+   "nome": "Bastidores da Instalação e Dia de Obra",
+   "aprende": [
+    "sequência operacional",
+    "planos de detalhe",
+    "timelapse",
+    "ambientação",
+    "narrativa documental"
+   ],
+   "estrutura": [
+    "imagem_que_para_a_rolagem",
+    "contexto_do_dia",
+    "etapas_em_ordem",
+    "resultado",
+    "cta"
+   ],
+   "duracao_s": [
+    15,
+    60
+   ],
+   "ritmo": "medio",
+   "entrada": "muitos clipes curtos da obra (3–5 s), com ou sem fala/narração",
+   "montagem": "assemble",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "suave",
+   "sfx_max_10s": 2,
+   "motions": [
+    "day_title",
+    "chapter_label",
+    "pill",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "broll_semantico",
+    "planos_de_detalhe",
+    "corte_no_movimento",
+    "timelapse_curto",
+    "checagem_epi"
+   ],
+   "evitar": [
+    "cortar_no_meio_do_gesto",
+    "cena_sem_epi",
+    "musica_mais_alta_que_fala"
+   ],
+   "gravar": "Registre o dia inteiro em clipes de 3–5 s: plano aberto, médio e detalhe de cada etapa. EPI sempre visível (luva, capacete).",
+   "origem": [
+    "gancho_visual",
+    "multitarefa",
+    "voiceover",
+    "frase_identificacao",
+    "conteudo_legenda",
+    "serie"
+   ],
+   "versao": 1
+  },
+  "myths_facts": {
+   "nome": "Mitos e Verdades",
+   "aprende": [
+    "suspense",
+    "explicação",
+    "ritmo",
+    "comprovação"
+   ],
+   "estrutura": [
+    "afirmacao_do_mito",
+    "pausa_de_suspense",
+    "veredito",
+    "explicacao",
+    "prova_ou_norma",
+    "cta"
+   ],
+   "duracao_s": [
+    20,
+    50
+   ],
+   "ritmo": "medio",
+   "entrada": "1 vídeo falando (ou narração) + prova visual (norma, medição, foto)",
+   "montagem": "cut",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "jumpcuts",
+   "sfx_max_10s": 2,
+   "motions": [
+    "big_phrase",
+    "pill",
+    "card",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "cold_open",
+    "titulo_gancho",
+    "veredito_visual",
+    "fonte_normativa_conferida"
+   ],
+   "evitar": [
+    "afirmacao_tecnica_sem_fonte",
+    "efeito_sem_funcao"
+   ],
+   "gravar": "Diga o mito numa frase, pause 1 s, dê o veredito e explique com um exemplo concreto. Tenha a fonte (norma, fabricante) em mãos.",
+   "origem": [],
+   "versao": 1
+  },
+  "visualization_3d": {
+   "nome": "Visualizações 3D e Fluxo de Energia",
+   "aprende": [
+    "câmera",
+    "materiais",
+    "iluminação",
+    "animação",
+    "representação técnica"
+   ],
+   "estrutura": [
+    "gancho_em_texto",
+    "titulo_do_conceito",
+    "sistema_montando",
+    "problema",
+    "numero",
+    "solucao",
+    "cta"
+   ],
+   "duracao_s": [
+    15,
+    45
+   ],
+   "ritmo": "medio",
+   "entrada": "roteiro/explicação (sem vídeo) ou renders 3D importados como clipes",
+   "montagem": "motion_lib",
+   "layout": "diagrama",
+   "cap_y": 1440,
+   "zoom": "off",
+   "sfx_max_10s": 2,
+   "motions": [
+    "ktext",
+    "card",
+    "chip",
+    "Wires",
+    "toggle"
+   ],
+   "tecnicas": [
+    "diagrama_estados",
+    "texto_e_narracao",
+    "cores_fixas_energia"
+   ],
+   "evitar": [
+    "texto_menor_que_xs",
+    "afirmacao_tecnica_sem_fonte"
+   ],
+   "gravar": "Não precisa gravar: escreva uma ideia por frase. O motor do Cinex desenha 2D (motion_lib.py); 3D de verdade entra como clipe pronto.",
+   "limitacoes": "O Cinex não renderiza 3D: o fluxo de energia é 2D animado. Renders 3D externos entram como B-roll.",
+   "origem": [
+    "motion_explicativo"
+   ],
+   "versao": 1
+  },
+  "testimonial": {
+   "nome": "Depoimento Real do Cliente",
+   "aprende": [
+    "seleção de falas",
+    "autenticidade",
+    "emoção",
+    "contexto",
+    "imagens de apoio",
+    "credibilidade"
+   ],
+   "estrutura": [
+    "resultado_primeiro",
+    "quem_e",
+    "antes",
+    "decisao",
+    "depois_numeros",
+    "cta"
+   ],
+   "duracao_s": [
+    20,
+    60
+   ],
+   "ritmo": "medio",
+   "entrada": "vídeo do cliente falando (+ B-roll do projeto/local)",
+   "montagem": "cut",
+   "layout": "cheio",
+   "cap_y": 1300,
+   "zoom": "jumpcuts",
+   "sfx_max_10s": 1,
+   "motions": [
+    "name_card",
+    "before_after",
+    "quote_card",
+    "cta_follow"
+   ],
+   "tecnicas": [
+    "cold_open",
+    "corte_pausas_natural",
+    "broll_semantico",
+    "numero_na_tela"
+   ],
+   "evitar": [
+    "robotizar_fala_do_cliente",
+    "efeito_sem_funcao"
+   ],
+   "gravar": "Entreviste, não peça texto decorado: \"como era antes?\", \"o que mudou?\", \"quanto pagava e quanto paga?\". Autorização de uso de imagem obrigatória.",
+   "origem": [
+    "depoimento"
+   ],
+   "versao": 1
+  }
+ },
+ "combinacoes": {
+  "talking_head+lists_rankings": {
+   "origens": [
+    "talking_head",
+    "lists_rankings"
+   ],
+   "nota": "fala para a câmera com cards numerados por item"
+  },
+  "testimonial+before_after": {
+   "origens": [
+    "testimonial",
+    "before_after"
+   ],
+   "nota": "o cliente conta e o antes/depois prova"
+  },
+  "behind_the_scenes+visualization_3d": {
+   "origens": [
+    "behind_the_scenes",
+    "visualization_3d"
+   ],
+   "nota": "obra real intercalada com o fluxo de energia animado"
+  },
+  "myths_facts+talking_head": {
+   "origens": [
+    "myths_facts",
+    "talking_head"
+   ],
+   "nota": "mito e veredito ditos pelo especialista"
+  },
+  "split_screen+visualization_3d": {
+   "origens": [
+    "split_screen",
+    "visualization_3d"
+   ],
+   "nota": "fala num painel, diagrama no outro"
+  }
+ }
+}

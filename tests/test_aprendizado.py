@@ -40,7 +40,7 @@ class FormatosTest(Base):
         tec = A.conh("tecnicas")["tecnicas"]
         for fid, p in f.items():
             for t in p["tecnicas"] + p["evitar"]: self.assertIn(t, tec, f"{fid}: técnica {t} sem catálogo")
-            self.assertTrue(p["aprende"]); self.assertEqual(p["versao"], 1)
+            self.assertTrue(p["aprende"]); self.assertGreaterEqual(p["versao"], 1)
 
     def test_tecnicas_dizem_quando_evitar(self):
         for k, t in A.conh("tecnicas")["tecnicas"].items():
