@@ -240,6 +240,20 @@ class ResultadosTest(Base):
         with self.assertRaises(SystemExit): A.definir_objetivo("a", "fama")
 
 
+class ReferenciasTest(Base):
+    def test_referencia_conferida_e_contagem(self):
+        ok = dict(url="https://www.instagram.com/reel/abc/", autor="@editor", plataforma="Instagram", tipo="criador",
+                  alvos=["formato:talking_head", "tecnica:cold_open"], insight="Abre com a frase mais forte antes do contexto.")
+        A.referencia_add(ok)
+        with self.assertRaises(SystemExit): A.referencia_add(ok)                                  # url repetida
+        with self.assertRaises(SystemExit): A.referencia_add(dict(ok, url="https://x.y/1", alvos=["formato:tiktok"]))
+        with self.assertRaises(SystemExit): A.referencia_add(dict(ok, url="https://x.y/2", insight="x" * 401))
+        with self.assertRaises(SystemExit): A.referencia_add(dict(ok, url="http://x.y/3"))
+        r = A.referencias()
+        self.assertEqual(r["total"], 1); self.assertEqual(r["faltando"]["formato:talking_head"], 9)
+        self.assertEqual(len(A.referencias("tecnica:cold_open")), 1)
+
+
 class DesempenhoTest(Base):
     def test_aplicar_vira_proposta_e_nao_muda_a_marca(self):
         import importlib, desempenho as D

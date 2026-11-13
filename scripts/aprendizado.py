@@ -31,6 +31,7 @@ Uso (python scripts/aprendizado.py <comando> ...):
   comparar --marca H [--formato F] [--objetivo O] [--plataforma X]
   padroes [--marca H] [--formato F] [--propor]        hipóteses a partir das correções (rascunhos com --propor)
   pesquisa add '<json>' | pesquisa list [--tipo T]
+  referencia add '<json>' | referencia list [--alvo formato:<id>]   referências profissionais (meta: 10 por item)
   experimento criar '<json>' | experimento resultado <id> <variante> <P> '<json>' | experimento avaliar <id>
   propor '<json>' [--rascunho] | enviar <id> | propostas [--status S] [--marca H] | mostrar <id> [--marca H]
   aprovar <id> --por "nome" [--marca H] [--nota "..."] | rejeitar <id> --por "nome" --motivo "..." [--marca H]
@@ -392,6 +393,41 @@ def pesquisa_add(data):
     append(local_root() / "pesquisa.jsonl", rec); return rec
 
 
+REF_CAMPOS = ("url", "autor", "plataforma", "alvos", "insight", "tipo")
+REF_TIPOS = ("criador", "estudo", "documentacao", "curso", "caso_real")
+META_REFS = 10                      # referências desejadas por formato e por técnica
+
+
+def referencia_add(data):
+    """Uma referência profissional para um formato ou técnica (pesquisa, não regra). Só entra depois de aberta e conferida:
+    url, autor, plataforma, alvos ["formato:<id>" | "tecnica:<id>"], insight (com as nossas palavras, sem copiar o texto
+    do autor), tipo (criador | estudo | documentacao | curso | caso_real). Vira oficial só por proposta aprovada."""
+    miss = [k for k in REF_CAMPOS if not data.get(k)]
+    if miss: raise SystemExit(f"faltam campos: {miss}")
+    if data["tipo"] not in REF_TIPOS: raise SystemExit(f"tipo: {', '.join(REF_TIPOS)}")
+    if not str(data["url"]).startswith("https://"): raise SystemExit("url precisa começar com https://")
+    if len(data["insight"]) > 400: raise SystemExit("insight longo demais: resuma com as suas palavras (até 400 caracteres)")
+    for a in data["alvos"]:
+        kind, _, i = a.partition(":")
+        if kind == "formato": formato(i)
+        elif kind == "tecnica":
+            if i not in conh("tecnicas")["tecnicas"]: raise SystemExit(f"técnica desconhecida: {i}")
+        else: raise SystemExit(f"alvo inválido: {a}")
+    p = local_root() / "referencias.jsonl"
+    if any(r["url"] == data["url"] for r in readl(p)): raise SystemExit("essa url já está registrada")
+    rec = dict(data, id=uuid.uuid4().hex[:8], data_consulta=data.get("data_consulta") or today(), conferida=True)
+    append(p, rec); return rec
+
+
+def referencias(alvo=None):
+    rows = readl(local_root() / "referencias.jsonl")
+    if alvo: return [r for r in rows if alvo in r["alvos"]]
+    alvos = [f"formato:{k}" for k in formatos()] + [f"tecnica:{k}" for k in conh("tecnicas")["tecnicas"]]
+    cont = {a: sum(a in r["alvos"] for r in rows) for a in alvos}
+    return dict(total=len(rows), meta_por_item=META_REFS, completos=sum(v >= META_REFS for v in cont.values()), itens=len(alvos),
+                faltando={a: META_REFS - v for a, v in cont.items() if v < META_REFS})
+
+
 def exp_path(eid, marca=None): return (brand_dir(marca) if marca else local_root()) / "experimentos" / f"{eid}.json"
 
 
@@ -670,6 +706,9 @@ def main(argv):
         if pos[0] == "add": _show(pesquisa_add(J(pos[1])))
         else:
             t = _opt(args, "--tipo"); _show([r for r in readl(local_root() / "pesquisa.jsonl") if not t or r["tipo"] == t])
+    elif cmd == "referencia":
+        if pos[0] == "add": _show(referencia_add(J(pos[1])))
+        else: _show(referencias(_opt(args, "--alvo")))
     elif cmd == "experimento":
         sub = pos[0]
         if sub == "criar": _show(experimento_criar(J(pos[1])))
