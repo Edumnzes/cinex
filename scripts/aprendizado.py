@@ -180,8 +180,8 @@ def resolver(fmt, marca=None, projeto=None, combina=None):
     reg = conh("regras"); layers.append((f"global v{reg.get('versao', 1)}", {k: v["valor"] if isinstance(v, dict) and "valor" in v else v
                                                                           for k, v in flat_rules(reg.get("regras", {})).items()}))
     for fid in [*(combina or [])[::-1], fmt]:                       # o formato principal vence o combinado
-        f = formato(fid); params = {f"formato.{k}": v for k, v in f.items() if k not in ("regras", "versao", "nome", "origem")}
-        layers.append((f"formato {fid} v{f.get('versao', 1)}", {**params, **flat_rules(f.get("regras", {}))}))
+        f = formato(fid); params = {f"formato.{k}": v for k, v in f.items() if k not in ("regras", "versao", "nome", "origem", "referencias")}
+        layers.append((f"formato {fid} v{f.get('versao', 1)}", {**params, **flat(f.get("regras", {}))}))
     if marca:
         pr = prefs(marca)
         layers.append((f"marca @{handle(marca)} v{pr.get('versao', 0)}", flat_rules(pr.get("regras", {}))))
