@@ -10,7 +10,9 @@ One full decode of the file (proves it plays to the end) with ffmpeg filters:
   audio vs video length                                        -> sync / nothing truncated
   decode errors                                                -> corrupt file
 --silent: text-only motion video (silent track) - loudness checks are skipped.
---project also runs `python project.py check` (graphics over faces, safe zones, SFX density).
+--project also runs `python project.py check` (graphics over faces, safe zones, SFX density) and
+`python project.py contraste` (WCAG contrast of every caption group against the real background: text has no outline
+or glow by the owner's rule, so the contrast must be measured; minimum from conhecimento/regras.json, 4.5:1 / 3:1 large).
 Writes qa.json and, if decisoes.json exists, fills its "qa_result". Exit code 1 when anything FAILs.
 """
 import argparse, json, re, subprocess, sys
@@ -87,6 +89,10 @@ def run(argv=None):
         chk = subprocess.run([sys.executable, a.project, "check"], capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
         warns = [l[5:] for l in chk.splitlines() if l.startswith("WARN")]
         add("gráficos x rosto / safe zone / SFX", not warns, warns[:6] or "0 avisos", "0 avisos", warn=True)
+        ct = subprocess.run([sys.executable, a.project, "contraste"], capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
+        low = [l[5:] for l in ct.splitlines() if l.startswith("WARN")]
+        summ_c = next((l for l in ct.splitlines() if "medições" in l), "sem medição")
+        add("contraste do texto (WCAG)", not low, (low[:5] + [summ_c]) if low else summ_c, "todas acima do mínimo", warn=True)
 
     fails = [r for r in res if r["status"] == "FALHA"]; warns = [r for r in res if r["status"] == "AVISO"]
     for r in res: print(f"  {r['status']:6} {r['item']:34} {r['valor']}   (esperado {r['esperado']})")

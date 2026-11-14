@@ -99,6 +99,29 @@ def T(txt, size, fill=WHITE, weight=None, stroke=0, sf=BLACK, shadow=True, famil
     _tc[k] = im
     return im
 
+def wcag_lum(rgb):
+    """Relative luminance (WCAG 2.x) of sRGB values 0-255; works on arrays (..., 3)."""
+    c = np.asarray(rgb, dtype=np.float64) / 255.0
+    c = np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+    return c[..., 0] * 0.2126 + c[..., 1] * 0.7152 + c[..., 2] * 0.0722
+
+
+def contrast_ratio(a, b):
+    """WCAG contrast ratio between two colours (or arrays of colours): 1 (none) to 21 (black on white)."""
+    la, lb = wcag_lum(a), wcag_lum(b)
+    return (np.maximum(la, lb) + 0.05) / (np.minimum(la, lb) + 0.05)
+
+
+def contrast_thresholds():
+    """Approved global rules qa.contraste_min / qa.contraste_min_texto_grande (conhecimento/regras.json), else WCAG 4.5 / 3.0."""
+    try:
+        r = json.loads((Path(__file__).resolve().parent.parent / "conhecimento" / "regras.json").read_text(encoding="utf-8"))["regras"]
+        g = lambda k, d: (r.get(k) or {}).get("valor", d) if isinstance(r.get(k), dict) else r.get(k, d)
+        return float(g("qa.contraste_min", 4.5)), float(g("qa.contraste_min_texto_grande", 3.0))
+    except (OSError, ValueError, KeyError):
+        return 4.5, 3.0
+
+
 def glyph_mid(txt, size, weight=None, family="sans", stroke=0):
     """Vertical centre of the text's ink relative to its BASELINE (negative = above). A T() sprite is centred on
     its ink box, so words with descenders ("que", "g") or no ascenders sit at different heights if pasted by
@@ -1023,7 +1046,8 @@ class Reel:
         a = a[..., None]
         return (img * a + bg * (1 - a)).astype(np.uint8)
 
-    def compose(self, frame, t, debug=False):
+    def _base(self, frame, t):
+        """The picture under the graphics: camera, colour, B-roll, background fx, text behind the person."""
         frame = self._planes(frame, t)
         img = self._portrait(grade(self.color_correct(self.camera(frame, t), t), self.look), t)
         img = self.bg_fx(self._broll_full(img, t), t)
@@ -1032,14 +1056,68 @@ class Reel:
             b = np.asarray(back, dtype=np.float32); ba = b[..., 3:4] / 255
             a = self._matte.alpha(img, t)
             img = (img * (1 - ba * (1 - a)) + b[..., :3] * ba * (1 - a)).astype(np.uint8)
+        return img
+
+    def _layer(self, t, debug=False):
         ov = Image.new("RGBA", (W, H))
         self._broll_cards(ov, t)
         self._overlays(ov, t)
         for m in self.motions: m(ov, t)
         self.draw_captions(ov, t)
         if debug: self._debug(ov, t)
+        return ov
+
+    @staticmethod
+    def _over(img, ov):
         o = np.asarray(ov, dtype=np.uint16); al = o[..., 3:4]
         return ((img.astype(np.uint16) * (255 - al) + o[..., :3] * al) // 255).astype(np.uint8)
+
+    def compose(self, frame, t, debug=False):
+        return self._over(self._base(frame, t), self._layer(t, debug))
+
+    def contrast_report(self, motions=False, large_px=66, ring=7, pct=25):
+        """Contrast of the on-screen text against what is really behind it (owner's rule: no outline, no glow, so the
+        contrast must come from colour, weight, shadow and position). One sample per caption group, at the middle of
+        its display; with motions=True also every 0.5 s of the motion graphics (hook titles).
+        For each text colour: glyph pixels (layer drawn without shadow) vs a ring of `ring` px around them in the final
+        image (shadow included). Ratio = the `pct` percentile of the per-pixel WCAG ratios (the weak part, not the
+        average). Threshold 4.5:1, or 3:1 when the text is large (>= large_px on the 1080 canvas)."""
+        global SHADOW
+        thr, thr_big = contrast_thresholds()
+        times = [(min(g["s"] + .35, (g["s"] + g["e"]) / 2), " ".join(w["d"] for w in g["w"])) for g in self.groups
+                 if not any(a <= (g["s"] + g["e"]) / 2 < b for a, b in self.hide_caps)]
+        if motions and self.motions:
+            times += [(t / 2, "motion") for t in range(int(self.dur * 2))]
+        big = self.cs["size"] >= large_px
+        out = []
+        for t, label in times:
+            fr = next(self.frames(t, 1), None)
+            if fr is None: continue
+            img = self._base(fr, t)
+            final = self._over(img, self._layer(t))
+            keep = SHADOW; SHADOW = (0.0, 1, 0)                 # glyphs only, no shadow
+            try:
+                gl = Image.new("RGBA", (W, H))
+                if label == "motion":
+                    for m in self.motions: m(gl, t)
+                else: self.draw_captions(gl, t)
+            finally: SHADOW = keep
+            g = np.asarray(gl); mask = g[..., 3] > 200
+            if mask.sum() < 50: continue
+            cols = (g[..., :3][mask] // 24) * 24
+            uniq, cnt = np.unique(cols, axis=0, return_counts=True)
+            for col, n in zip(uniq, cnt):
+                if n < 150: continue
+                m_col = mask & np.all((g[..., :3] // 24) * 24 == col, axis=-1)
+                text_rgb = g[..., :3][m_col].mean(axis=0)
+                grown = np.asarray(Image.fromarray((m_col * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(2 * ring + 1))) > 0
+                around = grown & ~mask
+                if around.sum() < 50: continue
+                r = float(np.percentile(contrast_ratio(text_rgb, final[around]), pct))
+                need = thr_big if big else thr
+                out.append(dict(t=round(t, 2), texto=label, cor=[int(x) for x in text_rgb], contraste=round(r, 2),
+                                minimo=need, ok=r >= need))
+        return out
 
     def _debug(self, ov, t):
         d = ImageDraw.Draw(ov)
@@ -1089,6 +1167,7 @@ class Reel:
         motion                         -> camera QA: lock/track per range, pan & zoom speeds, wobble, verdict
         full out.mp4                   -> final render (audio copied from src, SFX mixed in, sfx.wav kept)
         looks [t]                      -> looks.jpg: the same frame in every colour grade, to pick one with the user
+        contraste [--motions]          -> WCAG contrast of each caption group (and hook titles) vs the real background
         """
         argv = argv or sys.argv[1:]
         sys.stdout.reconfigure(encoding="utf-8")
@@ -1126,6 +1205,11 @@ class Reel:
             self._sheet(tiles, "color.jpg", cols=3)
         elif cmd == "full":
             self.render(args[0])
+        elif cmd == "contraste":                       # text vs real background (no outline/glow -> must be measured)
+            rep = self.contrast_report(motions="--motions" in argv); bad = [r for r in rep if not r["ok"]]
+            for r in bad: print(f"WARN {r['t']:.2f}s contraste {r['contraste']}:1 < {r['minimo']}:1  cor {r['cor']}  '{r['texto'][:40]}'")
+            worst = min((r["contraste"] for r in rep), default=None)
+            print(f"{len(rep)} medições, {len(bad)} abaixo do mínimo" + (f", pior {worst}:1" if worst is not None else ""))
         elif cmd == "cuts":                            # why each cut gets (or doesn't get) a zoom step
             for c, need, why in self.cut_report: print(f"  {c:6.2f}s  {'ZOOM   ' if need else 'no zoom'}  {why}")
             print(f"{sum(1 for r in self.cut_report if r[1])} of {len(self.cut_report)} same-shot cuts get a zoom step")

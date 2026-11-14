@@ -362,6 +362,10 @@ python scripts/qa.py final.mp4 --project project.py      # resolution, fps, dura
                                                           # black/frozen frames, full decode, graphics/safe zone/SFX
 ```
 Any FALHA blocks delivery: fix and re-run. It writes qa.json and fills `decisoes.json → qa_result`.
+With `--project` it also measures the **text contrast** (`python project.py contraste [--motions]`): captions have no outline
+or glow (owner's rule), so each caption group is checked against the real background, shadow included (WCAG 2.2: 4.5:1, or
+3:1 for large text — approved rule `qa.contraste_min`). A warning means: move the caption to a darker area (`cap_y`), raise
+`reels_lib.SHADOW`, change the keyword colour, or accept it knowingly — tell the user which groups are weak.
 Still yours to do by eye: `final_sheet.jpg`, caption text, names, numbers, dates, colour across shots.
 
 ### 6c. Decision log + score (manual §13–14)

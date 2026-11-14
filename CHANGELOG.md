@@ -18,6 +18,8 @@
   `assets/formatos.json` vira `conhecimento/formatos.json`.
 - **Sem capas e legendas na conversa** (regra global v2, aprovada pelo dono em 2026-11-12): `export_ig.py` não gera mais
   capa nem prévia da grade; a legenda do post é enviada no chat, e `legenda_docx.py` foi removido.
+- **Checagem de contraste do texto** (`project.py contraste`, entra no `qa.py --project` como aviso): mede cada grupo de legenda
+  contra o fundo real, com sombra, pelo critério WCAG 2.2 (4,5:1; 3:1 texto grande), já que o texto não tem borda nem brilho.
 - `desempenho.py aplicar` deixa de gravar na marca: cria uma proposta que espera aprovação.
 - `brand.py` e `desempenho.py` aceitam `CINEX_MARCAS` (pasta das marcas), usado nos testes.
 
